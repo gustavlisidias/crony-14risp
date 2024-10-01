@@ -1,0 +1,27 @@
+{% load static %}
+{% load compress %}
+
+<!doctype html>
+<html lang="pt-br">
+	<head>
+		<title>Crony | Internal Server Error</title>
+		<link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon.ico' %}">
+
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="Website for controlling personnel departments with employee records, time, vacations and more">
+		<meta name="author" content="Gustavo Lisi Dias">
+
+		<!-- Bootstrap 5 -->
+		<link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+		{% compress css %}<link rel="stylesheet" type="text/scss" href="{% static 'custom.scss' %}">{% endcompress %}
+		<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+	</head>
+
+	<body>
+		<div class="container d-flex justify-content-center">
+			<img class="img img-fluid" src="{% static 'images/error/500.svg' %}" style="height: 100vh;">
+		</div>
+	</body>
+</html>

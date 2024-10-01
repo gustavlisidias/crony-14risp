@@ -1,0 +1,51 @@
+<div class="modal fade" id="modalEditarAvaliacao" aria-hidden="true" aria-labelledby="modalEditarAvaliacaoLabel" tabindex="-1">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" class="modal-content" id="formEditarAvaliacao">
+			{% csrf_token %}
+			<div class="modal-header">
+				<h2 class="modal-title fs-5" id="modalEditarAvaliacaoLabel">Editar Avaliação - {{avaliacao}}</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="row mb-3">
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="avaliacaoInicio" name="inicio" value="{{avaliacao.inicio|date:'Y-m-d'}}" placeholder>
+							<label class="form-label" for="avaliacaoInicio">Periodo Inicial *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="avaliacaoFinal" name="final" value="{{avaliacao.final|date:'Y-m-d'}}" placeholder>
+							<label class="form-label" for="avaliacaoFinal">Periodo Final *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="avaliacaoEncerramento" name="encerramento" value="{{avaliacao.data_encerramento|date:'Y-m-d'}}" placeholder>
+							<label class="form-label" for="avaliacaoEncerramento">Data de Encerramento *</label>
+						</div>
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" id="avaliacaoFuncionarios" name="funcionarios" multiple style="height: 100%;">
+						{% for funcionario in funcionarios %}
+							{% if funcionario in avaliacao.avaliadores.all %}
+								<option value="{{ funcionario.id }}" selected>{{ funcionario }}</option>
+							{% else %}
+								<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+							{% endif %}
+						{% endfor %}
+					</select>
+					<label for="avaliacaoFuncionarios">Avaliadores *</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-danger text-light" name="excluir" value="true">Excluir</button>
+				<button type="submit" class="btn btn-primary text-light" name="encerrar" value="true">Encerrar</button>
+				<button type="submit" class="btn btn-primary text-light" name="salvar" value="true">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

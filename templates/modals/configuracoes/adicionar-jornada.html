@@ -1,0 +1,25 @@
+<div class="modal fade" id="modalAdicionarJornada" tabindex="-1" aria-labelledby="modalAdicionarJornadaLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="{% url 'adicionar-jornada' %}" class="modal-content" id="formAdicionarJornada">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarJornadaLabel">Adicionar Jornada</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="jornadaTitulo" name="titulo" placeholder>
+					<label class="form-label" for="jornadaTitulo">Título</label>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="jornadaDescricao" name="descricao" value="00:00 - 00:00/00:00 - 00:00">
+					<label class="form-label" for="jornadaDescricao">Descrição</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-info text-light" data-bs-dismiss="modal">Fechar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

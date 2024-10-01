@@ -1,0 +1,27 @@
+<div class="modal fade" id="modalSolicitarFeedback" tabindex="-1" aria-labelledby="modalSolicitarFeedbackLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="{% url 'solicitar-feedback' %}" class="modal-content" id="formSolicitarFeedback">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalSolicitarFeedbackLabel">Solicitar Feedback</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label" for="feedbackSolicitacao">Solicitação *</label>
+					<textarea class="form-control" id="feedbackSolicitacao" name="solicitacao" placeholder="Ex: Olá Fulano, você poderia me enviar um feedback referente a minha última atividade?" required></textarea>
+				</div>
+				<label class="form-label" for="feedbackDestinatario">Funcionário *</label>
+				<select class="form-select" id="feedbackDestinatario" name="destinatario" required>
+					{% for funcionario in funcionarios %}
+						<option value="{{funcionario.id}}">{{funcionario}}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Solicitar</button>
+			</div>
+		</form>
+	</div>
+</div>

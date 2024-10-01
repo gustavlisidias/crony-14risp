@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Avaliação - {{avaliacao.titulo}}{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/avaliacao/editar-avaliacao.html" %}
+{% include "modals/avaliacao/responder-avaliacao.html" %}
+{% include "modals/avaliacao/comentarios-avaliacao.html" %}
+
+<div class="fluid-container p-4 m-0">
+  	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>
+				<a class="text-light" href="{% url 'avaliacao' %}">Avaliações</a>
+				<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+				{{avaliacao}}
+			</div>
+			<form method="GET" id="formExportarAvaliacao">
+				<div class="btn-group">
+					{% if not respondido and not avaliacao.status %}
+						<button class="btn btn-secondary text-light" type="button" title="Responder avaliação" data-bs-toggle="modal" data-bs-target="#modalResponderAvaliacao1">
+							Responder
+						</button>
+					{% endif %}
+					{% if request.user.get_access != 'common' %}
+						<button class="btn btn-secondary text-light" type="button" title="Editar avaliação" data-bs-toggle="modal" data-bs-target="#modalEditarAvaliacao">
+							Editar
+						</button>
+						{% if respostas %}
+							<button class="btn btn-secondary text-light" type="button" title="Comentários avaliação" data-bs-toggle="modal" data-bs-target="#modalVerComentarios">
+								Comentários
+							</button>
+							<button class="btn btn-secondary text-light" type="submit" name="exportar" value="true" title="Exportar avaliação">
+								Exportar
+							</button>
+						{% endif %}
+					{% endif %}
+				</div>
+			</form>
+		</div>
+		<div class="card-body">
+			{% if respostas and request.user.get_access != 'common' %}
+				<!-- Cards Importantes -->
+				<div class="row mb-5">
+					<div class="col">
+						<div class="card bg-body-secondary text-body text-center">
+							<div class="card-body">
+								TOTAL RESPOSTAS<br>{{dados.total_respostas}}
+							</div>
+						</div>
+					</div>
+					<div class="col">
+						<div class="card bg-body-secondary text-body text-center">
+							<div class="card-body">
+								AVALIADORES<br>{{dados.total_participantes_ativos}}/{{dados.total_participantes}}
+							</div>
+						</div>
+					</div>
+					<div class="col">
+						<div class="card bg-body-secondary text-body text-center">
+							<div class="card-body">
+								SCORE<br>{{dados.score|floatformat:02}}
+							</div>
+						</div>
+					</div>
+					<div class="col">
+						<div class="card bg-body-secondary text-body text-center">
+							<div class="card-body">
+								NOTA FINAL<br>{{dados.nota_final|floatformat:02}}
+							</div>
+						</div>
+					</div>
+					<div class="col">
+						<div class="card bg-body-secondary text-body text-center">
+							<div class="card-body">
+								APROVADO<br>{% if dados.aprovado %}<i class="fa-duotone fa-solid fa-circle-check fa-xl text-success"></i> {% else %} <i class="fa-duotone fa-solid fa-circle-xmark fa-xl text-danger"></i> {% endif %}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Gráficos -->
+				<div class="row mb-5">
+					<div class="col">
+						<canvas id="graficoChart" width="200" height="100"></canvas>
+					</div>
+					<div class="col">
+						<canvas id="notasChart" width="200" height="100"></canvas>
+					</div>
+				</div>
+			{% endif %}
+
+			<!-- Tabela com Respostas -->
+			<table class="table table-hover align-middle table-respostas">
+				<thead>
+					<tr>
+						<th scope="col">#</th>
+						<th scope="col">Avaliador</th>
+						<th scope="col">Pergunta</th>
+						<th scope="col">Critério</th>
+						<th scope="col">Nível</th>
+						<th scope="col">Nota</th>
+						{% if request.user.get_access != 'common' %}
+							<th scope="col">Peso</th>
+						{% endif %}
+					</tr>
+				</thead>
+				<tbody>
+					{% for resposta in respostas %}
+						<tr>
+							<th scope="row">{{forloop.counter}}</th>
+							<td>{{resposta.funcionario}}</td>
+							<td>{{resposta.pergunta.pergunta.titulo}}</td>
+							<td>{{resposta.pergunta.criterio.nome}}</td>
+							{% if resposta.funcionario == avaliacao.avaliado %}
+								<td>Auto</td>
+							{% elif resposta.funcionario.usuario.get_access != 'common' %}
+								<td>Gestor</td>
+							{% else %}
+								<td>Par</td>
+							{% endif %}
+							<td>{{resposta.nota}}</td>
+							{% if request.user.get_access != 'common' %}
+								<td>{{resposta.pergunta.peso}}</td>
+							{% endif %}
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+
+		$(".table-respostas").DataTable(config);
+	});
+</script>
+
+{% if respostas %}
+<script src="{% static 'chartjs/chart.min.js' %}"></script>
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const grafico1 = document.getElementById("graficoChart").getContext("2d");
+		const dadosGrafico1 = [
+			{% for resposta in respostas %}
+				{
+					"avaliador": "{{resposta.funcionario.nome_completo}}",
+					"criterio": "{{resposta.pergunta.criterio.nome}}",
+					"nota": parseFloat("{{resposta.nota|floatformat:02}}".replace(",", ".")),
+				},
+			{% endfor %}
+		];
+
+		// Extrair os critérios únicos e avaliadores únicos
+		const criterios = [...new Set(dadosGrafico1.map(item => item.criterio))];
+		const avaliadores = [...new Set(dadosGrafico1.map(item => item.avaliador))];
+
+		// Inicializar um objeto para armazenar as notas por critério para cada avaliador
+		const dadosAgrupados = {};
+
+		// Preencher o objeto dadosAgrupados
+		criterios.forEach(criterio => {
+			dadosAgrupados[criterio] = avaliadores.map(avaliador => {
+				// Encontrar a nota para o avaliador e critério atuais
+				const item = dadosGrafico1.find(g => g.criterio === criterio && g.avaliador === avaliador);
+				return item ? item.nota : 0;
+			});
+		});
+
+		const datasets = avaliadores.map((avaliador, index) => {
+			return {
+				label: avaliador,
+				data: criterios.map(criterio => dadosAgrupados[criterio][index]),
+				backgroundColor: `rgba(${250 - (index * 30)}, ${115 + (index * 30)}, ${0 + (index * 40)}, 0.25)`,
+				borderColor: `rgba(${250 - (index * 30)}, ${115 + (index * 30)}, ${0 + (index * 40)}, 0.75)`,
+				borderWidth: 1
+			};
+		});
+
+		new Chart(grafico1, {
+			type: "bar",
+			data: {
+				labels: criterios,
+				datasets: datasets
+			},
+			options: {
+				scales: {
+					y: {
+						beginAtZero: true
+					}
+				},
+				responsive: true,
+				plugins: {
+					legend: {
+						position: "top",
+					},
+					title: {
+						display: true,
+						text: "Notas por Critério"
+					}
+				}
+			}
+		});
+
+		//#################################################################################
+
+		const dadosGrafico2 = {
+			{% for nivel, funcionarios in dados.notas.items %}
+				{% for item, media in funcionarios.items %}
+					{% if forloop.last %}
+						"{{nivel}}": parseFloat("{{media}}".replace(",", ".")),
+					{% endif %}
+				{% endfor%}
+			{% endfor%}
+		};
+
+		const dadosGraficoRenomeado = {
+			"Gestor": dadosGrafico2["2"],
+			"Par": dadosGrafico2["1"],
+			"Auto": dadosGrafico2["0"]
+		};
+
+		const niveis = Object.keys(dadosGraficoRenomeado).map(nivel => nivel);
+		const medias = Object.values(dadosGraficoRenomeado).map(media => media);
+
+		// Configuração do gráfico
+		const ctx = document.getElementById("notasChart").getContext("2d");
+		
+		new Chart(ctx, {
+			type: "bar",
+			data: {
+				labels: niveis,
+				datasets: [
+					{
+						label: "Média das Notas por Nível (aplicado peso por critério)",
+						data: medias,
+						backgroundColor: "rgba(250, 115, 0, 0.25)",
+						borderColor: "rgba(250, 115, 0, 0.75)",
+						borderWidth: 1
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				scales: {
+					y: {
+						beginAtZero: true
+					}
+				}
+			}
+		});
+
+	});
+</script>
+{% endif %}
+{% endblock %}

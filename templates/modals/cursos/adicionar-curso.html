@@ -1,0 +1,49 @@
+<div class="modal fade" id="modalAdicionarCurso" tabindex="-1" aria-labelledby="modalAdicionarCursoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form method="POST" class="modal-content" id="formAdicionarCurso">
+            {% csrf_token %}
+            <div class="modal-header bg-body">
+                <h2 class="modal-title fs-5" id="modalAdicionarCursoLabel">Novo Curso</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="cursoTitulo" name="titulo" placeholder required>
+					<label for="cursoTitulo">Título *</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <textarea class="form-control" id="cursoDescricao" name="descricao" placeholder required></textarea>
+					<label for="cursoDescricao">Descrição *</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <select class="form-select" id="cursoContrato" name="contrato" multiple style="height: 100%;">
+                        {% for contrato in contratos %}
+                            <option value="{{ contrato.id }}">{{ contrato }}</option>
+                        {% endfor %}
+                    </select>
+					<label for="cursoContrato">Contrato</label>
+                </div>
+				{% if etapas %}
+					<div class="form-floating mb-3">
+						<select class="form-select" id="cursoEtapas" name="etapa" multiple style="height: 100%;">
+							{% for etapa in etapas %}
+								<option value="{{ etapa.id }}">{{ etapa.titulo }}</option>
+							{% endfor %}
+						</select>
+						<label for="cursoEtapas">Etapas</label>
+					</div>
+				{% endif %}
+
+				<div id="etapasContainer">
+                    <!-- Etapas novas serão adicionadas aqui -->
+                </div>
+				<button type="button" class="btn btn-secondary text-light" id="adicionarEtapa">Adicionar Etapa</button>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-info text-light" data-bs-dismiss="modal">Fechar</button>
+                <button type="submit" class="btn btn-secondary text-light">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Avaliações{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/avaliacao/adicionar-avaliacao.html" %}
+
+<div class="fluid-container p-4 m-0">
+  	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+		<div>Avaliações</div>
+		<div class="btn-group">
+			{% if request.user.get_access != 'common' %}
+				<button class="btn btn-secondary text-light" type="button" title="Nova avaliação" data-bs-toggle="modal" data-bs-target="#modalAdicionarAvaliacao">
+					Adicionar
+				</button>
+			{% endif %}
+		</div>
+		</div>
+		<div class="card-body">
+			<table class="table table-hover align-middle table-avaliacoes">
+				<thead>
+					<tr>
+						<th scope="col">#</th>
+						<th scope="col">Título</th>
+						<th scope="col">Período</th>
+						<th scope="col">Avaliado</th>
+						<th scope="col">Data Encerramento</th>
+						<th scope="col">Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for avaliacao in avaliacoes %}
+						<tr role="button" onclick="verAvaliacao({{avaliacao.id}})">
+							<th scope="row">{{forloop.counter}}</th>
+							<td>{{avaliacao.titulo}}</td>
+							<td>{{avaliacao.inicio|date:"d/m/Y"}} até {{avaliacao.final|date:"d/m/Y"}}</td>
+							<td>{{avaliacao.avaliado}}</td>
+							<td>{{avaliacao.data_encerramento|date:"d/m/Y"}}</td>
+
+							{% if funcionario.status %}
+								<td>
+									<span class="d-none">Encerrado</span>
+									<i class="fa-duotone fa-circle-xmark text-danger"></i>
+								</td>
+							{% else %}
+								<td>
+									<span class="d-none">Aberto</span>
+									<i class="fa-duotone fa-circle-check text-success"></i>
+								</td>
+							{%endif %}
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+
+		$(".table-avaliacoes").DataTable(config);
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		let perguntaCount = 0;
+
+		const perguntasContainer = document.getElementById("perguntasContainer");
+		const adicionarPerguntaBtn = document.getElementById("adicionarPergunta");
+	
+		adicionarPerguntaBtn.addEventListener("click", function () {
+			let currentCount = document.getElementById("perguntasContainer").childElementCount + 1;
+
+			perguntaCount++;
+	
+			const perguntaHtml = `
+				<div class="card mb-3" id="pergunta-${perguntaCount}">
+					<div class="card-body">
+						<h5 class="card-title">Pergunta ${currentCount}</h5>
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="tituloPergunta${perguntaCount}" name="titulo-pergunta-nova" placeholder="Título da Pergunta" required>
+							<label for="tituloPergunta${perguntaCount}">Título</label>
+						</div>
+						<div class="mb-3">
+							<label class="form-label" for="avaliacaoPergunta${perguntaCount}">Pergunta *</label>
+							<textarea class="ck-editor-5" id="avaliacaoPergunta${perguntaCount}" name="texto-pergunta-nova"></textarea>
+							<span class="word-count" id="avaliacaoPergunta${perguntaCount}_script-word-count"></span>
+						</div>
+						<button type="button" class="btn btn-danger btn-sm" onclick="removerPergunta(${perguntaCount})">Remover</button>
+					</div>
+				</div>
+			`;
+	
+			perguntasContainer.insertAdjacentHTML("beforeend", perguntaHtml);
+			inicarCKEditor();
+		});
+	});
+
+	function removerPergunta(perguntaId) {
+		const perguntaElement = document.getElementById(`pergunta-${perguntaId}`);
+		if (perguntaElement) {
+			perguntaElement.remove();
+		}
+	};
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const btnProximo1 = document.getElementById("btnProximo1");
+		const btnProximo2 = document.getElementById("btnProximo2");
+	
+		btnProximo1.addEventListener("click", function (event) {
+			const inputs = document.getElementById("modalAdicionarAvaliacao").querySelectorAll("input");
+			let allFieldsFilled = true;
+
+			inputs.forEach(function (input) {
+				if (!input.value.trim() && !input.classList.contains("ck-hidden")) {
+					allFieldsFilled = false;
+				}
+			});
+
+			if (!allFieldsFilled) {
+				alert("Por favor, preencha todos os campos obrigatórios.");
+			} else {
+				btnProximo1.setAttribute("data-bs-target", "#modalAdicionarAvaliacao2");
+				btnProximo1.setAttribute("data-bs-toggle", "modal");
+				btnProximo1.click();
+			};
+		});
+
+		btnProximo2.addEventListener("click", function (event) {
+			const inputs = document.getElementById("modalAdicionarAvaliacao2").querySelectorAll("input");
+			let allFieldsFilled = true;
+
+			inputs.forEach(function (input) {
+				if (!input.value.trim() && !input.classList.contains("ck-hidden")) {
+					allFieldsFilled = false;
+				}
+			});
+
+			if (!allFieldsFilled) {
+				alert("Por favor, preencha todos os campos obrigatórios.");
+			} else {
+				btnProximo2.setAttribute("data-bs-target", "#modalAdicionarAvaliacao3");
+				btnProximo2.setAttribute("data-bs-toggle", "modal");
+				btnProximo2.click();
+			};
+		});
+	});
+	
+</script>
+
+<script>
+	function verAvaliacao(avaliacaoId) {
+		location.replace(`{% url 'detalhes-avaliacao' 0 %}`.replace("0", avaliacaoId));
+	};
+</script>
+{% endblock %}

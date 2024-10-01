@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Minhas Férias{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/ferias/solicitar-ferias.html" %}
+{% include "modals/ferias/visualizar-documentos.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			Gerenciar Períodos & Solicitações
+		</div>
+		<div class="card-body">
+			<ul class="nav nav-tabs mb-3" id="tab-ferias" role="tablist" style="height: 2.5rem">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link active" id="periodo-tab" data-bs-toggle="tab" data-bs-target="#periodo-pane" type="button" role="tab">Minhas Férias</button>
+				</li>
+				{% if request.user.get_access == "admin" %}
+					<li class="nav-item flex-fill" role="presentation">
+						<button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes-pane" type="button" role="tab">Solicitações</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<form method="POST" action="" id="formRelatorioFerias" onsubmit="gerarRelatorio()">
+							{% csrf_token %}
+							<input type="hidden" name="relatorio" value="true" id="feriasRelatorio">
+							<button class="btn btn-secondary text-light" type="submit">Gerar Relatório</button>
+						</form>
+					</li>
+				{% endif %}
+			</ul>
+
+			<div class="tab-content" id="tab-ferias-content">
+				<div class="tab-pane fade show active" id="periodo-pane" role="tabpanel" aria-labelledby="periodo-tab" tabindex="0">
+					{% for ferias in minhas_ferias reversed %}
+						{% if ferias.status == False %}
+							<div class="card bg-body py-4 px-5 m-5">
+								<div class="row mb-4">
+									<div class="col">
+										<h4 style="white-space: pre-line">
+											Período
+											{{ferias.periodo}} - {{ferias.periodo}}
+										</h4>
+									</div>
+									<div class="col d-flex justify-content-end">
+										<h4 style="white-space: pre-line">
+											Saldo
+											{{ferias.saldo|absolute_days}} dias
+										</h4>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-3 d-flex justify-content-start">
+										<small style="white-space: pre-line">
+											Direito a férias a partir de
+											{{ferias.inicio|date:"d/m/Y"}}
+										</small>
+									</div>
+									<div class="col-3 d-flex justify-content-start">
+										<small style="white-space: pre-line">
+											Data limite para início
+											{{ferias.vencimento|date:"d/m/Y"}}
+										</small>
+									</div>
+									<div class="col d-flex justify-content-end">
+										<button type="button" class="btn btn-secondary text-light rounded-pill" 
+											onclick="solicitarFerias('{{ferias.inicio|date:"Y-m-d"}}', '{{ferias.vencimento|date:"Y-m-d"}}', {{ferias.saldo|absolute_days}})" style="width: 10rem; height: 4rem;">
+											Solicitar Férias
+										</button>
+									</div>
+								</div>
+							</div>
+						{% endif %}
+					{% endfor %}
+				</div>
+				
+				{% if request.user.get_access == "admin" %}
+					<div class="tab-pane fade" id="solicitacoes-pane" role="tabpanel" aria-labelledby="solicitacoes-tab" tabindex="0">
+						<div class="table-responsive">
+							<table class="table table-hover align-middle table-ferias">
+								<thead>
+									<tr>
+										<th scope="col">#</th>
+										<th scope="col">Observação</th>
+										<th scope="col">Entrada</th>
+										<th scope="col">Volta</th>
+										<th scope="col" class="text-center">Ações</th>
+									</tr>
+								</thead>
+								<tbody>
+									{% for solicitacao in solicitacoes %}
+										<tr data-id="{{solicitacao.id}}" role="button">
+											<th scope="row">{{forloop.counter}}</th>
+											<td>{{solicitacao.observacao}}</td>
+											<td>{{solicitacao.inicio|date:"d/m/Y"}}</td>
+											<td>{{solicitacao.final|date:"d/m/Y"}}</td>
+											<td class="text-center">
+												<div class="d-flex justify-content-around">
+													<a role="button" title="Aprovar solicitação" onclick="event.stopPropagation();" hx-post="{% url 'aprovar-solicitacao-ferias' solicitacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()"><i class="fa-thin fa-check text-success"></i></a>
+													<a role="button" title="Excluir solicitação" onclick="event.stopPropagation();" hx-post="{% url 'excluir-solicitacao-ferias' solicitacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()"><i class="fa-light fa-xmark text-danger"></i></a>
+												</div>
+											</td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{% endif %}
+			</div>
+			
+			<div class="d-flex justify-content-center align-items-center">
+				<img src="{% static 'images/background/ferias.svg' %}" class="img img-fluid" width="480">
+			</div>
+		</div>
+	</div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+
+		const table1 = $(".table-ferias").DataTable(config);
+
+		$("#solicitacoes-tab").on("click", function() {
+			setTimeout(() => {table1.draw(false)}, "200");
+		});
+
+		//####################################################################################
+
+		const tableRows = document.querySelector(".table-ferias").rows;
+		Array.from(tableRows).forEach(row => {
+			row.addEventListener("click", function() {
+				document.getElementById("overlay").style.display = "block";
+				const solicitacaoId = row.getAttribute("data-id");
+
+				$.ajax({
+					type: "GET",
+					url: `{% url "procurar-documentos" 0 %}`.replace("0", solicitacaoId),
+					success: function (data) {
+						document.getElementById("overlay").style.display = "none";
+
+						const modal = $("#modalVisualizarDocumentosFerias");
+
+						modal.find(".modal-title").html(`Solicitação de Férias - ${data.nome}`);
+						modal.find(".text-obs").html(data.observacao);
+						modal.find(".text-data").html(`${formatarData(data.inicio)} até ${formatarData(data.final)}`);
+						modal.find(".modal-body .row").children().remove();
+
+						if (data.docs.length > 0) {							
+							data.docs.forEach(item => {
+								let url = `{% url "stream-documento" 0 "ferias" "visualizar" %}`.replace("0", item.id);
+								modal.find(".modal-body .row").append(`<a href="${url}" target="_blank" class="col d-flex flex-column justify-content-center">
+								<i class="fa-duotone fa-file fa-2xl text-body"></i>
+								<p class="text-center">${item.caminho}</p>
+								</a>`);
+							});
+						} else {
+							modal.find(".modal-body .row").append(`
+								<p>Sem documentos enviados!</p>
+							`);
+						};
+
+						modal.modal("show");
+					},
+					error: function (error) {
+						alert(error);
+					}
+				});
+			});
+		});
+
+		//####################################################################################
+
+		document.querySelectorAll("tbody tr td[role='button']").forEach(function(cell) {
+			cell.addEventListener("click", function(event) {
+				event.stopPropagation();
+			});
+		});
+
+	});
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", (event) => {
+        const solicitacaoAbono = document.getElementById("solicitacaoAbono");
+        const solicitacaoNroDiasAbono = document.getElementById("solicitacaoNroDiasAbono");
+
+        solicitacaoAbono.addEventListener("change", function () {
+            if (this.checked) {
+                solicitacaoNroDiasAbono.removeAttribute("disabled");
+            } else {
+                solicitacaoNroDiasAbono.setAttribute("disabled", "disabled");
+                solicitacaoNroDiasAbono.value = 1;
+            }
+        });
+    });
+
+	function solicitarFerias(inicio, final, saldo) {
+		const modal = $("#modalSolicitarFerias");
+		modal.find("#solicitacaoInicio").val(inicio);
+		modal.find("#solicitacaoInicio").attr("min", inicio);
+		modal.find("#solicitacaoInicio").attr("max", final);
+
+		const totalFerias = modal.find("#solicitacaoNroDiasFerias");
+		const totalAbono = modal.find("#solicitacaoNroDiasAbono");
+
+		modal.find("#formSolicitacaoFerias").off("submit").on("submit", function(event) {
+			const feriasValue = parseInt(totalFerias.val(), 10) || 0;
+			const abonoValue = parseInt(totalAbono.val(), 10) || 0;
+	
+			if (feriasValue + abonoValue > saldo) {
+				event.preventDefault();
+				alert("A soma de dias de férias e abono não pode exceder o saldo disponível.");
+			}
+		});
+
+		modal.modal("show");
+	};
+
+	function gerarRelatorio() {
+		document.getElementById("overlay").style.display = "block";
+		
+		const form = document.getElementById("formRelatorioFerias");
+		const formData = new FormData(form);
+		
+		fetch(form.action, {
+			method: form.method,
+			body: formData,
+		})
+		.then(response => {
+			if (response.ok) {
+				document.getElementById("overlay").style.display = "none";
+			} else {
+				throw new Error("Erro ao enviar o formulario.");
+			}
+		})
+		.catch(error => {
+			console.error(error);
+			document.getElementById("overlay").style.display = "none";
+		});
+	
+		return false;
+	};
+</script>
+{% endblock %}

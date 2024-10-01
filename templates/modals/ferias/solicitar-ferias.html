@@ -1,0 +1,47 @@
+<div class="modal fade" id="modalSolicitarFerias" tabindex="-1" aria-labelledby="modalSolicitarFeriasLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<form method="POST" action="" class="modal-content" enctype="multipart/form-data" id="formSolicitacaoFerias">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalSolicitarFeriasLabel">Solicitação de Férias</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-check">
+					<input class="form-check-input me-2" type="checkbox" value="true" id="solicitacaoDecimo" name="decimo" style="height: 20px; width: 20px;">
+					<label class="form-check-label" for="solicitacaoDecimo" style="margin-top: 3px;">13º Salário</label>
+				</div>
+				<div class="form-check mb-3">
+					<input class="form-check-input me-2" type="checkbox" value="true" id="solicitacaoAbono" name="abono" style="height: 20px; width: 20px;">
+					<label class="form-check-label" for="solicitacaoAbono" style="margin-top: 3px;">Abono Pecuniário</label>
+				</div>
+				<div class="row mb-3">
+					<div class="col">
+						<label class="form-label" for="solicitacaoInicio">Inicio *</label>
+						<input type="date" class="form-control" name="inicio" id="solicitacaoInicio" required>
+					</div>
+					<div class="col">
+						<label class="form-label" for="solicitacaoNroDiasFerias">Total Dias de Férias *</label>
+						<input type="number" class="form-control" name="total_ferias" id="solicitacaoNroDiasFerias" min="0" max="30" value="15" required>
+					</div>
+					<div class="col">
+						<label class="form-label" for="solicitacaoNroDiasAbono">Total Dias de Abono *</label>
+						<input type="number" class="form-control" name="total_abono" id="solicitacaoNroDiasAbono" min="0" max="30" value="0" disabled required>
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<textarea class="form-control" id="solicitacaoObservacao" name="observacao" placeholder required></textarea>
+					<label class="form-label" for="solicitacaoObservacao">Observação *</label>
+				</div>
+				<div class="mb-3">
+					<label for="solicitacaoArquivos" class="form-label">Arquivos para a solicitação (PDF, JPG, PNG)</label>
+					<input class="form-control" type="file" id="solicitacaoArquivos" name="arquivo" multiple>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Solicitar</button>
+			</div>
+		</form>
+	</div>
+</div>

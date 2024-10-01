@@ -1,0 +1,38 @@
+<div class="modal fade" id="modalAlterarSenha" tabindex="-1" aria-labelledby="modalAlterarSenhaLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="{% url 'alterar-senha' %}" class="modal-content" id="formAlterarSenha">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAlterarSenhaLabel">Alterar Senha</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<input type="text" name="username" autocomplete="username" style="display: none;" disabled>
+				<div class="form-floating mb-3">
+					<input type="password" class="form-control" id="id_old_password" name="old_password" autocomplete="current-password" placeholder required>
+					<label class="form-label" for="id_old_password">Senha atual</label>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="password" class="form-control" id="id_new_password1" name="new_password1" autocomplete="new-password" placeholder required>
+					<label class="form-label" for="id_new_password1">Nova senha</label>
+					<div class="form-text mt-2">
+						<ul>
+							<li>Sua senha não pode ser muito parecida com o resto das suas informações pessoais.</li>
+							<li>Sua senha precisa conter pelo menos 8 caracteres.</li>
+							<li>Sua senha não pode ser uma senha comumente utilizada.</li>
+							<li>Sua senha não pode ser inteiramente numérica.</li>
+						</ul>
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="password" class="form-control" id="id_new_password2" name="new_password2" autocomplete="new-password" placeholder required>
+					<label class="form-label" for="id_new_password2">Confirme nova senha</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Alterar</button>
+			</div>
+		</form>
+	</div>
+</div>

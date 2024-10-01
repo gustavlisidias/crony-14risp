@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Registro de Pontos | {{colaborador.nome_completo}}{% endblock %}
+
+{% block content %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			<a class="text-light" href="{% url 'pontos' %}">Registro de Pontos</a>
+			<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+			Colaborador
+			<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+			{{colaborador.nome_completo}}
+		</div>
+
+		<div class="card-body">
+			<!-- Filtros -->
+			<div class="card card-filtros mb-4">
+				<div class="card-header">
+					Informações & Filtros
+				</div>
+				<div class="card-body">
+					<form method="GET" id="formFiltrarPonto">
+						<div class="row mb-3">
+							<div class="col-md-4 col-12 d-flex align-items-center">
+								<img class="rounded-circle" src="{{colaborador.id|photo:'url'}}">
+								<div>
+									<p class="ms-3 mb-0">{{colaborador.nome_completo}}</p>
+									<p class="ms-3 mb-0">{{colaborador.cargo}} - {{colaborador.setor}}</p>
+									<p class="ms-3 mb-0">{{jornadas.first.contrato.descricao}}</p>
+									<p class="ms-3 mb-0">Banco de Horas: <b class="{% if '-' in dados.banco|timedelta %} text-danger {% else %} text-success {% endif %}">{{dados.banco|timedelta}}</b></p>
+									<p class="ms-3 mb-0">Score (Período): <b>{{dados.notas.0|floatformat:02}}</b></p>
+								</div>
+							</div>
+							<div class="col-md-4 col-12">
+								<label class="form-label fs-6">Data Inicial</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_inicial" class="form-control" value="{{filtros.inicio}}" style="height: 43px;">
+								</div>
+							</div>
+							<div class="col-md-4 col-12">
+								<label class="form-label fs-6">Data Final</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_final" class="form-control" value="{{filtros.final}}" style="height: 43px;">
+								</div>
+							</div>
+						</div>
+
+						<div class="d-flex justify-content-end">								
+							<div>
+								<button type="submit" class="btn btn-primary text-light float-end ms-2">Aplicar</button>
+								<a href="{% url 'detalhes-ponto' colaborador.id %}" role="button" class="btn btn-primary text-light float-end">Limpar</a>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table table-hover align-middle table-pontos-funcionario display nowrap" width="100%">
+					<thead>
+						<tr>
+							<th scope="col">Data</th>
+							{% for nro in nro_colunas %}
+								{% if forloop.counter|even %}
+									<th>{{forloop.counter}}ª Saída</th>
+								{% else %}
+									<th>{{forloop.counter}}ª Entrada</th>
+								{% endif %}
+							{% endfor %}
+							<th scope="col">Total</th>
+							<th scope="col">Saldo</th>
+							<th scope="col">Banco</th>
+							<th scope="col">Motivo</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for data, dados in pontos.items reversed %}
+							{% for dado in dados %}
+								<tr>
+									<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
+
+									{% for nro in nro_colunas %}
+										<td>{{ dado.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
+									{% endfor %}
+
+									<td class="{% if "-" in dado.total|timedelta %} text-danger {% elif dado.total|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+										{{dado.total|timedelta}}
+									</td>
+									<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+										{{dado.saldo|timedelta}}
+									</td>
+									<td class="{% if "-" in dado.banco|timedelta %} text-danger {% elif dado.banco|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+										{{dado.banco|timedelta}}
+									</td>
+									<td>{{dado.motivo|default_if_none:""}}</td>
+								</tr>
+							{% endfor %}
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+			scrollX: true,
+			paging: false,
+		});
+
+		const table1 = $(".table-pontos-funcionario").DataTable(config);
+	});
+</script>
+{% endblock %}

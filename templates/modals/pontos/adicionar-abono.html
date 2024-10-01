@@ -1,0 +1,44 @@
+<div class="modal fade" id="modalSolicitarAbono" tabindex="-1" aria-labelledby="modalSolicitarAbonoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<form method="POST" action="{% url 'solicitar-abono' %}" enctype='multipart/form-data' class="modal-content" id="formSolicitarAbono">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalSolicitarAbonoLabel">Solicitar Abono</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="row mb-3">
+					<label class="form-label">Período da abonação</label>
+					<div class="col">
+						<label class="form-label" for="abonoInicio">Inicio</label>
+						<input type="datetime-local" class="form-control" name="inicio" id="abonoInicio" required>
+					</div>
+					<div class="col">
+						<label class="form-label" for="abonoFinal">Final</label>
+						<input type="datetime-local" class="form-control" name="final" id="abonoFinal" required>
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" name="tipo" id="abonoTipo" onchange="alertaAbono(this)" required>
+						{% for tipo in tipos %}
+							<option value="{{tipo.key}}">{{tipo.value}}</option>
+						{% endfor %}
+					</select>
+					<label for="abonoTipo">Tipo</label>
+				</div>
+				<div class="form-floating mb-3">
+					<textarea class="form-control" placeholder="Motivo" id="abonoMotivo" name="motivo" required></textarea>
+					<label for="abonoMotivo">Motivo da solicitação</label>
+				</div>
+				<div class="input-group mb-3">
+					<label class="input-group-text" for="abonoArquivo">Arquivo</label>
+					<input type="file" class="form-control" id="abonoArquivo" name="arquivo">
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Enviar</button>
+			</div>
+		</form>
+	</div>
+</div>

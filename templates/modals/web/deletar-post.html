@@ -1,0 +1,20 @@
+<div class="modal fade" id="modalExcluirPost" tabindex="-1" aria-labelledby="modalExcluirPostLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="" class="modal-content" id="formExcluirPost">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalExcluirPostLabel">Excluir Postagem</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body d-flex justify-content-center">
+				<div>
+					<small>Tem certeza que deseja excluir esta postagem?</small>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Excluir</button>
+			</div>
+		</form>
+	</div>
+</div>

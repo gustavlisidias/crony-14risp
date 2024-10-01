@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Configurações{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/configuracoes/adicionar-jornada.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			Configurações
+		</div>
+		<div class="card-body" style="min-height: 50vh">
+			<div class="d-flex align-items-start">
+				<div class="nav flex-column nav-pills me-4 w-25" id="pills-tab" role="tablist" aria-orientation="vertical">
+					<button class="nav-link text-start active" id="pills-documentos-tab" data-bs-toggle="pill" data-bs-target="#pills-documentos" type="button" role="tab" aria-controls="pills-documentos" aria-selected="true">Geral</button>
+					<button class="nav-link text-start" id="pills-ponto-tab" data-bs-toggle="pill" data-bs-target="#pills-ponto" type="button" role="tab" aria-controls="pills-ponto" aria-selected="false">Registro de Ponto</button>
+					<button class="nav-link text-start" id="pills-contratos-tab" data-bs-toggle="pill" data-bs-target="#pills-contratos" type="button" role="tab" aria-controls="pills-contratos" aria-selected="false">Jornadas de Trabalho</button>          
+					<button class="nav-link text-start" id="pills-empresa-tab" data-bs-toggle="pill" data-bs-target="#pills-empresa" type="button" role="tab" aria-controls="pills-empresa" aria-selected="false">Empresa</button>
+				</div>
+
+				<div class="tab-content w-75" id="pills-tabContent">
+					<!-- Documentos -->
+					<div class="tab-pane fade show active" id="pills-documentos" role="tabpanel" aria-labelledby="pills-documentos-tab" tabindex="0">
+						<form method="POST" action="" id="formConfiguracaoDocumentos">
+							{% csrf_token %}
+							<h6>SITE</h6>
+							<hr>
+							<div class="form-group mb-3">
+								<label for="geralHosts">Hosts</label>
+								<input type="text" class="form-control" id="geralHosts" name="hosts" {% for variavel in variaveis %}{% if variavel.chave == "HOST" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+							<div class="form-group mb-3">
+								<label for="geralHostsExterno">Hosts Externos</label>
+								<input type="text" class="form-control" id="geralHostsExterno" name="hosts_externo" {% for variavel in variaveis %}{% if variavel.chave == "HOST_EXTERNO" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+
+							<h6 class="mt-5">IDENTIFICAÇÃO DA EMPRESA</h6>
+							<hr>
+							<div class="form-group mb-3">
+								<label for="geralNomeEmpresa">Nome da Empresa</label>
+								<input type="text" class="form-control" id="geralNomeEmpresa" name="nome_empresa" {% for variavel in variaveis %}{% if variavel.chave == "NOME_EMPRESA" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+							<div class="form-group mb-3">
+								<label for="geralCNPJ">CNPJ</label>
+								<input type="text" class="form-control" id="geralCNPJ" name="cnpj" {% for variavel in variaveis %}{% if variavel.chave == "CNPJ" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+							<div class="form-group mb-3">
+								<label for="geralInscricao">Inscrição Estadual</label>
+								<input type="text" class="form-control" id="geralInscricao" name="insc_estadual" {% for variavel in variaveis %}{% if variavel.chave == "INSC_ESTADUAL" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+							<div class="form-group mb-3">
+								<label for="geralEmail">Email de Indentificação</label>
+								<input type="text" class="form-control" id="geralEmail" name="email" {% for variavel in variaveis %}{% if variavel.chave == "EMAIL" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+
+							<h6 class="mt-5">DIRETÓRIOS</h6>
+							<hr>
+							<div class="form-group mb-3">
+								<label for="geralCaminho">Caminho de Documentos Diversos</label>
+								<input type="text" class="form-control" id="geralCaminho" name="caminho_documentos" {% for variavel in variaveis %}{% if variavel.chave == "PATH_DOCS" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+								<small id="geralCaminhoHelp" class="form-text text-muted">O caminho em seu servidor onde se encontra os documentos, não relacionados a funcionários</small>
+							</div>
+							<div class="form-group mb-3">
+								<label for="geralCaminhoFuncionarios">Caminho de Documentos dos Funcionários</label>
+								<input type="text" class="form-control" id="geralCaminhoFuncionarios" name="caminho_funcionarios" {% for variavel in variaveis %}{% if variavel.chave == "PATH_DOCS_EMP" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+								<small id="geralCaminhoFuncionariosHelp" class="form-text text-muted">O caminho em seu servidor onde se encontra os documentos de funcionários</small>
+							</div>
+							<button type="submit" class="btn btn-primary text-light float-end ms-2">Salvar</button>
+						</form>
+					</div>
+
+					<!-- Registro de Ponto Externo -->
+					<div class="tab-pane fade" id="pills-ponto" role="tabpanel" aria-labelledby="pills-ponto-tab" tabindex="0">
+						<form method="POST" action="" id="formConfiguracaoDocumentos">
+							{% csrf_token %}
+							<h6>PERMISSÕES PARA REGISTRO</h6>
+							<hr>
+							<div class="form-group mb-3">
+								<label for="pontoMatriculas">Matrículas</label>
+								<input type="text" class="form-control" id="pontoMatriculas" name="matriculas_externo" {% for variavel in variaveis %}{% if variavel.chave == "MATRICULAS_EXTERNAS" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+								<small id="pontoMatriculasHelp" class="form-text text-muted">Matrículas dos funcionários liberados para registro externo</small>
+							</div>
+							<div class="form-check">
+								<input class="form-check-input" type="checkbox" value="True" id="pontoRegistrar" name="registrar_externo" {% for variavel in variaveis %}{% if variavel.chave == "REGISTRO_EXTERNO" and variavel.valor == "True" %}checked{% endif %}{% endfor %}>
+								<label class="form-check-label" for="pontoRegistrar">Permitir registros externos</label>
+							</div>
+							<button type="submit" class="btn btn-primary text-white float-end ms-2">Salvar</button>
+						</form>
+					</div>
+
+					<!-- Contratos e Jornadas de Trabalho -->
+					<div class="tab-pane fade" id="pills-contratos" role="tabpanel" aria-labelledby="pills-contratos-tab" tabindex="0">					
+						<form method="POST" action="" onsubmit="enviarFormulario()" id="formConfiguracaoJornadas">
+							{% csrf_token %}
+							<h6>CONTRATOS & JORNADAS DE TRABALHO</h6>
+							<hr>
+							{% for contrato, dias in jornadas.items %}
+								<div class="d-flex justify-content-between">
+									<h6>Jornada do contrato: {{contrato}}</h6>
+									<i class="fa-duotone fa-trash text-body" role="button" title="Remover jornada" onclick="removerJornada(this)"></i>
+								</div>
+								<input type="hidden" name="jornada-{{contrato.id}}">
+								<div class="table-responsive mb-3">
+									<table class="table table-jornada table-borderless align-middle fs-6" data-id={{contrato.id}}>
+										<thead>
+											<tr>
+												<th scope="col">Dia</th>
+												{% for dia, horarios in dias.items %}
+													{% if forloop.first %}
+														{% for hora in horarios %}
+															<th scope="col">{{hora.tipo}}</th>
+														{% endfor %}
+													{% endif %}
+												{% endfor %}
+											</tr>
+										</thead>
+										<tbody class="table-group-divider">
+											{% for dia, horarios in dias.items %}
+												<tr>
+													<th scope="row"><input type="hidden" name="dia" id="jornadaDia" value="{{dia}}">{{dia|weekday}}</th>
+													{% for hora in horarios %}
+														<td><input type="time" class="form-control" name="{{hora.tipo}}" id="jornada{{hora.tipo}}" value="{{hora.hora|default_if_none:"00:00"}}"></td>
+													{% endfor %}
+													<td style="display: flex;position: relative;top: 10px;padding: 0px 5px;"><i role="button" title="Adicionar horário" onclick="AdicionarHorario(this)" class="fa-duotone fa-plus"></i></td>
+													<td style="display: flex;position: relative;top: 10px;padding: 0px 5px;"><i role="button" title="Remover horário" onclick="RemoverHorario(this)" class="fa-duotone fa-minus"></i></td>
+												</tr>
+											{% endfor %}
+										</tbody>
+									</table>
+								</div>
+							{% endfor %}
+							<button type="submit" class="btn btn-primary text-light float-end ms-2" name="jornadas" value="true">Salvar</button>
+							<button type="button" class="btn btn-secondary text-light float-end ms-2" data-bs-toggle="modal" data-bs-target="#modalAdicionarJornada">Adicionar</button>
+						</form>
+					</div>
+
+					<!-- Empresa (Setores e Cargos, Tipos de Atividade e Tipos de Documentos) -->
+					<div class="tab-pane fade" id="pills-empresa" role="tabpanel" aria-labelledby="pills-empresa-tab" tabindex="0">
+						<form method="POST" action="" id="formConfiguracaoEmpresa">
+							{% csrf_token %}
+							<h6>SETORES, CARGOS, TIPOS DE ATIVIDADES & DOCUMENTOS</h6>
+							<hr>
+
+							<div class="row">
+								<div class="col-4">
+									<h6>SETORES</h6>
+									<input type="text" class="form-control mb-2" id="novoSetor">
+									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarSetor">Adicionar</button>
+								</div>
+								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
+									<ul class="list-group list-group-flush list-setores">
+										{% for setor in setores %}
+											<input type="hidden" name="setor" value="{{setor.setor}}">
+											<li class="list-group-item d-flex justify-content-between align-items-start">
+												{{setor.setor}}
+												<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 1)"></i>
+											</li>
+										{% endfor %}
+									</ul>
+								</div>
+							</div>
+
+							<hr>
+
+							<div class="row">
+								<div class="col-4">
+									<h6>CARGOS</h6>
+									<input type="text" class="form-control mb-2" id="novoCargo">
+									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarCargo">Adicionar</button>
+								</div>
+								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
+									<ul class="list-group list-group-flush list-cargos">
+										{% for cargo in cargos %}
+											<input type="hidden" name="cargo" value="{{cargo.cargo}}">
+											<li class="list-group-item d-flex justify-content-between align-items-start">
+												{{cargo.cargo}}
+												<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 1)"></i>
+											</li>
+										{% endfor %}
+									</ul>
+								</div>
+							</div>
+
+							<hr>
+
+							<div class="row">
+								<div class="col-4">
+									<h6>TIPOS DE ATIVIDADE</h6>
+									<div class="d-flex">
+										<input type="color" value="#000000" class="form-control form-control-color mb-2 me-2 w-25 px-2 py-1" id="novoCorAtividade">
+										<input type="text" class="form-control mb-2" id="novoTipoAtividade">
+									</div>
+									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarAtividade">Adicionar</button>
+								</div>
+								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
+									<ul class="list-group list-group-flush list-atividades">
+										{% for tipo in tipos_atividade %}
+											<input type="hidden" name="tipo" value="{{tipo.tipo}}">
+											<input type="hidden" name="cor" value="{{tipo.cor}}">
+											<li class="list-group-item d-flex justify-content-between align-items-start">
+												<div>
+													<i class="fa-solid fa-circle" style="color: {{tipo.cor}};"></i> 
+													{{tipo.tipo}}
+												</div>
+												<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 2)"></i>
+											</li>
+										{% endfor %}
+									</ul>
+								</div>
+							</div>
+
+							<hr>
+
+							<div class="row mb-3">
+								<div class="col-4">
+									<h6>TIPOS DE DOCUMENTOS</h6>
+									<div class="d-flex">
+										<input type="text" class="form-control mb-2 me-2 w-25" id="novoCodigoDocumento" placeholder="000">
+										<input type="text" class="form-control mb-2" id="novoDocumento">
+									</div>
+									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarDocumento">Adicionar</button>
+								</div>
+								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
+									<ul class="list-group list-group-flush list-documentos">
+										{% for tipo in tipos_documento %}
+											<input type="hidden" name="documento" value="{{tipo.tipo}}">
+											<input type="hidden" name="codigo" value="{{tipo.codigo}}">
+											<li class="list-group-item d-flex justify-content-between align-items-start">
+												{{tipo.codigo}} - {{tipo.tipo}}
+												<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 2)"></i>
+											</li>
+										{% endfor %}
+									</ul>
+								</div>
+							</div>
+
+							<button type="submit" class="btn btn-primary text-light float-end ms-2">Salvar</button>
+						</form>            
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+<div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+	function AdicionarHorario(elemento) {
+		let linha = elemento.closest("tr");
+		let inputs = linha.querySelectorAll("td input");
+		let tipo = "";
+		let id = "";
+
+		if (inputs.length > 0) {
+			tipo = inputs[inputs.length - 1].parentElement.querySelector(".form-control").name == "Entrada" ? "Saída" : "Entrada";
+			id = inputs[inputs.length - 1].parentElement.querySelector(".form-control").name == "Entrada" ? "jornadaSaída" : "jornadaEntrada";
+		} else {
+			tipo = "Entrada";
+			id = "jornadaEntrada";
+		};
+
+		let novoInput = document.createElement("input");
+		novoInput.id = id;
+		novoInput.type = "time";
+		novoInput.className = "form-control";
+		novoInput.name = tipo;
+		novoInput.value = "00:00";
+
+		let novaColuna = document.createElement("td");
+		novaColuna.appendChild(novoInput);
+		linha.insertBefore(novaColuna, elemento.parentElement);
+	};
+
+	function RemoverHorario(elemento) {
+		let linha = elemento.closest("tr");
+		let inputs = linha.querySelectorAll("td input");
+		let ultimaColuna = inputs[inputs.length - 1].parentElement;
+
+		if (inputs) {
+			linha.removeChild(ultimaColuna);
+		}
+	};
+
+	function removerItemLista(element, nroEle) {
+		const listItem = $(element).closest('li');
+		const hiddenInputs = listItem.prevAll('input[type="hidden"]').slice(0, nroEle);
+		listItem.remove();
+		hiddenInputs.remove();
+	}
+
+	function removerJornada(element) {
+		element.parentElement.nextElementSibling.nextElementSibling.remove(); // tabela
+		element.parentElement.nextElementSibling.remove(); // input hidden
+		element.parentElement.remove(); // titulo + botão
+	};
+
+	function gerarJornada(linhas) {
+		const objeto = {};      
+
+		linhas.forEach((linha) => {
+			const dia = parseInt(linha.querySelector(`input[name="dia"]`).value);
+			const horariosEntrada = [];
+			const horariosSaida = [];
+			
+			linha.querySelectorAll(`input[name="Entrada"]`).forEach((input) => {
+				horariosEntrada.push(input.value);
+			});
+			
+			linha.querySelectorAll(`input[name="Saída"]`).forEach((input) => {
+				horariosSaida.push(input.value);
+			});
+
+			const horarios = {};
+			for (let i = 0; i < horariosEntrada.length; i++) {
+				horarios[`entrada${i+1}`] = horariosEntrada[i];
+				horarios[`saida${i+1}`] = horariosSaida[i];
+			}
+
+			objeto[dia] = horarios;
+		});
+
+		return objeto;
+	};
+
+	function enviarFormulario() {
+		document.querySelectorAll(".table-jornada").forEach(tabela => {
+			const id = tabela.dataset.id;
+			const linhas = tabela.querySelectorAll("tbody tr");
+			const dados = gerarJornada(linhas);
+			document.getElementsByName(`jornada-${id}`)[0].value = JSON.stringify(dados);
+		});
+	};
+
+	document.addEventListener("DOMContentLoaded", function () {
+		$('#btnAdicionarSetor').on('click', function() {
+			const setor = $('#novoSetor').val();
+	
+			$('.list-setores').prepend(`
+				<input type="hidden" name="setor" value="${setor}">
+				<li class="list-group-item d-flex justify-content-between align-items-start">
+					${setor}
+					<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 1)"></i>
+				</li>
+			`);
+
+			$('#novoSetor').val('');
+		});
+
+		$('#btnAdicionarCargo').on('click', function() {
+			const cargo = $('#novoCargo').val();
+	
+			$('.list-cargos').prepend(`
+				<input type="hidden" name="cargo" value="${cargo}">
+				<li class="list-group-item d-flex justify-content-between align-items-start">
+					${cargo}
+					<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 1)"></i>
+				</li>
+			`);
+
+			$('#novoCargo').val('');
+		});
+
+		$('#btnAdicionarAtividade').on('click', function() {
+			const tipo = $('#novoTipoAtividade').val();
+			const cor = $('#novoCorAtividade').val();	
+	
+			$('.list-atividades').prepend(`
+				<input type="hidden" name="tipo" value="${tipo}">
+				<input type="hidden" name="cor" value="${cor}">
+				<li class="list-group-item d-flex justify-content-between align-items-start">
+					<div>
+						<i class="fa-solid fa-circle" style="color: ${cor};"></i>
+						${tipo}
+					</div>
+					<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 2)"></i>
+				</li>
+			`);
+
+			$('#novoTipoAtividade').val('');
+			$('#novoCorAtividade').val('#000000');
+		});
+
+		$('#btnAdicionarDocumento').on('click', function() {
+			const documento = $('#novoDocumento').val();
+			const codigo = $('#novoCodigoDocumento').val();
+			let codigoExistente = false;
+
+			$('.list-documentos input[name="codigo"]').each(function() {
+				if ($(this).val() === codigo) {
+					codigoExistente = true;
+					alert(`O código ${codigo} já foi utilizado anteriormente!`);
+				}
+			});
+
+			if (!codigoExistente) {
+				$('.list-documentos').prepend(`
+					<input type="hidden" name="documento" value="${documento}">
+					<input type="hidden" name="codigo" value="${codigo}">
+					<li class="list-group-item d-flex justify-content-between align-items-start">
+						${codigo} - ${documento}
+						<i class="fa-thin fa-x text-danger" role="button" onclick="removerItemLista(this, 2)"></i>
+					</li>
+				`);
+
+				$('#novoDocumento').val('');
+				$('#novoCodigoDocumento').val('');
+			};
+		});
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 600,
+		});
+
+		const table = $(".table-logs").DataTable(config);
+	});
+</script>
+{% endblock %}

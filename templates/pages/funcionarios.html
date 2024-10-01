@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Colaboradores{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/funcionarios/adicionar-funcionario.html" %}
+{% include "modals/funcionarios/visualizar-funcionario.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>Colaboradores</div>
+			{% if request.user.get_access == "admin" %}
+				<div class="btn-group">
+					<button class="btn btn-secondary text-light" type="button" title="Novo funcionário" data-bs-toggle="modal" data-bs-target="#modalAdicionarFuncionario">
+						Adicionar
+					</button>
+					<form method="GET" action="{% url 'exportar-funcionarios' %}" class="btn btn-secondary p-0 m-0" id="formExportarFuncionarios" onsubmit="gerarRelatorio()">
+						<button class="btn btn-secondary text-light" type="submit" title="Exportar funcionários">
+							Exportar
+						</button>
+					</form>
+				</div>
+			{% endif %}
+		</div>
+		<div class="card-body table-responsive">
+			<table class="table table-hover align-middle table-funcionarios">
+				<thead>
+					<tr>
+						<th scope="col">Matricula</th>
+						<th scope="col">Nome</th>
+						<th scope="col">Cargo</th>
+						<th scope="col">Setor</th>
+						<th scope="col">Gestor</th>
+						<th scope="col">Ativo</th>
+						<th scope="col">Data Contratação</th>
+						<th class="text-center" scope="col">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for funcionario in funcionarios %}
+						<tr>
+							<th scope="row">{{funcionario.matricula}}</th>
+							<td>{{funcionario}}</td>
+							<td>{{funcionario.cargo.cargo}}</td>
+							<td>{{funcionario.setor.setor}}</td>
+							<td>{{funcionario.gerente|default_if_none:""}}</td>
+
+							{% if funcionario.data_demissao %}
+								<td>
+									<span class="d-none">Inativo</span>
+									<i class="fa-duotone fa-circle-xmark text-danger"></i>
+								</td>
+							{% else %}
+								<td>
+									<span class="d-none">Ativo</span>
+									<i class="fa-duotone fa-circle-check text-success"></i>
+								</td>
+							{%endif %}
+
+							<td>{{funcionario.data_contratacao|date:"d/m/Y"}}</td>
+
+							{% if request.user.get_access == "admin" or request.user == funcionario.gerente.usuario or request.user == funcionario.usuario %}
+								<td class="text-center">
+									<a href="{% url 'editar-funcionario' funcionario.id %}" title="Editar usuário">
+										<i class="fa-thin fa-user-pen fa-lg text-body"></i>
+									<a>
+								</td>
+							{% else %}
+								<td class="text-center">
+									<a role="button" title="Ver usuário" onclick="visualizarFuncionario({nome: '{{funcionario}}', cargo: '{{funcionario.cargo.cargo}}', setor: '{{funcionario.setor.setor}}', foto: '{{funcionario.id|photo}}', contato: '{{funcionario.contato}}', resposavel: '{{funcionario.gerente}}'})">
+										<i class="fa-thin fa-user-tag fa-lg text-body"></i>
+									<a>
+								</td>
+							{% endif %}
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+
+		$(".table-funcionarios").DataTable(config);
+	});
+</script>
+
+<script>
+	function updateSelectCidades(estado) {
+		$.ajax({
+			type: "GET",
+			url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
+			success: function (data) {
+				let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
+
+				for (let i = 0; i < data.length; i++) {
+					options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
+				};
+
+				$(`[name="cidade"]`).each(function () {
+					$(this).html(options);
+				});
+			},
+			error: function (error) {
+				alert(error.responseJSON.mensagem);
+			}
+		});
+	};
+
+	function visualizarFuncionario(funcionario) {
+		const modal = $("#modalVisualizarFuncionario");
+		const src = funcionario.foto == "None" || funcionario.foto == "" ? "static/images/avatar.jpg" : `media/${funcionario.foto}`;
+		const contato = funcionario.contato == "None" || funcionario.contato == "" ? "" : funcionario.contato;
+
+		modal.find(".foto-funcionario").attr("src", src);
+		modal.find(".nome-funcionario").html(funcionario.nome);
+		modal.find(".cargo-funcionario").html(`${funcionario.cargo} de ${funcionario.setor}`);
+		modal.find(".gerente-funcionario").html(funcionario.gerente);
+		modal.find(".contato-funcionario").html(contato);
+		modal.modal("show");
+	};
+
+	function gerarRelatorio() {
+		document.getElementById("overlay").style.display = "block";
+		
+		const form = document.getElementById("formExportarFuncionarios");
+		const formData = new FormData(form);
+		
+		fetch(form.action, {
+			method: form.method,
+			body: formData,
+		})
+		.then(response => {
+			if (response.ok) {
+				document.getElementById("overlay").style.display = "none";
+			} else {
+				throw new Error("Erro ao enviar o formulario.");
+			}
+		})
+		.catch(error => {
+			console.error(error);
+			document.getElementById("overlay").style.display = "none";
+		});
+	
+		return false;
+	};
+</script>
+{% endblock %}

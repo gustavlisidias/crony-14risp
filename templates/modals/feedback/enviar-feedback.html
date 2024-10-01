@@ -1,0 +1,112 @@
+<div class="modal fade" id="modalEnviarFeedback" data-bs-focus="false" aria-labelledby="modalEnviarFeedbackLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="{% url 'enviar-feedback' %}" class="modal-content" id="formEnviarFeedback">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEnviarFeedbackLabel">Enviar Feedback</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="row mb-3">
+					<div class="col text-center">
+						<h5>Comprometimento</h5>
+						<p class="text-muted" style="min-height: 80px">
+							Assiduidade, disponibilidade e compromisso para melhor aproveitamento das atividades internas
+						</p>
+						<div class="rating">
+							<input value="5" name="comprometimento" id="comprometimento5" type="radio">
+							<label for="comprometimento5"></label>
+							<input value="4" name="comprometimento" id="comprometimento4" type="radio">
+							<label for="comprometimento4"></label>
+							<input value="3" name="comprometimento" id="comprometimento3" type="radio">
+							<label for="comprometimento3"></label>
+							<input value="2" name="comprometimento" id="comprometimento2" type="radio">
+							<label for="comprometimento2"></label>
+							<input value="1" name="comprometimento" id="comprometimento1" type="radio">
+							<label for="comprometimento1"></label>
+						</div>
+					</div>
+					<div class="col text-center">
+						<h5>Conhecimento</h5>
+						<p class="text-muted" style="min-height: 80px">
+							Conhecimento prático e teórico das atividades relacionas à função
+						</p>
+						<div class="rating">
+							<input value="5" name="conhecimento" id="conhecimento5" type="radio">
+							<label for="conhecimento5"></label>
+							<input value="4" name="conhecimento" id="conhecimento4" type="radio">
+							<label for="conhecimento4"></label>
+							<input value="3" name="conhecimento" id="conhecimento3" type="radio">
+							<label for="conhecimento3"></label>
+							<input value="2" name="conhecimento" id="conhecimento2" type="radio">
+							<label for="conhecimento2"></label>
+							<input value="1" name="conhecimento" id="conhecimento1" type="radio">
+							<label for="conhecimento1"></label>
+						</div>
+					</div>
+				</div>
+				<div class="row mb-3">
+					<div class="col text-center">
+						<h5>Produtividade</h5>
+						<p class="text-muted" style="min-height: 80px">
+							Foco no crescimento diário da produtividade com estrita observância aos aspectos de qualidade do trabalho
+						</p>
+						<div class="rating">
+							<input value="5" name="produtividade" id="produtividade5" type="radio">
+							<label for="produtividade5"></label>
+							<input value="4" name="produtividade" id="produtividade4" type="radio">
+							<label for="produtividade4"></label>
+							<input value="3" name="produtividade" id="produtividade3" type="radio">
+							<label for="produtividade3"></label>
+							<input value="2" name="produtividade" id="produtividade2" type="radio">
+							<label for="produtividade2"></label>
+							<input value="1" name="produtividade" id="produtividade1" type="radio">
+							<label for="produtividade1"></label>
+						</div>
+					</div>
+					<div class="col text-center">
+						<h5>Comportamento</h5>
+						<p class="text-muted" style="min-height: 80px">
+							Cuidados com o ambiente físico de trabalho, e Postura frente às regras de convivo social
+						</p>
+						<div class="rating">
+							<input value="5" name="comportamento" id="comportamento5" type="radio">
+							<label for="comportamento5"></label>
+							<input value="4" name="comportamento" id="comportamento4" type="radio">
+							<label for="comportamento4"></label>
+							<input value="3" name="comportamento" id="comportamento3" type="radio">
+							<label for="comportamento3"></label>
+							<input value="2" name="comportamento" id="comportamento2" type="radio">
+							<label for="comportamento2"></label>
+							<input value="1" name="comportamento" id="comportamento1" type="radio">
+							<label for="comportamento1"></label>
+						</div>
+					</div>
+				</div>
+				<label class="form-label" for="feedbackModelo">Modelo *</label>
+				<select class="form-select mb-3" id="feedbackModelo" name="modelo" required onchange="atualizarModelo(this)">
+					<option value="" selected hidden>Selecione um modelo...</option>
+					{% for modelo in modelos %}
+						<option value="{{modelo.key}}">{{modelo.value}}</option>
+					{% endfor %}
+				</select>
+				<label class="form-label" for="feedbackDestinatario">Funcionário *</label>
+				<select class="form-select mb-3" id="feedbackDestinatario" name="destinatario" required>
+					<option value="" selected hidden>Selecione um funcionário...</option>
+					{% for funcionario in funcionarios %}
+						<option value="{{funcionario.id}}">{{funcionario}}</option>
+					{% endfor %}
+				</select>
+				<div class="mb-3">
+					<label class="form-label" for="feedbackMensagem">Mensagem *</label>
+					<textarea class="ck-editor-5" id="feedbackMensagem" name="mensagem"></textarea>
+					<span class="word-count" id="feedbackMensagem_script-word-count"></span>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Enviar</button>
+			</div>
+		</form>
+	</div>
+</div>

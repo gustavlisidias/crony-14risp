@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Cursos{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/cursos/adicionar-curso.html" %}
+{% include "modals/cursos/atribuir-curso.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>
+				{% if request.user.get_access == 'admin' %} Cursos {% else %} Meus Cursos {% endif %}
+			</div>
+			{% if request.user.get_access == "admin" %}
+				<div class="btn-group">
+					<button class="btn btn-secondary text-light" type="button" title="Novo curso" data-bs-toggle="modal" data-bs-target="#modalAdicionarCurso">
+						Adicionar
+					</button>
+				</div>
+			{% endif %}
+		</div>
+
+		<div class="card-body">
+
+			<!-- Filtros -->
+			<div class="card card-filtros mb-4">
+				<div class="card-header">
+					Filtros
+				</div>
+				<div class="card-body">
+					<form method="GET" id="formFiltrarDocumentos">
+						<div class="row">
+							<div class="col-md-4 col-12">
+								<label class="form-label fs-6">Data Inicial</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_inicial" class="form-control" value="{{filtros.inicio}}">
+								</div>
+							</div>
+							<div class="col-md-4 col-12">
+								<label class="form-label fs-6">Data Final</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_final" class="form-control" value="{{filtros.final}}">
+								</div>
+							</div>
+							<div class="col-md-4 col-12">
+								<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+								<select class="form-select select-users" id="selectUsers" name="funcionarios" multiple>
+									{% for funcionario in funcionarios %}
+										<option value="{{ funcionario.id }}" {% if funcionario.id|value_to_string in request.GET|item_from_dict:"funcionarios" %} selected {% endif %}>{{ funcionario }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<button type="submit" class="btn btn-primary text-light float-end ms-2">Aplicar</button>
+						<a href="{% url 'cursos' %}" role="button" class="btn btn-primary text-light float-end">Limpar</a>
+					</form>
+				</div>
+			</div>
+
+			<div class="nav nav-tabs" id="nav-tab" role="tablist">
+				<button class="nav-link active" id="nav-meus-cursos" data-bs-toggle="tab" data-bs-target="#tab-meus-cursos" type="button" role="tab" aria-controls="tab-meus-cursos" aria-selected="true">
+					Meus Cursos
+				</button>
+				<button class="nav-link" id="nav-cursos" data-bs-toggle="tab" data-bs-target="#tab-cursos" type="button" role="tab" aria-controls="tab-cursos" aria-selected="false">
+					Cursos Disponíveis
+				</button>
+			</div>
+
+			<div class="tab-content" id="nav-tabContent">
+				<div class="tab-pane fade show active" id="tab-meus-cursos" role="tabpanel" aria-labelledby="nav-meus-cursos" tabindex="0">
+					<div class="list-group mt-3">
+						{% for funcionario, cursos in cursos_por_funcionario.items %}
+							{% for curso, info in cursos.items %}
+								<div class="list-group-item list-group-item-action" data-bs-toggle="collapse"
+									data-bs-target="#etapas{{funcionario.id}}{{forloop.counter}}" role="button">
+									<div class="d-flex w-100 justify-content-between">
+										<div class="mb-2">
+											<h5>{{funcionario}}</h5>
+											<h5>Curso: {{curso}} {% if curso.contrato %}<small class="text-muted fs-6">(Obrigatório)</small>{% endif %}</h5>
+										</div>
+										<small>{{info.data}}</small>
+									</div>
+									<p class="mb-2">{{curso.descricao}}</p>
+									<!-- Gráfico de Progresso -->
+									<div class="d-flex justify-content-center mb-2">
+										<canvas id="progress{{funcionario.id}}{{forloop.counter}}"></canvas>
+									</div>
+									<!-- Etapas -->
+									<div class="collapse" id="etapas{{funcionario.id}}{{forloop.counter}}">
+										<div class="card card-body">
+											<h5>Etapas</h5>
+											<div class="d-flex justify-content-around my-3">
+												{% for etapa in info.etapas %}
+													<div>
+														{% if etapa.status %}
+															<i class="fa-thin fa-check fa-xl text-success"></i>
+														{% else %}
+															<i class="fa-thin fa-timer fa-xl text-warning"></i>
+														{% endif %}
+
+														{{etapa.etapa.titulo}}
+													</div>
+												{% endfor %}
+											</div>
+											<div class="d-grid gap-2">
+												<a href="{% url 'progresso-curso' curso.id funcionario.id %}" class="btn btn-primary text-light rounded-pill start-course">Começar</a>
+											</div>
+										</div>
+									</div>
+								</div>
+							{% endfor %}
+						{% empty %}
+							<div class="card d-flex justify-content-center align-items-center p-2">
+								Nenhum curso adicionado!
+							</div>
+						{% endfor %}
+					</div>
+				</div>
+				<div class="tab-pane fade" id="tab-cursos" role="tabpanel" aria-labelledby="nav-cursos" tabindex="0">
+					<form method="POST" action="" id="formAdicionarCurso">
+						{% csrf_token %}
+						<div class="list-group mt-3">
+							{% for curso in cursos %}
+								<div role="button" class="list-group-item list-group-item-action">
+									<div class="d-flex w-100 justify-content-between">
+										<h5 class="mb-3">{{curso}}</h5>
+										<small class="text-body-secondary">{{curso.data_cadastro}}</small>
+									</div>
+									<p class="mb-2">{{curso.descricao}}</p>
+									<div class="d-flex justify-content-between">
+										<div>
+											<p class="text-body">Etapas do Curso</p>
+											<ul>
+												{% for etapa in curso.etapas.all %}
+													<li>{{etapa.titulo}}</li>
+												{% endfor %}
+											</ul>
+										</div>
+										<div class="d-flex align-items-center">
+											<div>
+												{% if request.user.get_access != 'common' %}
+													<button type="button" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;" onclick="atribuirCurso({{curso.id}}, {{funcionario.id}})">Atribuir</button>
+												{% endif %}
+												{% if funcionario.get_perfil.time|value_to_string in curso.time.all|query_to_list:"titulo" %}
+													<button type="submit" name="curso" value="{{curso.id}}" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;">Adicionar</button>
+												{% endif %}
+											</div>
+										</div>
+									</div>
+								</div>
+							{% empty %}
+								<div class="card d-flex justify-content-center align-items-center p-2">
+									Nenhum curso disponível!
+								</div>
+							{% endfor %}
+						</div>
+					</form>
+				</div>
+			</div>
+
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'chartjs/progress.min.js' %}"></script>
+<script>
+	{% for funcionario, cursos in cursos_por_funcionario.items %}
+		{% for curso, info in cursos.items %}
+			var element = document.getElementById("progress{{funcionario.id}}{{forloop.counter}}");
+			var percent = parseFloat("{{info.progresso|floatformat:2}}".replace(",", "."));
+			createProgress(element, percent);
+		{% endfor %}
+	{% endfor %}
+</script>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		document.querySelectorAll('.start-course').forEach(button => {
+			button.addEventListener('click', function (event) {
+				window.location.href = button.getAttribute("href");
+			});
+		});
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		createSelectChoices(document.querySelector(".select-users"), -1);
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		let etapaIndex = 0;
+	
+		document.getElementById("adicionarEtapa").addEventListener("click", function () {
+			etapaIndex++;
+			const etapasContainer = document.getElementById("etapasContainer");
+
+			const divisor = document.createElement("hr");
+			const indexDiv = document.createElement("p");
+
+			indexDiv.innerHTML = `Etapa #${etapaIndex}`;
+	
+			const etapaDiv = document.createElement("div");
+			etapaDiv.className = "form-floating mb-3";
+			etapaDiv.innerHTML = `
+				<input type="text" class="form-control" id="cursoEtapaTitulo${etapaIndex}" name="etapa_titulo" placeholder required>
+				<label for="cursoEtapaTitulo${etapaIndex}">Título *</label>
+			`;
+
+			const textoDiv = document.createElement("div");
+			textoDiv.className = "mb-3";
+			textoDiv.innerHTML = `
+				<label class="form-label" for="cursoEtapaTexto${etapaIndex}"></label>
+				<textarea class="ck-editor-5" id="cursoEtapaTexto${etapaIndex}" name="etapa_texto"></textarea>
+				<span class="word-count" id="cursoEtapaTexto${etapaIndex}_script-word-count"></span>
+			`;
+			
+			etapasContainer.appendChild(divisor);
+			etapasContainer.appendChild(indexDiv);
+			etapasContainer.appendChild(etapaDiv);
+			etapasContainer.appendChild(textoDiv);
+
+			inicarCKEditor();
+
+		});
+	});	
+</script>
+
+<script>
+	function atribuirCurso(course, func) {
+        const modal = $("#modalAtribuirCurso");
+        const action = `{% url "atribuir-curso" 0 %}`.replace("0", course);
+
+        modal.find(".modal-title").html("Atribuir Curso");
+        modal.find("form").attr("action", action);
+        modal.modal("show");
+    };
+</script>
+{% endblock %}

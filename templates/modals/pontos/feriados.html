@@ -1,0 +1,71 @@
+<div class="modal fade" id="modalAdicionarFeriado" tabindex="-1" aria-labelledby="modalAdicionarFeriadoLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" class="modal-content" action="{% url 'adicionar-feriado' %}" id="formAdicionarFeriado">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarFeriadoLabel">Adicionar Feriado</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="feriadoTitulo" name="titulo" placeholder required>
+					<label for="feriadoTitulo">Título *</label>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="feriadoData">Data Feriado *</label>
+					<input type="date" class="form-control" name="data" id="feriadoData" required>
+				</div>
+				<div class="row mb-3">
+					<div class="col">
+						<div class="form-floating">
+							<select class="form-select" id="feriadoContrato" name="contrato">
+							  <option value="" selected>Todos</option>
+							  <option value="CLT">CLT</option>
+							  <option value="Estagio">Estágio</option>
+							</select>
+							<label for="feriadoContrato">Contrato *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<select class="form-select" id="feriadoRegiao" onchange="updateRegiao(this.value)">
+							  <option value="" selected>Nacional</option>
+							  <option value="Estadual">Estadual</option>
+							  <option value="Municipal">Municipal</option>
+							</select>
+							<label for="feriadoRegiao">Região *</label>
+						</div>
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="feriadoEstado" name="estado" disabled onchange="updateSelectCidades(this.value)">
+								<option value="" selected hidden>Selecione um Estado</option>
+								{% for estado in estados %}
+									<option value="{{estado.id}}">{{estado.name}}</option>
+								{% endfor %}
+							</select>
+							<label class="form-label" for="feriadoEstado">Estado *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="feriadoCidade" name="cidade" disabled>
+								<option value="" selected hidden>Selecione uma Cidade</option>
+								<option value="" disabled>Primeiro selecione um Estado</option>
+							</select>
+							<label class="form-label" for="feriadoCidade">Cidade *</label>
+						</div>
+					</div>
+				</div>
+
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

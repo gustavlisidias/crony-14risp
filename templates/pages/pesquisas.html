@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Pesquisas{% endblock %}
+
+{% block header %}
+<link rel="stylesheet" href="{% static 'smartwizard/smartWizard.min.css' %}">
+<script src="{% static 'smartwizard/smartWizard.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/pesquisa/visualizar-pesquisa.html" %}
+{% include "modals/pesquisa/responder-pesquisa.html" %}
+{% include "modals/pesquisa/adicionar-pesquisa.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>Pesquisas & Revisões</div>
+
+			{% if request.user.get_access == "admin" %}
+				<div class="btn-group">
+					<button class="btn btn-secondary text-light" type="button" title="Nova pesquisa" data-bs-toggle="modal" data-bs-target="#modalAdicionarPesquisa">
+						Adicionar
+					</button>
+				</div>
+			{% endif %}
+		</div>
+
+		<div class="card-body">
+
+			<div class="table-responsive mt-3">
+				<table class="table table-hover align-middle table-pesquisas">
+					<thead>
+						<tr>
+							<th scope="col">#</th>
+							<th scope="col">Título</th>
+							<th scope="col">Descrição</th>
+							<th scope="col">Data Encerramento</th>
+							<th scope="col">Anônima</th>
+							<th scope="col">Respondido</th>
+							<th scope="col">Ações</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for pesquisa in pesquisas %}
+							<tr role="button" onclick="verPesquisa({{pesquisa.id}})">
+								<th scope="row">{{forloop.counter}}</th>
+								<td>{{pesquisa.titulo}}</td>
+								<td>{{pesquisa.descricao|default_if_none:""|safe|truncatechars_html:50}}</td>
+								<td>{{pesquisa.data_encerramento|date:"d/m/Y"}}</td>
+
+								{% if not pesquisa.anonimo %}
+									<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+								{% else %}
+									<td><i class="fa-duotone fa-circle-check text-success"></i></td>
+								{% endif %}
+
+								{% if not pesquisa.respondido %}
+									<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+								{% else %}
+									<td><i class="fa-duotone fa-circle-check text-success"></i></td>
+								{% endif %}
+
+								<th class="text-center">
+									<div class="d-flex justify-content-around">
+										<a role="button" title="Responder" {% if not pesquisa.respondido %} onclick="event.stopPropagation(); responderPesquisa({{pesquisa.id}})" {% else %} onclick="event.stopPropagation(); alert('Pesquisa já respondida!')" {% endif %}>
+											<i class="fa-thin fa-pen-field text-body"></i>
+										</a>
+										{% if request.user.get_access == "admin" %}
+											<a role="button" title="Respostas" href="{% url 'visualizar-respostas' pesquisa.id %}">
+												<i class="fa-thin fa-message-captions text-body"></i>
+											</a>
+											<a role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-pesquisa' pesquisa.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+												<i class="fa-thin fa-x text-danger"></i>
+											</a>
+										{% endif %}
+									</div>
+								</th>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+
+		</div>
+	</div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+	
+		const table1 = $(".table-pesquisas").DataTable(config);
+	});
+
+	document.addEventListener("DOMContentLoaded", function () {
+		let perguntaIndex = 0;
+	
+		document.getElementById("adicionarPergunta").addEventListener("click", function () {
+			perguntaIndex++;
+			const perguntasContainer = document.getElementById("perguntasContainer");
+			
+			const perguntaDiv = document.createElement("div");
+			perguntaDiv.className = "mb-3";
+			perguntaDiv.innerHTML = `
+				<label for="pesquisaPergunta${perguntaIndex}" class="form-label">Pergunta ${perguntaIndex}</label>
+				<textarea class="form-control" id="pesquisaPergunta${perguntaIndex}" name="pergunta" required></textarea>
+				<div class="form-check mt-2">
+					<input class="form-check-input me-2" type="checkbox" id="pesquisaObrigatorio${perguntaIndex}" name="obrigatorio[${perguntaIndex}]" style="width: 20px; height:20px;">
+					<label class="form-check-label" for="pesquisaObrigatorio${perguntaIndex}" style="margin-top: 3px;">
+						Obrigatória
+					</label>
+				</div>
+			`;
+			
+			perguntasContainer.appendChild(perguntaDiv);
+		});
+	});	
+
+	function verPesquisa(pesquisaId) {
+		$.ajax({
+			type: "GET",
+			url: `{% url 'visualizar-pesquisa' 0 %}`.replace("0", pesquisaId),
+			success: function (data) {
+				const pesquisa = data.pesquisa;
+				const perguntas = data.perguntas;
+				const respostas = data.respostas;
+				const funcionarios = data.funcionarios;
+
+				const modal = $("#modalVisualizarPesquisa");
+				const action = `{% url 'editar-pesquisa' 0 %}`.replace("0", pesquisa.id);
+
+				modal.find("form").attr("action", action);
+				modal.find("#modalVisualizarPesquisaLabel").html(`Pesquisa ${pesquisa.titulo}`);
+				modal.find("#pesquisaEditarEncerramento").val(pesquisa.encerramento);
+				modal.find("#pesquisaEditarDescricao").html(pesquisa.descricao);
+
+				if (pesquisa.anonimo) {
+					modal.find("#pesquisaEditarAnonimo").attr("checked", "checked");
+				} else {
+					modal.find("#pesquisaEditarAnonimo").removeAttr("checked");
+				};
+
+				const selectElement = modal.find("#pesquisaEditarFuncionarios").get(0);
+				for (const option of selectElement.options) {
+					if (funcionarios.includes(parseInt(option.value))) {
+						option.selected = true;
+					} else {
+						option.selected = false;
+					}
+				};
+
+				modal.modal("show");
+			},
+			error: function (error) {
+				alert(error);
+			}
+		});
+	};
+
+	function responderPesquisa(pesquisaId) {
+		$.ajax({
+			type: "GET",
+			url: `{% url 'visualizar-pesquisa' 0 %}`.replace("0", pesquisaId),
+			success: function (data) {
+				const pesquisa = data.pesquisa;
+				const perguntas = data.perguntas;
+				const respostas = data.respostas;
+				const funcionarios = data.funcionarios;
+
+				const modal = $("#modalResponderPesquisa");
+				const action = `{% url 'responder-pesquisa' 0 %}`.replace("0", pesquisa.id);
+
+				modal.find("form").attr("action", action);
+				modal.find("#modalResponderPesquisaLabel").html(`Responder a Pesquisa ${pesquisa.titulo}`);
+
+				const body = modal.find(".modal-body");
+				body.html("");
+
+				let steps = "";
+            	let contents = "";
+
+				perguntas.forEach((pergunta, index) => {
+					let required = pergunta.obrigatorio ? "required" : "";
+					let signal = pergunta.obrigatorio ? "*" : "";
+
+					steps += `<li class="nav-item">
+									<a class="nav-link" href="#pergunta-${index}">
+										<div class="num">${index + 1}</div>
+										${pergunta.texto}
+									</a>
+								</li>`;
+
+					contents += `<div class="tab-pane" role="tabpanel" id="pergunta-${index}">
+									<input type="hidden" value="${pergunta.id}" name="pergunta">
+									<div class="form-floating">
+										<textarea class="form-control" placeholder id="repostaPesquisa${pergunta.id}" name="resposta" ${required}></textarea>
+										<label for="repostaPesquisa${pergunta.id}">Resposta ${signal}</label>
+									</div>
+								</div>`;
+				});
+
+				body.append(`
+					<div id="smartwizard">
+						<ul class="nav">${steps}</ul>
+						<div class="tab-content">${contents}</div>
+					</div>
+				`);
+
+				$("#smartwizard").smartWizard({
+					theme: "dots",
+					justified: true,
+					autoAdjustHeight: true,
+					transition: {
+						animation: 'fade', // Animation effect on navigation, none|fade|slideHorizontal|slideVertical|slideSwing|css(Animation CSS class also need to specify)
+						speed: '400', // Animation speed. Not used if animation is 'css'
+						easing: '', // Animation easing. Not supported without a jQuery easing plugin. Not used if animation is 'css'
+						prefixCss: '', // Only used if animation is 'css'. Animation CSS prefix
+						fwdShowCss: '', // Only used if animation is 'css'. Step show Animation CSS on forward direction
+						fwdHideCss: '', // Only used if animation is 'css'. Step hide Animation CSS on forward direction
+						bckShowCss: '', // Only used if animation is 'css'. Step show Animation CSS on backward direction
+						bckHideCss: '', // Only used if animation is 'css'. Step hide Animation CSS on backward direction
+					},
+					toolbar: {
+						position: 'top', // none|top|bottom|both
+						showNextButton: true, // show/hide a Next button
+						showPreviousButton: true, // show/hide a Previous button
+						extraHtml: '' // Extra html to show on toolbar
+					},
+					lang: {
+						next: "Proximo",
+						previous: "Anterior"
+					},
+				});
+
+				modal.modal("show");
+			},
+			error: function (error) {
+				alert(error);
+			}
+		});
+	};
+</script>
+{% endblock %}

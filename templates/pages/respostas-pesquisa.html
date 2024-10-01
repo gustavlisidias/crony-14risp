@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Pesquisas{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>
+				<a class="text-light" href="{% url 'pesquisa' %}">Pesquisas & Revisões</a>
+				<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+				{{pesquisa.titulo}}
+			</div>
+
+			{% if request.user.get_access == "admin" %}
+				<div class="btn-group">
+					<form method="GET" class="btn btn-secondary p-0 m-0" id="formExportarPesquisa">
+						<button class="btn btn-secondary text-light" name="exportar" value="true" type="submit" title="Exportar">
+							Exportar
+						</button>
+					</form>
+				</div>
+			{% endif %}
+		</div>
+
+		<div class="card-body">
+			<div class="card bg-body p-2 mb-3">
+				{{pesquisa.descricao|safe}}
+				{% if vencido %}
+					<small>Encerrou em {{pesquisa.data_encerramento}}</small>
+				{% else %}
+					<small>Encerra em {{pesquisa.data_encerramento}}</small>
+				{% endif %}
+				{% if pesquisa.anonimo %}
+					<small>Pesquisa anônima</small>
+				{% else %}
+					<small>Pesquisa aberta</small>
+				{% endif %}
+			</div>
+
+			{% if pesquisa.respostas %}
+				<div class="d-flex justify-content-around mb-3" id="charts-container">
+					{% for dado in dados %}
+						<div class="chart-container">
+							<canvas id="chart-{{ forloop.counter }}"></canvas>
+						</div>
+					{% endfor %}
+				</div>
+			{% endif %}
+
+			{% for pergunta in pesquisa.perguntas %}
+				<h6>{{pergunta.texto|safe}}</h6>
+				<ol class="list-group list-group-numbered mb-3">
+					{% for resposta in pesquisa.respostas %}
+						{% if resposta.pergunta == pergunta %}
+							<li class="list-group-item d-flex justify-content-between align-items-start">
+								<div class="ms-2 me-auto">
+									<div class="fw-medium">{{resposta.texto}}</div>
+									{% if not pesquisa.anonimo %}{{resposta.funcionario}}{% endif %}
+								</div>
+								<span>{{resposta.data_cadastro}}</span>
+							</li>
+						{% endif %}
+					{% empty %}
+						<li class="list-group-item d-flex justify-content-between align-items-start">
+							<div class="d-flex justify-content-center">
+								Sem respostas!
+							</div>
+						</li>
+					{% endfor %}
+				</ol>
+			{% endfor %}
+
+		</div>
+	</div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'chartjs/chart.min.js' %}"></script>
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		function removeSpecialChars(input) {
+			var tempDiv = document.createElement("div");
+			tempDiv.innerHTML = input;
+
+			var decodedString = tempDiv.textContent || tempDiv.innerText || "";
+			return decodedString.replace(/<\/?[^>]+(>|$)/g, "");
+		};
+
+		{% if pesquisa.respostas %}
+			{% for dado in dados %}
+				createChart(
+					document.getElementById("chart-{{ forloop.counter }}").getContext('2d'),
+					"pie",
+					{{ dado.respostas|safe }},
+					{{ dado.count|safe }},
+					"Respostas",
+					removeSpecialChars("{{ dado.pergunta|escapejs }}")
+				);
+			{% endfor %}
+		{% endif %}
+	});
+</script>
+{% endblock %}

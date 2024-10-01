@@ -1,0 +1,62 @@
+{% load static %}
+
+<div class="modal fade" id="modalVisualizarAvaliacao" tabindex="-1" aria-labelledby="modalVisualizarAvaliacaoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-xl">
+		<div class="modal-content">
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalVisualizarAvaliacaoLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="row card-avaliacao">
+					<div class="col-7 border-end">
+						<div class="modal-observacao mb-3">
+							<label class="form-label">Observações</label>
+							<div></div>
+						</div>
+						<div class="modal-funcionarios mb-3">
+							<label class="form-label">Funcionarios</label>
+							<div></div>
+						</div>
+					</div>
+					<div class="col-5 m-auto table-box">
+						<h4 class="text-center mb-3">Matriz de Avaliação</h4>
+						<div class="row mb-3 ps-5">
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/1.png' %}" data-potencial="2" data-desempenho="0" title="Desempenho Abaixo do Esperado e Potencial Alto" style="height: 50px;">
+							</div>
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/2.png' %}" data-potencial="2" data-desempenho="1" title="Desempenho Esperado e Potencial Alto" style="height: 50px;">
+							</div>
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/3.png' %}" data-potencial="2" data-desempenho="2" title="Desempenho Acima do Esperado e Potencial Alto" style="height: 50px;">
+							</div>
+						</div>
+						<div class="row mb-3 ps-5">
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/4.png' %}" data-potencial="1" data-desempenho="0" title="Desempenho Abaixo do Esperado e Potencial Medio" style="height: 50px;">
+							</div>
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/5.png' %}" data-potencial="1" data-desempenho="1" title="Desempenho Esperado e Potencial Medio" style="height: 50px;">
+							</div>
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/6.png' %}" data-potencial="1" data-desempenho="2" title="Desempenho Acima do Esperado e Potencial Medio" style="height: 50px;">
+							</div>
+						</div>
+						<div class="row ps-5">
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/7.png' %}" data-potencial="0" data-desempenho="0" title="Desempenho Abaixo do Esperado e Potencial Baixo" style="height: 50px;">
+							</div>
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/8.png' %}" data-potencial="0" data-desempenho="1" title="Desempenho Esperado e Potencial Baixo" style="height: 50px;">
+							</div>
+							<div class="col">
+								<img class="img img-fluid" src="{% static 'images/9box/9.png' %}" data-potencial="0" data-desempenho="2" title="Desempenho Acima do Esperado e Potencial Baixo" style="height: 50px;">
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

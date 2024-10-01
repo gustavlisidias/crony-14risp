@@ -1,0 +1,156 @@
+{% load static %}
+{% load custom_tags %}
+
+<nav class="navbar navbar-expand-lg bg-body header">
+	<div class="container-fluid justify-content-end">
+
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#header-toogle" aria-controls="header-toogle" aria-expanded="false">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+
+		<div class="collapse navbar-collapse" id="header-toogle">
+			<!-- Search -->
+			<div class="d-flex ms-auto">
+				<div class="customize-input">
+					<input class="form-control border-0 bg-body" data-bs-toggle="modal" data-bs-target="#modalPesquisa" type="text" placeholder="Procurar...">
+					<button type="submit" data-bs-toggle="modal" data-bs-target="#modalPesquisa" style="border: 0px solid transparent; background: transparent;">
+						<i class="fa-thin fa-magnifying-glass text-body"></i>
+					</button>
+				</div>
+			</div>
+
+			<!-- Modal Search -->
+			<div class="modal fade" id="modalPesquisa" tabindex="-1" aria-labelledby="modalPesquisaLabel" aria-hidden="true">
+				<div class="modal-dialog">
+					<form class="modal-content p-3" method="GET" id="formProcurar" style="max-height: 25rem;">
+						<div class="input-group">
+							<input class="form-control" id="search" name="search" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="go" spellcheck="false" autofocus="true" placeholder="Pesquisar" type="search" style="height: 3rem">
+							<span class="input-group-text"><i class="fas fa-search"></i></span>
+						</div>
+						<div class="list-group overflow-y-auto mt-3" id="search-results">
+							<a href="{% url 'pontos' %}" class="list-group-item list-group-item-action">
+								<div class="d-flex w-100 justify-content-between">
+									<h5 class="mb-1">Registrar Ponto</h5>
+									<i class="fa-thin fa-arrow-up-right-from-square fa-xl text-body"></i>
+								</div>
+								<p class="my-1">Registre seu ponto conforme sua jornada de trabalho</p>
+							</a>
+							<a href="{% url 'agenda' %}" class="list-group-item list-group-item-action">
+								<div class="d-flex w-100 justify-content-between">
+									<h5 class="mb-1">Atividades</h5>
+									<i class="fa-thin fa-arrow-up-right-from-square fa-xl text-body"></i>
+								</div>
+								<p class="my-1">Minhas atividades pendentes</p>
+							</a>
+							<a href="{% url 'documentos' %}" class="list-group-item list-group-item-action">
+								<div class="d-flex w-100 justify-content-between">
+									<h5 class="mb-1">Documentos</h5>
+									<i class="fa-thin fa-arrow-up-right-from-square fa-xl text-body"></i>
+								</div>
+								<p class="my-1">Documentos gerais não vinculados a funcionarios</p>
+							</a>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			<ul class="navbar-nav ms-4 me-2 mb-2 mb-lg-0 d-flex align-items-center">
+				<!-- Weather -->
+				<li class="nav-item dropstart me-0">
+					<div class="card card-waether border-0">
+						<div class="card-body p-0">
+							<div class="row">
+								<div class="col d-flex justify-content-center align-items-center p-0">
+									<img class="img" src="{% static 'images/weather/01d.png' %}" height="40">
+								</div>
+								<div class="col d-flex align-items-center align-items-center p-0" style="width: 10rem;">
+									<div class="order-1">
+										<p class="m-0 p-0">0 ºC</p>
+										<p class="m-0 p-0 fs-7">Carregando...</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</li>
+
+				<!-- Ouvidoria -->
+				{% comment %} <li class="nav-item dropstart me-4" title="Ouvidoria">
+					<a class="nav-link" href="{% url 'ouvidoria' %}" role="button"><i class="fa-light fa-handshake"></i></a>
+				</li> {% endcomment %}
+				
+				<!-- Tema -->
+				<li class="nav-item dropstart me-3" title="Trocar tema">
+					<div class="form-check form-switch ms-1">
+						<input id="btnSwitchTheme" class="form-check-input" type="checkbox" role="switch" {% if funcionario.id|theme == "dark" %}checked{% endif %}>
+					</div>
+				</li>
+
+				<!-- Notifications -->
+				<li class="nav-item dropstart dropdown-notifications me-4">
+					<a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<i class="fa-thin fa-bell"></i>
+						{% if notificacoes %}
+							<span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle notificacao-badge">
+								<span class="visually-hidden">Notificações</span>
+							</span>
+						{% endif %}
+					</a>
+					<div class="dropdown-menu card p-0" style="background: var(--bs-light) !important;">
+						<ul class="list-group notificacao-list overflow-y-auto overflow-x-hidden">
+							{% if notificacoes %}
+								<div
+									class="card-header bg-body border-bottom-0 d-flex justify-content-between align-items-center">
+									<p class="text-body p-0 m-0">Notificações</p>
+									<a class="fs-7 text-decoration-underline notificacao-all" role="button" hx-post="{% url 'ler-notificacoes' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload();">
+										Marcar todas comos lidas
+									</a>
+								</div>
+
+								{% for notificacao in notificacoes %}
+									<li class="list-group-item d-flex justify-content-between align-items-start border-end-0 border-start-0">
+										<div class="me-auto" title="{{notificacao.description|default_if_none:""|safe|replace:"\u0027, \u0022"}}">
+											<div class="fw-bold me-2 mb-2">{{notificacao.verb}}</div>
+											{{notificacao.description|default_if_none:""|safe|truncatechars_html:50}}
+										</div>
+										<span title="Marcar como lido" class="badge text-bg-primary rounded-pill" role="button" hx-post="{% url 'ler-notificacao' notificacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="removerNotificacao(this)">
+											<i class="fa-solid fa-inbox fa-xs"></i>
+										</span>
+									</li>
+								{% endfor %}
+							{% else %}
+								<li class="list-group-item text-body d-flex justify-content-center align-items-start notificacao-none">
+									Nenhuma notificação pendente!
+								</li>
+							{% endif %}
+						</ul>
+					</div>
+				</li>
+
+				<!-- Profile -->
+				<li class="nav-item dropdown dropdown-profile">
+					<a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+						<img src="{{ funcionario.id|photo:'url' }}" class="img img-fluid rounded-circle me-2">
+						<span class="ml-2 d-none d-lg-inline-block">{{funcionario}}</span>
+					</a>
+					<div class="dropdown-menu dropdown-menu-end">
+						<a class="dropdown-item" href="{% url 'perfil' %}"><i class="fa-thin fa-user text-body"></i> Perfil</a>
+						{% if request.user.get_access == "admin" %}
+							<a class="dropdown-item" href="{% url 'configuracoes' %}"><i class="fa-thin fa-gear text-body"></i> Configurações</a>
+							<a class="dropdown-item" href="/admin"><i class="fa-thin fa-chart-candlestick text-body"></i> Painel</a>
+						{% endif %}
+						{% comment %} <a class="dropdown-item" href="{% url 'score' %}"><i class="fa-thin fa-star text-body"></i> Ranking</a> {% endcomment %}
+						<a class="dropdown-item" href="{% url 'sair' %}"><i class="fa-thin fa-power-off text-body"></i> Sair</a>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</div>
+</nav>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const path = `{% static 'images/weather/0.png' %}`;
+		getLocation(path);
+	});
+</script>

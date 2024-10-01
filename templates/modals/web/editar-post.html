@@ -1,0 +1,26 @@
+<div class="modal fade" id="modalEditarPost" data-bs-focus="false" aria-labelledby="modalEditarPostLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="" class="modal-content" id="formEditarPost">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEditarPostLabel">Editar Postagem</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="postTitulo" name="titulo" value="" required>
+					<label class="form-label" for="postTitulo">Título</label>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="postEditTexto">Texto</label>
+					<textarea class="ck-editor-5" id="postEditTexto" name="texto"></textarea>
+					<span class="word-count" id="postEditTexto_script-word-count"></span>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

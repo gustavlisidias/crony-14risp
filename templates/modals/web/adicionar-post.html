@@ -1,0 +1,26 @@
+<div class="modal fade" id="modalAdicionarPost" data-bs-focus="false" aria-labelledby="modalAdicionarPostLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="{% url 'adicionar-post' %}" class="modal-content" id="formAdicionarPost">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarPostLabel">Nova Publicação</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="postTitulo" name="titulo" placeholder required>
+					<label class="form-label" for="postTitulo">Título</label>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="postTexto">Texto</label>
+					<textarea class="ck-editor-5" id="postTexto" name="texto" placeholder="Uma boa publicação: Compartilhar noticías, alinhamento e esclarecimento com a equipe, informações relevantes para você e seus colegas. Evite enviar mensagens de bom dia, boa tarde, compartilhar informações não relevantes ao ambiente de trabalho."></textarea>
+					<span class="word-count" id="postTexto_script-word-count"></span>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Publicar</button>
+			</div>
+		</form>
+	</div>
+</div>

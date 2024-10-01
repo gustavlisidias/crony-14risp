@@ -1,0 +1,20 @@
+<div class="modal fade" id="modalResponderPesquisa" tabindex="-1" aria-labelledby="modalResponderPesquisaLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="" class="modal-content" id="formResponderPesquisa">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalResponderPesquisaLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div id="smartwizard">
+					<!-- Os passos serão adicionados dinamicamente aqui -->
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Enviar</button>
+			</div>
+		</form>
+	</div>
+</div>

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Desempenho{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/desempenho/enviar-avaliacao.html" %}
+{% include "modals/desempenho/visualizar-avaliacao.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			Avaliações de Desempenho
+		</div>
+		
+		<div class="card-body">
+
+			<!-- Filtros -->
+			<div class="card card-filtros mb-4">
+				<div class="card-header">
+					Filtros
+				</div>
+				<div class="card-body">
+					<form method="GET" id="formFiltroAvaliacoes">
+						<div class="row mb-3">
+							<div class="col-md-4 col-12">
+								<label for="selectTypes" class="form-label fs-6">Tipos</label>
+								<select class="form-select select-types" id="selectTypes" name="tipos" multiple>
+									{% for tipo in tipos %}
+										<option value="{{ tipo.id }}" {% if not request.GET or tipo.id|value_to_string in request.GET|item_from_dict:"tipos" %} selected {% endif %}>{{ tipo }}</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="col-md-4 col-12">
+								<label for="selectStatus" class="form-label fs-6">Status</label>
+								<select class="form-select select-status" id="selectStatus" name="status" multiple>
+									<option value="0" {% if not request.GET or '0' in request.GET|item_from_dict:"status" %} selected {% endif %}>Abertos</option>
+									<option value="1" {% if '1' in request.GET|item_from_dict:"status" %} selected {% endif %}>Concluidos</option>
+								</select>
+							</div>
+							<div class="col-md-4 col-12">
+								<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+								<select class="form-select select-users" id="selectUsers" name="funcionarios" multiple>
+									{% for funcionario in funcionarios %}
+										<option value="{{ funcionario.id }}" {% if funcionario.id|value_to_string in request.GET|item_from_dict:"funcionarios" %} selected {% endif %}>{{ funcionario }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<button type="submit" class="btn btn-primary text-light float-end ms-2">Aplicar</button>
+						<a href="{% url 'desempenho' %}" role="button" class="btn btn-primary text-light float-end">Limpar</a>
+					</form>
+				</div>
+			</div>
+
+			<!-- Avaliações -->
+			<div class="list-group mt-3">
+				{% for avaliacao in avaliacoes %}
+					<div class="list-group-item list-group-item-action list-avaliacoes" role="button" {% if avaliacao.status == 0 %} onclick="avaliarAtividade({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}'})" {% else %} onclick="visualizarAvaliacao({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}', desempenho: {{avaliacao.desempenho_id}}, potencial: {{avaliacao.potencial_id}}, observacao: '{{avaliacao.observacao|replace:"\u0027, \u0022"}}', funcionarios: {{avaliacao.funcionarios|safe}}})" {% endif %}>
+						<div class="d-flex w-100 justify-content-between">
+							<h5 class="mb-1" {% if avaliacao.status == 1 %} title="Avaliado" {% else %} title="Pendente" {% endif %}>
+								{{avaliacao.titulo}}
+								<small class="fs-6">({{avaliacao.tipo}})</small>
+								<small>
+									{% if avaliacao.status == 1 %}
+										<i class="fa-duotone fa-circle-check text-success"></i>
+									{% else %}
+										<i class="fa-duotone fa-circle-exclamation text-warning"></i>
+									{% endif %}
+								</small>
+							</h5>
+							<small>{{avaliacao.tempo|sincedelta}}</small>
+						</div>
+						<p class="mb-2">{{avaliacao.descricao|default_if_none:""|safe}}</p>
+						{% for funcionario in avaliacao.funcionarios|filter_range:5 %}
+							<small>
+								{{funcionario}} 
+								{% if not forloop.last %}
+									<i class="fa-solid fa-circle fa-2xs mx-2 text-body"></i>
+								{% endif %}
+							</small>
+						{% endfor %}
+						{% if avaliacao.funcionarios|length > 5 %} ...{% endif %}
+					</div>
+				{% empty %}
+					<div class="card d-flex justify-content-center align-items-center p-2">
+						Nenhuma avaliação pendente
+					</div>
+				{% endfor %}
+			</div>
+
+			<div class="d-flex justify-content-center align-items-center">
+				<img src="{% static 'images/background/performance.svg' %}" class="img img-fluid" width="480">
+			</div>
+
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		createSelectChoices(document.querySelector(".select-types"), -1);
+		createSelectChoices(document.querySelector(".select-status"), -1);
+		createSelectChoices(document.querySelector(".select-users"), -1);
+	});
+</script>
+
+<script>
+	function avaliarAtividade(atividade) {
+		const modal = $("#modalEnviarAvaliacao");
+		const action = `{% url "desempenho-avaliacao" 0 %}`.replace("0", atividade.atvid);
+
+		modal.find("#modalEnviarAvaliacaoLabel").html(`Avaliar Atividade - ${atividade.titulo}`);
+		modal.find("form").attr("action", action);
+
+		if ("{{request.user.get_access}}" != "admin" ) {
+			modal.find("#btnEnviarFeedback").css("display", "none");
+		} else {
+			modal.find("#btnEnviarFeedback").css("display", "block");
+		};
+
+		modal.modal("show");
+	};
+
+	function visualizarAvaliacao(atividade) {
+		const modal = $("#modalVisualizarAvaliacao");
+
+		modal.find("#modalVisualizarAvaliacaoLabel").html(`Visualizar Avaliação - ${atividade.titulo}`);
+		modal.find(".modal-observacao div").html(atividade.observacao);
+		modal.find(".modal-funcionarios div").html('');
+
+		modal.find(".table-box img").each(function () {
+			if ($(this).data("potencial") == atividade.potencial && $(this).data("desempenho") == atividade.desempenho) {
+				$(this).css("filter", "");
+			} else {
+				$(this).css("filter", "grayscale(1)");
+			}
+		});
+
+		atividade.funcionarios.forEach(funcionario => {
+			modal.find(".modal-funcionarios div").append(`<p class="m-0">${funcionario}</p>`);
+		});
+		
+		modal.modal("show");
+	};
+</script>
+{% endblock %}

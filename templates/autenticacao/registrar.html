@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block auth %}
+
+{% include "includes/messages.html" %}
+
+<div class="d-flex align-items-center min-vh-100">
+	<div class="container">
+		<div class="row m-auto d-flex align-items-center">
+			<div class="col-md-6">
+				<div class="row justify-content-center">
+					<img src="{% static 'images/background/register.svg' %}" class="img img-fluid">
+				</div>
+			</div>
+			<div class="col-md-6">
+				<div class="row justify-content-center">
+					<div class="col-md-8">
+						<div class="mb-4">
+							<h3>Criar uma nova conta</h3>
+						</div>
+						<form method="POST" autocomplete="off" id="formRegistrar">
+							{% csrf_token %}
+							<div class="form-floating mb-3">
+								<input type="text" class="form-control" id="registrarNome" name="first_name" placeholder autocomplete>
+								<label for="registrarNome">Nome</label>
+							</div>
+							<div class="form-floating mb-3">
+								<input type="text" class="form-control" id="registrarSobrenome" name="last_name" placeholder autocomplete>
+								<label for="registrarSobrenome">Sobrenome</label>
+							</div>
+							<div class="form-floating mb-3">
+								<input type="email" class="form-control" id="registrarEmail" name="email" placeholder autocomplete readonly onfocus="this.removeAttribute('readonly');">
+								<label for="registrarEmail">Email</label>
+							</div>
+							<div class="form-floating mb-3">
+								<input type="password" class="form-control" id="registrarSenha1" name="password1" placeholder autocomplete>
+								<label for="registrarSenha1">Senha</label>
+							</div>
+							<div class="form-floating mb-3">
+								<input type="password" class="form-control" id="registrarSenha2" name="password2" placeholder autocomplete>
+								<label for="registrarSenha2">Confirmar senha</label>
+							</div>
+							<div class="d-flex mb-3 align-items-center">
+								<span class="ml-auto"><a href="{% url 'entrar' %}" class="forgot-pass">Já possui uma conta?</a></span>
+							</div>
+							<div class="d-grid gap-2">
+								<button type="submit" class="btn btn-block btn-primary text-light">Registrar</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endblock %}

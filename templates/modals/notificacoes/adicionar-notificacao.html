@@ -1,0 +1,56 @@
+<div class="modal fade" id="modalAdicionarNotificacao" data-bs-focus="false" aria-labelledby="modalAdicionarNotificacaoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="{% url 'adicionar-notificacao' %}" class="modal-content" id="formAdicionarNotificacao">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarNotificacaoLabel">Nova Notificação</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-check mb-3">
+					<input class="form-check-input me-2" type="checkbox" value="true" id="notificacoesAgenda" name="agendamento" style="height: 20px; width: 20px;">
+					<label class="form-check-label" for="notificacoesAgenda" style="margin-top: 3px;">Criar atividade</label>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" id="notificacoesLevel" name="level" required>
+						<option value="notificacao" selected>Notificação</option>
+						<option value="comunicado">Comunicado</option>
+					</select>
+					<label for="notificacoesLevel">Tipo</label>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="notificacoesAssunto" name="assunto" placeholder required>
+					<label class="form-label" for="notificacoesAssunto">Assunto *</label>
+				</div>
+				<div class="row mb-3 d-none" id="notificacaoDatas">
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="notificacaoInicio" name="inicio" placeholder>
+							<label class="form-label" for="notificacaoInicio">Início da Atividade *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="notificacaoFinal" name="final" placeholder>
+							<label class="form-label" for="notificacaoFinal">Final da Atividade *</label>
+						</div>
+					</div>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="notificacoesDescricao">Descrição *</label>
+					<textarea class="ck-editor-5" id="notificacoesDescricao" name="descricao"></textarea>
+					<span class="word-count" id="notificacoesDescricao_script-word-count"></span>
+				</div>
+				<select class="form-select" id="notificacoesUsuarios" name="usuarios" multiple required>
+					{% for funcionario in funcionarios %}
+						<option value="{{funcionario.id}}">{{funcionario}}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

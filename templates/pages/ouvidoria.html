@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Ouvidoria{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/ouvidoria/adicionar-ouvidoria.html" %}
+{% include "modals/ouvidoria/editar-ouvidoria.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>Ouvidoria & Manifestações</div>
+
+			<div class="btn-group">
+				<button class="btn btn-secondary text-light" type="button" title="Nova manifestação" data-bs-toggle="modal" data-bs-target="#modalAdicionarOuvidoria">
+					Adicionar
+				</button>
+			</div>
+		</div>
+
+		<div class="card-body">
+
+			<div class="card mb-3">
+				<div class="card-body bg-body">
+					<span>
+						Este é um espaço seguro e de confiança, onde os colaboradores podem registrar reclamações, fazer denúncias,
+						relatar ocorrências, dar sugestões e expressar suas ideias sabendo que serão ouvidos com atenção e respeito.
+					</span>
+				</div>
+			</div>
+
+			<table class="table table-ouvidoria">
+				<thead>
+					<tr>
+						<th scope="col">#</th>
+						<th scope="col">Categoria</th>
+						<th scope="col">Assunto</th>
+						<th scope="col">Data</th>
+						<th scope="col">Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for ticket in tickets %}
+						<tr role="button" {% if request.user == ticket.funcionario.usuario or request.user == ticket.responsavel.usuario %}onclick="editarOuvidoria({'id': '{{ticket.id}}', 'title': '{{ticket.assunto}}', 'categoria': '{{ticket.get_categoria_display}}', 'status': '{{ticket.get_status_display}}'})" {% endif %}>
+							<th scope="row">{{forloop.counter}}</th>
+							<td>{{ticket.get_categoria_display}}</td>
+							<td>{{ticket.assunto}}</td>
+							<td>{{ticket.data_cadastro}}</td>
+							<td>{{ticket.get_status_display}}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+
+		</div>
+	</div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+
+		const table = $(".table-ouvidoria").DataTable(config);
+	});
+</script>
+
+<script>
+	function editarOuvidoria(ticket) {
+		const modal = $("#modalEditarOuvidoria");
+        const action = `{% url "editar-ouvidoria" 0 %}`.replace("0", ticket.id);
+
+		modal.find(".manifestacao-descricao").children().remove();
+		modal.find(".card-messages").children().remove();
+
+		$.ajax({
+			type: "GET",
+			url: action,
+			success: function (data) {
+				data.data.forEach((item, index) => {		
+					let remetente = "";
+					let classFloat = item[1] === {{request.user.id}} ? "float-end" : "float-start";
+					let classText = item[1] === {{request.user.id}} ? "end" : "start";
+
+					if (data.anonimo == false) {
+						remetente = item[1] === {{request.user.id}} ? "mim" : item[0];
+					} else {
+						remetente = item[1] === {{request.user.id}} ? "mim" : "Anônimo";
+					};
+
+					let mensagem = item[2];
+					let data_cadastro = item[3];
+
+					modal.find(".card-messages").append(`
+						<div class="card mb-2">
+							<div class="card-body bg-body card-message-${index}">
+								${mensagem}
+								<span class="fs-7 text-muted ${classFloat}">Enviado por ${remetente} em ${formatarData(data_cadastro)}</span>
+							</div>
+						</div>
+					`);
+
+					modal.find(`.card-messages .card-message-${index}`).css("text-align", classText);
+				});
+
+				if (ticket.status === "Fechado") {
+					modal.find("#ouvidoriaMensagem").parent().css("display", "none");
+					modal.find("button[name='finalizar']").css("display", "none");
+					modal.find("button[name='enviar']").css("display", "none");
+				} else {
+					modal.find("#ouvidoriaMensagem").parent().css("display", "block");
+					modal.find("button[name='finalizar']").css("display", "block");
+					modal.find("button[name='enviar']").css("display", "block");
+				};
+
+				modal.find("#modalEditarOuvidoriaLabel").html(`Histórico - ${ticket.title}`);
+				modal.find(".manifestacao-descricao").append(`
+					<p class="mb-1"><b>Categoria: </b>${ticket.categoria}</p>
+					<p class="mb-1"><b>Status: </b>${ticket.status}</p>
+				`);
+				modal.find("form").attr("action", action);
+				modal.modal("show");
+			},
+			error: function (error) {
+				alert(error);
+			}
+		});
+    };
+</script>
+{% endblock %}

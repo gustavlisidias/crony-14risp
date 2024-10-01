@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Cursos{% endblock %}
+
+{% block header %}
+<link rel="stylesheet" href="{% static 'smartwizard/smartWizard.min.css' %}">
+<script src="{% static 'smartwizard/smartWizard.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			<a class="text-light" href="{% url 'cursos' %}">Cursos</a>
+			<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+			{{curso}}
+			<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+			{{progresso.first.funcionario.nome_completo}}
+		</div>
+		<div class="card-body">
+
+			<div class="mt-3" id="smartwizard">
+				<ul class="nav">
+					{% for etapa in progresso %}
+						<li class="nav-item">
+							<a class="nav-link" href="#{{etapa.etapa.titulo|slugify}}-{{etapa.id}}">
+								<div class="num">{{forloop.counter}}</div>
+								{{etapa.etapa.titulo}}
+							</a>
+						</li>
+					{% endfor %}
+				</ul>
+			 
+				<div class="tab-content">
+					{% for etapa in progresso %}
+						<div class="tab-pane" role="tabpanel" id="{{etapa.etapa.titulo|slugify}}-{{etapa.id}}" aria-labelledby="{{etapa.etapa.titulo|slugify}}-{{etapa.id}}">
+							<div class="card p-3 bg-body">
+								{{etapa.etapa.texto|safe}}
+								{% if etapa.data_conclusao %}
+									<div class="text-end">
+										<i class="fa-duotone fa-badge-check fa-2xl text-body" title="Concluído"></i>
+									</div>
+								{% endif %}
+							</div>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+
+			<div class="d-flex justify-content-center align-items-center">
+				<img src="{% static 'images/background/cursos.svg' %}" class="img img-fluid" width="480">
+			</div>
+			
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		$("#smartwizard").smartWizard({
+			theme: "dots",
+			lang: {
+				next: "Proximo",
+				previous: "Anterior"
+			},
+			toolbar: {
+				extraHtml: [$(`<button class="btn btn-info text-light ms-1" id="btnWizard" type="button"> Concluir </button>`)]
+			}
+		});
+
+		$("#btnWizard").on("click", function () {
+			const etapaId = parseInt($("#smartwizard .active").attr("href").replace("#", "").split("-").slice(-1)[0]);
+
+			$.ajax({
+				type: "POST",
+				url: `{% url "concluir-etapa" 0 %}`.replace("0", etapaId),
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+				},
+				success: function (data, textStatus, xhr) {
+					alert(data.message);
+
+					if (xhr.status === 200) {
+						const el = $("#smartwizard .active").attr("href").replace("#", "");
+						$(`#${el} .card`).append(`<div class="text-end">
+							<i class="fa-duotone fa-badge-check fa-2xl text-body" title="Concluído"></i>
+						</div>`);
+						$("#smartwizard .tab-content").height("100%");
+					};
+				},
+				error: function (data) {
+					alert(data.message);
+				}
+			});	
+			
+		});
+	});
+</script>
+{% endblock %}

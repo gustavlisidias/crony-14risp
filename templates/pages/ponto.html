@@ -1,0 +1,787 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Registro de Pontos{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/pontos/editar-ponto.html" %}
+{% include "modals/pontos/adicionar-abono.html" %}
+{% include "modals/pontos/visualizar-solicitacoes.html" %}
+{% include "modals/pontos/relatorios.html" %}
+{% include "modals/pontos/fechamento.html" %}
+{% include "modals/pontos/detalhes-fechamento.html" %}
+{% include "modals/pontos/feriados.html" %}
+{% include "modals/pontos/saldos.html" %}
+{% include "modals/web/adicionar-moedas.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			Registro de Pontos
+		</div>
+
+		<div class="card-body">
+			<!-- Navegação -->
+			<ul class="nav nav-tabs mb-3" id="tab-pontos" role="tablist">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link active" id="meuponto-tab" data-bs-toggle="tab" data-bs-target="#meuponto-pane" type="button" role="tab">Meu Ponto</button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes-pane" type="button" role="tab">Solicitações</button>
+				</li>
+				{% if request.user.get_access == "admin" %}
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores-pane" type="button" role="tab">Cartão Colaborador</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="fechamentos-tab" data-bs-toggle="tab" data-bs-target="#fechamentos-pane" type="button" role="tab">Fechamentos</button>
+					</li>
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="scores-tab" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">Scores (Mensal)</button>
+					</li>
+				{% endif %}
+			</ul>
+
+			<!-- Filtros -->
+			<div class="card card-filtros mb-4">
+				<div class="card-header">
+					Filtros & Ações
+				</div>
+				<div class="card-body">
+					<form method="GET" id="formFiltrarPonto">
+						<div class="row mb-3">
+							<div class="col-md-4 col-12">
+								<label class="form-label fs-6">Data Inicial</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_inicial" class="form-control" value="{{filtros.inicio}}">
+								</div>
+							</div>
+							<div class="col-md-4 col-12">
+								<label class="form-label fs-6">Data Final</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_final" class="form-control" value="{{filtros.final}}">
+								</div>
+							</div>
+							<div class="col-md-4 col-12">
+								<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+								<select class="form-select select-users" id="selectUsers" name="funcionarios" multiple>
+									{% for funcionario in funcionarios %}
+										<option value="{{ funcionario.id }}" {% if funcionario.id|value_to_string in request.GET|item_from_dict:"funcionarios" %} selected {% endif %}>{{ funcionario }}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+
+						<div class="d-flex justify-content-between">
+							<div>
+								<a role="button" class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalSolicitarAbono">Solicitar Abono</a>
+								{% if request.user.get_access == "admin" %}
+									<a role="button" class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalRelatoriosPonto">Gerar Relatorio</a>
+									<a role="button" class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalAdicionarFeriado">Adicionar Feriado</a>
+									<a role="button" class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalAdicionarSaldo">Adicionar Saldo</a>
+								{% endif %}
+							</div>									
+							<div>
+								<button type="submit" class="btn btn-primary text-light float-end ms-2">Aplicar</button>
+								<a href="{% url 'pontos' %}" role="button" class="btn btn-primary text-light float-end">Limpar</a>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			<div class="tab-content" id="tab-pontos-content">
+				<!-- Meu Ponto -->
+				<div class="tab-pane fade show active" id="meuponto-pane" role="tabpanel" aria-labelledby="meuponto-tab" tabindex="0">		
+					<div class="table-responsive">
+						<table class="table table-hover align-middle table-pontos">
+							<thead>
+								<tr>
+									<th scope="col">Data</th>
+									<th scope="col">Funcionário</th>
+									<th scope="col">Entrada</th>
+									<th scope="col">Saída</th>
+									<th scope="col">Total</th>
+									<th scope="col">Saldo</th>
+									<th class="text-center" scope="col">Ações</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for data, dados in pontos.items reversed %}
+									{% for dado in dados %}
+										<tr>
+											<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
+											<td>{{dado.funcionario}}</td>
+											<td>{{dado.pontos|index:0|default_if_none:"--:--"}}</td>
+											{% with last=dado.pontos|length|add:-1 %}
+												<td>{{dado.pontos|index:last|default_if_none:"--:--"}}</td>
+											{% endwith %}
+											<td class="{% if "-" in dado.total|timedelta %} text-danger {% elif dado.total|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dado.total|timedelta}}
+											</td>
+											<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dado.saldo|timedelta}}
+											</td>
+											<td class="text-center">
+												{% if dado.pendente %}
+													<i class="fa-light fa-clock-rotate-left fa-lg text-warning" title="Solicitação pendente"></i>
+												{% else %}
+													<a class="text-primary" role="button" title="Editar ponto" onclick="editarPonto({funcionario: '{{dado.funcionario.id}}', data: '{{data|date:'Y-m-d'}}'}, {{data|date:'Y-m-d'|is_today}}, {{dado.encerrado}}, {{dado.pontos|length}})">
+														<i class="fa-duotone fa-calendar-lines-pen fa-lg text-body"></i>
+													</a>
+												{% endif %}
+											</td>
+										</tr>
+									{% endfor %}
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- Solicitações de Ajsutes e Abonos -->
+				<div class="tab-pane fade" id="solicitacoes-pane" role="tabpanel" aria-labelledby="solicitacoes-tab" tabindex="0">
+					<div class="table-responsive">
+						<table class="table table-hover align-middle table-solicitacoes">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Funcionário</th>
+									<th scope="col">Tipo</th>
+									<th scope="col" class="text-center">Arquivo</th>
+									<th scope="col">Data</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for solicitacao in solicitacoes reversed %}
+									<tr role="button" onclick="visualizarSolicitacao('{{solicitacao.id}}', '{{solicitacao.tipo_label}}')">
+										<th scope="row">{{forloop.counter}}</th>
+										<td>{{solicitacao.funcionario__nome_completo}}</td>
+										<td>{{solicitacao.tipo_label}}</td>
+
+										<td class="text-center">
+											{% if solicitacao.tipo_label != "Ajuste" and solicitacao.caminho %}
+												<a href="{% url 'stream-documento' solicitacao.id 'abono' 'visualizar' %}">
+													<i class="fa-duotone fa-download text-body"></i>
+												</a>
+											{% endif %}
+										</td>
+
+										<td>{{solicitacao.data|date:"d/m/Y"}}</td>
+									</tr>
+								{% endfor%}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				{% if request.user.get_access == "admin" %}
+					<!-- Cartão Colaborador -->
+					<div class="tab-pane fade" id="colaboradores-pane" role="tabpanel" aria-labelledby="colaboradores-tab" tabindex="0">
+						<div class="table-responsive">
+							<table class="table table-hover align-middle table-colaboradores">
+								<thead>
+									<tr>
+										<th scope="col">Nome Completo</th>
+										<th scope="col">Cargo</th>
+										<th scope="col">Setor</th>
+										<th class="text-center" scope="col">Ações</th>
+									</tr>
+								</thead>
+								<tbody>
+									{% for funcionario in funcionarios %}
+										</tr>
+											<th scope="row" class="d-flex align-items-center">
+												<img class="rounded-circle" src="{{funcionario.id|photo:'url'}}" style="width: 30px; height: 30px; display: block; border-style: none; border: 3px solid {{funcionario.get_perfil.time.cor}};">
+												<p class="ms-3 mb-0">{{funcionario}}</p>
+											</th>
+											<td>{{funcionario.cargo}}</td>
+											<td>{{funcionario.setor}}</td>
+											<td class="text-center">
+												<a href="{% url 'detalhes-ponto' funcionario.id %}" title="Visualizar pontos">
+												<i class="fa-duotone fa-calendar-clock fa-lg text-body"></i>
+											</a></td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+					
+					<!-- Fechamentos -->
+					<div class="tab-pane fade" id="fechamentos-pane" role="tabpanel" aria-labelledby="fechamentos-tab" tabindex="0">
+						<div class="table-responsive">
+							<table class="table table-hover align-middle table-fechamentos">
+								<thead>
+									<tr>
+										<th scope="col">#</th>
+										<th scope="col">Periodo</th>
+										<th scope="col">Data Fechamento</th>
+										<th class="text-center" scope="col">Ações</th>
+									</tr>
+								</thead>
+								<tbody>
+									{% for fechamento in fechamentos %}
+										<tr>
+											<th scope="row">{{forloop.counter}}</th>
+											<td>{{fechamento.de}} - {{fechamento.ate}}</td>
+											<td>{{fechamento.data_fechamento|default_if_none:""|date:"d/m/Y"}}</td>
+											<td class="text-center">
+												<a role="button" title="Visualizar fechamento" onclick="mostrarFechamento({{fechamento}})">
+													<i class="fa-solid fa-bars fa-lg text-body"></i>
+												</a>
+											</td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Scores -->
+					<div class="tab-pane fade" id="scores-pane" role="tabpanel" aria-labelledby="scores-tab" tabindex="0">
+						<div class="table-responsive">
+							<table class="table table-hover align-middle table-scores">
+								<thead>
+									<tr>
+										<th scope="col">#</th>
+										<th scope="col">Colaborador</th>
+										<th scope="col">Pontuação</th>
+										<th scope="col">Status</th>
+										<th scope="col">Data Cadastro</th>
+										<th scope="col">Moedas</th>
+										<th class="text-center" scope="col">Ações</th>
+									</tr>
+								</thead>
+								<tbody>
+									{% for score in pontuacoes %}
+										<tr>
+											<th scope="row">{{forloop.counter}}</th>
+											<td>{{score.funcionario}}</td>
+											<td>{{score.pontuacao|floatformat:"02"}}</td>
+											{% if score.fechado %}
+												<td>
+													<span class="d-none">Fechado</span>
+													<i class="fa-duotone fa-circle-check text-success"></i>
+												</td>
+											{% else %}
+												<td>
+													<span class="d-none">Aberto</span>
+													<i class="fa-duotone fa-circle-xmark text-danger"></i>
+												</td>
+											{% endif %}
+											<td>{{score.data_cadastro|default_if_none:""|date:"d/m/Y"}}</td>
+											<td>{{score.moedas|floatformat:00}}</td>
+											<td class="text-center">
+												<a onclick="adicionarMoedas({{score.funcionario.id}}, {{score.anomes}})" role="button" title="Adicionar moedas">
+												<i class="fa-duotone fa-solid fa-coins fa-lg text-body"></i>
+											</a></td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				{% endif %}
+
+			</div>
+		</div>
+	</div>
+
+	<!-- Gráfico de Saldo por dia do Funcionário -->
+	{% if graph.plot %}
+		<div class="card w-100">
+			<div class="card-header bg-primary text-light border-bottom border-light">
+				Informações de Registro & Pontuação
+			</div>
+			<div class="card-body">
+				<small>O score de pontualidade atual se baseia apenas nos registros de ponto do mês, ao realizar o fechamento do mês este valor pode ser alterado dependendo da quantidade de Solicitações de Abono que você possuir. Para manter uma boa pontuação no score evite faltas desnecessárias e sempre as justifique.</small>
+				
+				<div class="progress mt-2 mb-4">
+					{% if graph.notas.0 >= 4.5 %}
+						<div class="progress-bar bg-success progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
+					{% elif graph.notas.0 >= 4 %}
+						<div class="progress-bar bg-secondary progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
+					{% elif graph.notas.0 >= 3.5 %}
+						<div class="progress-bar bg-warning progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
+					{% else %}
+						<div class="progress-bar bg-danger progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
+					{% endif %}
+				</div>
+
+				<div class="d-flex justify-content-around mb-3">
+					<p class="fw-bold">Score de Pontualidade: {{graph.notas.0|floatformat:2}}</p>
+					<p class="fw-bold">Total Trabalhado: {{graph.total|timedelta}}</p>
+					<p class="fw-bold">Saldo de Horas: {{graph.saldo|timedelta}}</p>
+					<p class="fw-bold">Banco de Horas: {{graph.banco|timedelta}}</p>
+				</div>
+
+				<div class="d-flex justify-content-center mb-2">
+					<canvas id="saldoGrafico" style="max-height: 360px; max-width: 720px"></canvas>
+				</div>
+			</div>
+		</div>
+	{% endif %}
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'chartjs/chart.min.js' %}"></script>
+<script>
+	function aprovarSolicitacao(solicitacaoId, categoria) {
+		$.ajax({
+			type: "POST",
+			url: `{% url "aprovar-solicitacao" 0 "cat" %}`.replace("0", solicitacaoId).replace("cat", categoria),
+			beforeSend: function (xhr) {
+				xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+			},
+			success: function (data) {
+				location.reload();
+			},
+			error: function (error) {
+				location.reload();
+			}
+		});
+	};
+
+	function removerSolicitacao(solicitacaoId, categoria) {
+		let motivo = prompt("Informe o motivo da exclusão:");
+		if (motivo != null && motivo !== "") {
+			$.ajax({
+				type: "POST",
+				url: `{% url "excluir-solicitacao" 0 "cat" %}`.replace("0", solicitacaoId).replace("cat", categoria),
+				data: {motivo: motivo},
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+				},
+				success: function (data) {
+					location.reload();
+				},
+				error: function (error) {
+					location.reload();
+				}
+			});
+		};
+	};
+
+	function visualizarSolicitacao(solicitacaoId, categoria) {
+		$.ajax({
+			type: "GET",
+			url: `{% url "consultar-solicitacao" 0 "cat" %}`.replace("0", solicitacaoId).replace("cat", categoria),
+			success: function (data) {
+				const solicitacao = data.solicitacao[0];
+				const modal = $("#modalVisualizarSolicitacao");
+
+				modal.find(".modal-body .infos").children().remove();
+				modal.find(".modal-body .horas").children().remove();
+
+				modal.find(".modal-body .infos").append(`
+					<p class="text-muted fs-6 mb-1"><b>Funcionário:</b> ${solicitacao[1]}</p>
+					<p class="text-muted fs-6 mb-1"><b>Tipo:</b> ${categoria}</p>
+				`);
+
+				if (data.categoria == "abono") {
+					modal.find(".modal-title").html("Solicitação de Abono");
+					modal.find(".modal-body .horas").append(`
+						<div class="row mt-3">
+							<div class="col">
+								<label class="form-label" for="solicitacaoInicio">Inicio</label>
+								<input type="datetime-local" class="form-control" id="solicitacaoInicio" value="${formatarDataHoraAsValue(solicitacao[2])}" disabled>
+							</div>
+							<div class="col">
+								<label class="form-label" for="solicitacaoFinal">Final</label>
+								<input type="datetime-local" class="form-control" id="solicitacaoFinal" value="${formatarDataHoraAsValue(solicitacao[3])}" disabled>
+							</div>
+						</div>
+					`);
+
+				} else {
+					modal.find(".modal-title").html("Solicitação de Ajuste de Ponto");
+					modal.find(".modal-body .infos").append(`<p class="text-muted fs-6"><b>Data:</b> ${formatarData(solicitacao[2])}</p>`);
+					data.solicitacao.forEach(item => {						
+						modal.find(".modal-body .horas").append(`
+							<input type="time" class="form-control mb-3 w-100" name="hora" value="${item[3]}" disabled>
+						`);
+					});
+				};
+
+				if (solicitacao[1] == "{{funcionario.nome_completo}}") {
+					modal.find(".btn-reprovar").html("Remover");
+				} else {
+					modal.find(".btn-reprovar").html("Reprovar");
+				};
+
+				modal.find(".btn-aprovar").off("click").on("click", function() {
+					aprovarSolicitacao(solicitacaoId, categoria);
+				});
+
+				modal.find(".btn-reprovar").off("click").on("click", function() {
+					removerSolicitacao(solicitacaoId, categoria);
+				});
+
+				modal.find("#solicitacaoMotivo").html(solicitacao[4]);
+				modal.modal("show");
+			},
+			error: function (error) {
+				alert(error);
+			}
+		});
+	};
+
+	function editarPonto(ponto, is_today, is_closed, qtd) {
+		const is_admin = "{{request.user.get_access}}" == "admin" ? true : false;
+		const editar = is_admin || (!is_today && !is_closed && qtd > 0);
+
+		$.ajax({
+			type: "GET",
+			url: `{% url "consultar-ponto" "data_ponto" 0  %}`.replace("0", ponto.funcionario).replace("data_ponto", ponto.data),
+			success: function (data) {
+				const modal = $("#modalEditarPonto");
+				const action = `{% url "editar-ponto" "data_ponto" 0 %}`.replace("0", ponto.funcionario).replace("data_ponto", ponto.data);
+
+				modal.find(".modal-title").html(`Editar Registro - ${formatarData(ponto.data)}`);
+				modal.find(".modal-body").empty();
+
+				if (qtd > 0) {
+					data.forEach((item, index) => {
+						const horaMinuto = item.hora.split(":").slice(0, 2).join(":");
+						const indexEntrada = Math.floor((index + 2) / 2);
+						const entrada = index % 2 == 0 ? `${indexEntrada}ª Entrada` : `${indexEntrada}ª Saída`;
+						const input = `
+							<div class="d-flex flex-nowrap rowPonto align-items-center">
+								<div class="flex-fill order-1 pe-3">
+									<div>
+										<label class="form-label">${entrada}</label>
+										<input type="time" class="form-control mb-3 w-100" name="hora" value="${horaMinuto}">
+									</div>
+								</div>
+								<div class="order-2 pe-3">
+									<i role="button" title="Adicionar ponto" class="fa-light fa-plus text-body pt-2" onclick="adicionarPonto(this)"></i>
+								</div>
+								<div class="order-3">
+									<i role="button" title="Remover ponto" class="fa-thin fa-trash-clock text-danger pt-2" onclick="excluirPonto(this)"></i>
+								</div>
+							</div>`;
+
+						modal.find(".modal-body").append(input);
+					});
+				} else {
+					const input = `
+						<div class="d-flex flex-nowrap rowPonto align-items-center">
+							<div class="flex-fill order-1 pe-3">
+								<div>
+									<label class="form-label">1ª Entrada</label>
+									<input type="time" class="form-control mb-3 w-100" name="hora" value="00:00">
+								</div>
+							</div>
+							<div class="order-2 pe-3">
+								<i role="button" title="Adicionar ponto" class="fa-light fa-plus text-body pt-2" onclick="adicionarPonto(this)"></i>
+							</div>
+							<div class="order-3">
+								<i role="button" title="Remover ponto" class="fa-thin fa-trash-clock text-danger pt-2" onclick="excluirPonto(this)"></i>
+							</div>
+						</div>`;
+
+					modal.find(".modal-body").append(input);
+				}
+
+				const textarea = `
+					{% if not request.user.get_access != "common" %}
+						<div class="form-floating">
+						<textarea class="form-control" placeholder="Motivo" id="pontoMotivo" name="motivo" required></textarea>
+						<label for="pontoMotivo">Motivo da Alteração</label>
+						</div>
+					{% endif %}
+				`;
+				
+				if (editar) {
+					modal.find("#btnEnviarSolicitacao").removeClass("d-none");
+				} else {
+					modal.find("#btnEnviarSolicitacao").addClass("d-none");
+				};
+
+				modal.find(".modal-body").append(textarea);
+				modal.find(".modal-content").attr("action", action);
+				modal.modal("show");
+			},
+			error: function (error) {
+				alert(error);
+			}
+		});
+	};
+
+	function adicionarPonto(icon) {
+		const rowPonto = $(icon).closest(".rowPonto");
+		const novoRowPonto = rowPonto.clone();
+	  
+		novoRowPonto.find(`input[name="hora"]`).val("");
+		rowPonto.after(novoRowPonto);
+	  
+		atualizarDescricoesPontos();
+	};
+	
+	function excluirPonto(icon) {
+		const rowPonto = $(icon).closest(".rowPonto");
+		rowPonto.remove();
+		
+		atualizarDescricoesPontos();
+	};
+
+	function atualizarDescricoesPontos() {
+		const rowsPonto = $(".rowPonto");
+		rowsPonto.each((index, row) => {
+		  const entradaSaida = index % 2 === 0 ? `${Math.floor((index + 2) / 2)}ª Entrada` : `${Math.floor((index + 2) / 2)}ª Saída`;
+		  $(row).find(".form-label").text(entradaSaida);
+		});
+	};
+
+	function updateRegiao(regiao) {
+		if (regiao === 'Estadual') {
+			document.getElementById('feriadoEstado').disabled = false;
+			document.getElementById('feriadoEstado').required = true;
+			document.getElementById('feriadoCidade').disabled = true;
+			document.getElementById('feriadoCidade').required = false;
+
+		} else if (regiao === 'Municipal') {
+			document.getElementById('feriadoEstado').disabled = false;
+			document.getElementById('feriadoEstado').required = true;
+			document.getElementById('feriadoCidade').disabled = false;
+			document.getElementById('feriadoCidade').required = true;
+
+		} else {
+			document.getElementById('feriadoEstado').disabled = true;
+			document.getElementById('feriadoEstado').required = false;
+			document.getElementById('feriadoCidade').disabled = true;
+			document.getElementById('feriadoCidade').required = false;
+		};
+	};
+
+	function updateSelectCidades(estado) {
+		$.ajax({
+			type: "GET",
+			url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
+			success: function (data) {
+				let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
+
+				for (let i = 0; i < data.length; i++) {
+					options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
+				};
+
+				$(`[name="cidade"]`).each(function () {
+					$(this).html(options);
+				});
+			},
+			error: function (error) {
+				alert(error.responseJSON.mensagem);
+			}
+		});
+	};
+
+	function mostrarFechamento(fechamento) {
+		const modal = $("#modalDetalhesFechamento");
+
+		modal.find("ol").children().remove();
+		modal.find("#modalDetalhesFechamentoLabel").html(`Fechamento de ${fechamento.de} até ${fechamento.ate}`);
+		modal.find(".modal-body").append(`<input type="hidden" value="${fechamento.de}" name="inicio">`);
+		modal.find(".modal-body").append(`<input type="hidden" value="${fechamento.ate}" name="final">`);
+		modal.find("form").attr("action", `{% url "excluir-fechamento" %}`);
+
+		[...fechamento.funcionarios].forEach(item => {
+			modal.find("ol").append(`
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					<div class="ms-2 me-auto">
+						<div class="fw-bold">${item.funcionario__nome_completo}</div>
+					</div>
+					<button type="submit" value="${item.funcionario__id}" name="relatorio" class="btn">
+						<i class="fa-thin fa-file-pdf text-body"></i>
+					</button>
+					<button type="submit" value="${item.funcionario__id}" name="funcionario" class="btn"">
+						<i class="fa-duotone fa-trash text-body"></i>
+					</button>
+				</li>
+			`);
+		});
+
+		modal.modal("show");
+	};
+
+	function gerarRelatorio(form) {
+		if (form.id == "formFechamentoPonto") {
+			$("#modalFechamentoPonto").modal("hide");
+		} else {
+			$("#modalRelatoriosPonto").modal("hide");
+		};	
+
+		document.getElementById("overlay").style.display = "block";
+		
+		const formData = new FormData(form);
+		
+		fetch(form.action, {
+			method: form.method,
+			body: formData,
+		})
+		.then(response => {
+			if (response.ok) {
+				if (form.id == "formFechamentoPonto") {
+					setTimeout(() => {
+						window.location.reload();
+					}, 2000);
+				} else {
+					document.getElementById("overlay").style.display = "none";
+				};
+			} else {
+				throw new Error("Erro ao enviar o formulario.");
+			}
+		})
+		.catch(error => {
+			console.error(error);
+			document.getElementById("overlay").style.display = "none";
+		});
+	
+		return false;
+	};
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		createSelectChoices(document.querySelector(".select-users"), -1);
+
+		//####################################################################################
+
+		const numberPages = {{funcionarios|length}} > 1 ? {{funcionarios|length}} : 7;
+		
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+			lengthMenu: [[numberPages, 100, 250, 500, -1], [numberPages, 100, 250, 500, "Tudo"]],
+		});
+
+		const config2 = Object.assign({}, datatables_config, {
+			scrollY: 500,
+			buttons: datatables_config.buttons.concat({
+				text: 'Fechamento',
+				className: 'bg-primary border-primary ms-2 rounded',
+				action: function (e, dt, node, config) {
+					$("#modalFechamentoPonto").modal("show");
+				}
+			})
+		});
+
+		const table1 = $(".table-pontos").DataTable(config);
+		const table2 = $(".table-solicitacoes").DataTable(config);
+		const table3 = $(".table-colaboradores").DataTable(config);
+		const table4 = $(".table-fechamentos").DataTable(config2);
+		const table5 = $(".table-scores").DataTable(config);
+
+		$("#meuponto-tab").on("click", function() {
+			setTimeout(() => {table1.draw(false)}, "200");
+		});
+
+		$("#solicitacoes-tab").on("click", function() {
+			setTimeout(() => {table2.draw(false)}, "200");
+		});
+
+		$("#colaboradores-tab").on("click", function() {
+			setTimeout(() => {table3.draw(false)}, "200");
+		});
+
+		$("#fechamentos-tab").on("click", function() {
+			setTimeout(() => {
+				table4.draw(false)
+				$("#fechamentos-pane").find(".buttons-pdf").addClass("rounded-end");
+			}, "200");
+		});
+
+		$("#scores-tab").on("click", function() {
+			setTimeout(() => {table5.draw(false)}, "200");
+		});
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const btnEnviarSolicitacao = document.getElementById("btnEnviarSolicitacao");
+		if (btnEnviarSolicitacao) {
+			btnEnviarSolicitacao.addEventListener("click", function (event) {
+				const inputsHora = document.querySelectorAll("#modalEditarPonto .rowPonto input[name='hora']");
+				if (!(inputsHora.length % 2 === 0)) {
+					event.preventDefault();
+					alert("O número de entradas e saídas devem ser iguais.");
+				}
+			});
+		};
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const form = document.getElementById("formSolicitarAbono");
+		const abonoInicio = document.getElementById("abonoInicio");
+		const abonoFinal = document.getElementById("abonoFinal");
+	
+		form.addEventListener("submit", function(event) {
+			// Obter a data atual no formato YYYY-MM-DDTHH:MM (formato usado pelo input datetime-local)
+			const today = new Date();
+			const todayStr = today.toISOString().slice(0, 16);
+	
+			// Obter os valores dos campos de data
+			const abonoInicioValue = abonoInicio.value;
+			const abonoFinalValue = abonoFinal.value;
+	
+			// Verificar se uma das datas é igual a hoje
+			if (abonoInicioValue.slice(0, 16) === todayStr || abonoFinalValue.slice(0, 16) === todayStr) {
+				// Impedir o envio do formulário
+				event.preventDefault();
+				alert("A data de início ou fim não pode ser igual à data de hoje.");
+			}
+		});
+	});
+</script>
+
+<script>
+	function adicionarMoedas(func, anomes) {
+		const modal = $("#modalAdicionarMoedas");
+		const action = `moedas/adicionar/${func}/${anomes}`;
+
+		modal.find("#formAdicionarMoedas").attr("action", action);
+        modal.modal("show");
+	};
+
+	function alertaAbono(element) {
+		if (element.value == "FT") {
+			alert("Abonos do tipo falta não terão compensação de horas. As horas desta solicitação serão negativadas em seu banco de horas!")
+		};
+	};
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		if (document.getElementById("saldoGrafico")) {
+			const dados = [
+				{% for data, dados in pontos.items %}
+					{% for dado in dados %}
+						{
+							data: `{{ data|date:"d/m/Y" }}`,
+							banco: parseFloat("{{ dado.banco|floatdelta|floatformat:2 }}".replace(",", "."))
+						},
+					{% endfor %}
+				{% endfor %}
+			];
+
+			const dadosFiltrados = dados.filter(item => {
+				return item.data.trim() !== "";
+			});
+
+			const labels = dadosFiltrados.map(item => item.data);
+			const banco = dadosFiltrados.map(item => item.banco);
+			const ctx = document.getElementById("saldoGrafico").getContext("2d");
+
+			createChart(ctx, "line", labels, banco, "Total em horas", "Banco de Horas");
+		};		
+	});
+</script>
+{% endblock %}

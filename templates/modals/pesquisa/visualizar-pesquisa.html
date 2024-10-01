@@ -1,0 +1,39 @@
+<div class="modal fade" id="modalVisualizarPesquisa" tabindex="-1" aria-labelledby="modalVisualizarPesquisaLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="" class="modal-content" id="formEditarPesquisa">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalVisualizarPesquisaLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-check mb-3">
+					<input class="form-check-input me-2" type="checkbox" value="true" id="pesquisaEditarAnonimo" name="anonimo" style="height: 20px; width: 20px;">
+					<label class="form-check-label" for="pesquisaEditarAnonimo" style="margin-top: 3px;">Anônimo</label>
+				</div>
+				<div class="form-floating mb-3">
+                    <input type="date" class="form-control" id="pesquisaEditarEncerramento" name="data_encerramento" placeholder required>
+					<label for="pesquisaEditarEncerramento">Data Encerramento</label>
+                </div>
+				<div class="form-floating mb-3">
+					<textarea class="form-control" id="pesquisaEditarDescricao" name="descricao" placeholder required style="height: 100px"></textarea>
+					<label for="pesquisaEditarDescricao">Descrição</label>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="pesquisaEditarFuncionarios" name="funcionarios" multiple style="height: 100%;">
+						{% for funcionario in funcionarios %}
+							<option value="{{funcionario.id}}">{{funcionario}}</option>
+						{% endfor %}
+					</select>
+					<label for="pesquisaEditarFuncionarios">Funcionarios</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				{% if request.user.get_access == "admin" %}
+					<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+				{% endif %}
+			</div>
+		</form>
+	</div>
+</div>

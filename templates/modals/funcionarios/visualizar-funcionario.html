@@ -1,0 +1,28 @@
+{% load static %}
+
+<div class="modal fade" id="modalVisualizarFuncionario" tabindex="-1" aria-labelledby="modalVisualizarFuncionarioLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-body p-0">
+				<div class="d-flex justify-content-center align-items-center">
+					<div class="card perfil-funcionario border-0 w-100">
+						<div class="w-100">
+							<img class="img img-fluid rounded-top" src="{% static 'images/background/funcionario.svg' %}">
+						</div>
+						<div class="text-center" style="top: -36px; position: inherit;">
+							<div class="h-100">
+								<img class="foto-funcionario rounded-circle" src="" style="width: 136px; height: 136px;">
+							</div>
+						</div>
+						<div class="text-center pb-5">
+							<h4 class="mb-2 nome-funcionario"></h4>
+							<span class="text-muted cargo-funcionario d-block mb-1"></span>
+							<span class="text-muted gerente-funcionario d-block mb-1"></span>
+							<span class="text-muted contato-funcionario d-block mb-1"></span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

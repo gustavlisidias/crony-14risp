@@ -1,0 +1,51 @@
+<div class="modal fade" id="modalRelatoriosPonto" tabindex="-1" aria-labelledby="modalRelatoriosPontoLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="{% url 'relatorio-ponto' %}" class="modal-content" id="formRelatorioPonto" onsubmit="gerarRelatorio(this)">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalRelatoriosPontoLabel">Relatório de Ponto</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-floating mb-3">
+					<select class="form-select" id="relatorioTipo" name="tipo">
+						<option value="0" selected>Espelho de Ponto</option>
+						<option value="1">Abonos</option>
+						<option value="2">Ajustes</option>
+					</select>
+					<label for="relatorioTipo">Tipo</label>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 100%;">
+						{% for contrato in contratos %}
+							<option value="{{contrato.id}}">{{contrato}}</option>
+						{% endfor %}
+					</select>
+					<label for="fechamentoContrato">Contrato</label>
+				</div>
+				<div class="row mb-3">
+					<div class="col">
+						<label for="relatorioInicio" class="form-label">Início</label>
+						<input class="form-control" type="date" id="relatorioInicio" name="relatorio_inicio">
+					</div>
+					<div class="col">
+						<label for="relatorioFinal" class="form-label">Final</label>
+						<input class="form-control" type="date" id="relatorioFinal" name="relatorio_final">
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="relatorioFuncionario" name="funcionarios" multiple style="height: 100%;">
+						{% for funcionario in funcionarios %}
+							<option value="{{funcionario.id}}" selected>{{funcionario}}</option>
+						{% endfor %}
+					</select>
+					<label for="relatorioFuncionario">Funcionarios</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Gerar</button>
+			</div>
+		</form>
+	</div>
+</div>

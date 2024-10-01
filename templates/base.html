@@ -1,0 +1,127 @@
+{% load static %}
+{% load compress %}
+{% load custom_tags %}
+
+<!doctype html>
+<html lang="pt-br" data-bs-theme="{{funcionario.id|theme}}">
+
+	<head>
+		<title>Crony {% block title %} {% endblock title %}</title>
+		<link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon.ico' %}">
+
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		
+		<meta name="description" content="Website for controlling personnel departments with employee records, time, vacations and more">
+		<meta name="author" content="Gustavo Lisi Dias">
+		
+		{% compress css %}
+		<!-- Bootstrap 5 -->
+		<link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+		<link rel="stylesheet" type="text/scss" href="{% static 'custom.scss' %}">
+		<!-- Fontawesome -->
+		<link rel="stylesheet" href="{% static 'fontawesome/all.min.css' %}">
+		<!-- CKEditor -->
+		<link rel="stylesheet" href="{% static 'django_ckeditor_5/dist/styles.css' %}">
+		<!-- DataTables -->
+		<link rel="stylesheet" href="{% static 'datatables/datatables.min.css' %}">
+		<!-- ChoicesJS -->
+		<link rel="stylesheet" href="{% static 'choices/choices.min.css' %}">
+		<!-- Emojionearea -->
+		<link rel="stylesheet" href="{% static 'emojionearea/emojionearea.css' %}">
+		{% endcompress %}
+
+		{% compress js %}
+		<!-- Bootstrap 5 -->
+		<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+		<!-- Fontawesome -->
+		<script src="{% static 'fontawesome/all.min.js' %}"></script>
+		<!-- JQuery 3.7 -->
+		<script src="{% static 'main/jquery.min.js' %}"></script>
+		<!-- CKEditor -->
+		<script src="{% static 'django_ckeditor_5/dist/bundle.js' %}"></script>
+		<script src="{% static 'django_ckeditor_5/dist/translations/pt-br.js' %}"></script>
+		<!-- DataTables -->
+		<script src="{% static 'datatables/pdfmake.min.js' %}"></script>
+		<script src="{% static 'datatables/vfs_fonts.js' %}"></script>
+		<script src="{% static 'datatables/datatables.min.js' %}"></script>
+		<!-- ChoicesJS -->
+		<script src="{% static 'choices/choices.min.js' %}"></script>
+		<!-- Emojionearea -->
+		<script src="{% static 'emojionearea/emojionearea.min.js' %}"></script>
+		<!-- HTMX, IMask, Fuse e HTML2Canvas -->
+		<script src="{% static 'main/htmx.min.js' %}"></script>
+		<script src="{% static 'imask/imask.min.js' %}"></script>
+		<script src="{% static 'main/html2canvas.min.js' %}"></script>
+		<script src="{% static 'main/fuse.js' %}"></script>
+		{% endcompress %}
+
+		<!-- Customizações -->
+		{% block header %} {% endblock header %}
+		<link rel="stylesheet" href="{% static 'main/main.css' %}?{% now 'U' %}">
+	</head>
+
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+		{% if request.user.is_authenticated %}
+			<!-- Preloder -->
+			<div id="overlay" class="overlay">
+				<div id="loading" class="loading"></div>
+			</div>
+
+			<div class="container-fluid">
+				<div class="row flex-nowrap">
+					{% include "includes/sidebar.html" %}
+					<div class="col p-0 content" style="width: 100vh">
+						{% include "includes/navbar.html" %}
+						{% block content %} {% endblock content %}
+					</div>
+				</div>
+			</div>
+		{% else %}
+			{% block auth %} {% endblock auth %}
+		{% endif %}
+
+		<script src="{% static 'main/main.js' %}?{% now 'U' %}"></script>
+		{% if request.user.is_authenticated %}
+			<script defer>
+				document.getElementById("overlay").style.display = "block";
+				document.querySelectorAll(".menu a").forEach(item => {
+					item.addEventListener("click", function() {
+						document.getElementById("overlay").style.display = "block";
+					});
+				});
+				document.addEventListener("DOMContentLoaded", function() {
+					setTimeout(() => {
+						document.getElementById("overlay").style.display = "none"; 
+					}, "1000");
+
+					document.getElementById("btnSwitchTheme").addEventListener("click", () => {
+						if (document.documentElement.getAttribute("data-bs-theme") == "dark") {
+							document.documentElement.setAttribute("data-bs-theme", "light");
+						}
+						else {
+							document.documentElement.setAttribute("data-bs-theme", "dark");
+						}
+
+						$.ajax({
+							type: "POST",	
+							url: `{% url "alterar-tema" %}`,					
+							beforeSend: function (xhr) {
+								xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+							},
+							success: function (response) {
+								console.log("tema alterado");
+							},
+							error: function (error) {
+								console.log(error);
+							}
+						});
+					});
+				});
+			</script>
+		{% endif %}
+		{% block javascript %} {% endblock javascript %}
+	</body>
+
+</html>

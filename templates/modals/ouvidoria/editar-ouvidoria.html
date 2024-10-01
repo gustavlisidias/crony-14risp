@@ -1,0 +1,27 @@
+<div class="modal fade" id="modalEditarOuvidoria" data-bs-focus="false" aria-labelledby="modalEditarOuvidoriaLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="{% url 'adicionar-ouvidoria' %}" class="modal-content" id="formAdicionarOuvidoria">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEditarOuvidoriaLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="manifestacao-descricao mb-3"></div>
+				<div class="card mb-3 card-manifestacao" style="max-height: 320px; overflow-y: auto">
+					<div class="card-body bg-secondary card-messages"></div>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="ouvidoriaMensagem">Nova Mensagem</label>
+					<textarea class="ck-editor-5" id="ouvidoriaMensagem" name="mensagem"></textarea>
+					<span class="word-count" id="ouvidoriaMensagem_script-word-count"></span>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" name="finalizar" value="true" class="btn btn-primary text-light">Finalizar</button>
+				<button type="submit" name="enviar" class="btn btn-primary text-light">Enviar</button>
+			</div>
+		</form>
+	</div>
+</div>

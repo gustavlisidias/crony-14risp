@@ -1,0 +1,20 @@
+<div class="modal fade" id="modalEditarPonto" tabindex="-1" aria-labelledby="modalEditarPontoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable">
+		<form method="POST" action="" class="modal-content" id="formEditarPonto">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEditarPontoLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				{% if request.user.get_access != "common" %}
+					<button type="submit" class="btn btn-primary text-light" id="btnEnviarSolicitacao">Salvar</button>
+				{% else %}
+					<button type="submit" class="btn btn-primary text-light" id="btnEnviarSolicitacao">Enviar Solicitação</button>
+				{% endif %}
+			</div>
+		</form>
+	</div>
+</div>

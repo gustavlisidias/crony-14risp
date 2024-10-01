@@ -1,0 +1,22 @@
+<div class="modal fade" id="modalComentarCelebracao" data-bs-focus="false" aria-labelledby="modalComentarCelebracaoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable">
+		<form method="POST" action="" class="modal-content" id="formComentarCelebracao">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalComentarCelebracaoLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<ol class="list-group mb-3" srtyle="max-height: 20rem; overflow-y: auto;"></ol>
+				<div class="form-floating">
+					<textarea class="form-control" placeholder="" id="celebracaoComentario" name="comentario"></textarea>
+					<label for="celebracaoComentario">Comentar</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Comentar</button>
+			</div>
+		</form>
+	</div>
+</div>

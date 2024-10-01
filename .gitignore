@@ -1,0 +1,14 @@
+.env
+
+assets/*
+static/*
+media/*
+settings/settings.py
+documentacao/*
+
+*.log
+*.pyc
+*.exe
+*.db
+
+web.config

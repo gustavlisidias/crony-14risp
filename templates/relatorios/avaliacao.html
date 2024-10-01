@@ -1,0 +1,161 @@
+<!doctype html>
+
+{% load static %}
+{% load custom_tags %}
+
+<html lang="pt-br">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<title>Avaliação Desempenho</title>
+
+		<style>
+			@page {
+				size: A4 portrait;
+				margin: 15px 15px 80px 15px;
+				font-family: "Lato", sans-serif;
+				font-weight: 400;
+				font-size: 11px;
+				font-style: normal;
+				letter-spacing: 0.2px;
+				color: #202020;
+				border-left: 1px solid #d7d7d7;
+				border-right: 1px solid #d7d7d7;
+				border-top: 1px solid #d7d7d7;
+				height: 100vh !important;
+				box-sizing: border-box;
+				padding: 1rem;
+
+				@bottom-center {
+					content: "Av. Alceu Paiva Arantes, 446 - Planalto Verde - Ribeirão Preto - SP \A email: nova@novadigitalizacao.com.br | telefone: (16) 3329-8412 \A www.novadigitalizacao.com.br";
+					white-space: pre;
+					border-left: 1px solid #d7d7d7;
+					border-right: 1px solid #d7d7d7;
+					border-bottom: 1px solid #d7d7d7;
+					width: 100% !important;
+					height: 80%;
+					box-sizing: border-box;
+					padding: 1rem;
+				}
+			}
+
+			body {
+				font-family: "Lato", sans-serif;
+				font-weight: 400;
+				font-size: 11px;
+				font-style: normal;
+				letter-spacing: 0.2px;
+				color: #202020;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="container-fluid">
+			<div class="d-flex justify-content-between align-items-center my-4">
+				<div><img class="img img-fluid" src="{% static 'images/logo-text.png' %}" style="width: 136px; height: 50px"></div>
+				<div class="flex-fill">
+					<p class="text-center fw-bold mb-0">AVALIAÇÃO DESEMPENHO - {{avaliacao.avaliado}}</p>
+				</div>
+				<div>
+					<p style="font-size: 10px; text-align: end;">Gerado por {{autor}} <br> em {% now "d F Y H:i" %}</p>
+				</div>
+			</div>
+
+			<hr>
+
+			<h3 class="text-center">{{perguntas.first.pergunta.titulo}}</h3>
+			{{perguntas.first.pergunta.texto|safe}}
+
+			<div class="my-4">
+				<p class="m-0 p-0">Total Respostas: {{dados.total_respostas}}</p>
+				<p class="m-0 p-0">Total Participantes: {{dados.total_participantes_ativos}}/{{dados.total_participantes}}</p>
+				<p class="m-0 p-0">Total Perguntas: {{dados.total_perguntas}}</p>
+			</div>
+
+			<h4>Notas calculadas<br>CRITERIO (peso) X NIVEL</h4>
+
+			<table class="table table-sm table-bordered mb-4">
+				<caption>Atenção: Em todas as avaliações, cada critério e cada nível possuem um peso. Esses pesos são determinados pelo setor de Recursos Humanos em conjunto com os responsáveis por sua avaliação. Além disso, seu score de assiduidade é atribuido ao cálculo da média final.</caption>
+				<thead>
+					<tr>
+						<th scope="col" class="bg-body text-start">Critério</th>
+						<th scope="col" class="bg-body text-center">Auto</th>
+						<th scope="col" class="bg-body text-center">Par</th>
+						<th scope="col" class="bg-body text-center">Gestor</th>
+						<th scope="col" class="bg-body-secondary text-center">Total por Critério</th>
+					</tr>
+				</thead>
+				<tbody class="table-group-divider">
+					{% for criterio, niveis in dados.tabela.items %}
+						<tr>
+							<th scope="col" class="text-start">{{ criterio }}</th>
+							<td class="text-center">{{ niveis.0|floatformat:02 }}</td>
+							<td class="text-center">{{ niveis.1|floatformat:02 }}</td>
+							<td class="text-center">{{ niveis.2|floatformat:02 }}</td>
+							<td class="bg-body-secondary text-center fw-bold">{{ niveis.0|soma:niveis.1|soma:niveis.2 }}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+				<tfoot>
+					<tr>
+						<th class="bg-body-secondary text-start">Total por Nível</th>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.0|floatformat:02}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.1|floatformat:02}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.2|floatformat:02}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.0|soma:dados.tabela_footer.1|soma:dados.tabela_footer.2}}</td>
+					</tr>
+				</tfoot>
+			</table>
+
+			<div class="text-center mb-4">
+				<h2>MÉDIA FINAL</h2>
+				<h2>{{dados.nota_final|floatformat:02}}</h2>
+			</div>
+
+			<table class="table table-sm table-bordered mb-5">
+				<caption>Conceito de pontuação dentro da plataforma.</caption>
+				<thead>
+					<tr>
+						<th colspan="6" class="bg-body-secondary text-center">Atribuir a pontuação que relata com maior fidelidade o desempenho do funcionário relativo aos fatores relacionados.</th>
+					</tr>
+					<tr>
+						<th scope="col">Grau</th>
+						<th scope="col" class="text-center">Excede muito o esperado</th>
+						<th scope="col" class="text-center">Excede o esperado</th>
+						<th scope="col" class="text-center">Atinge o esperado</th>
+						<th scope="col" class="text-center">Atinge parcielmente</th>
+						<th scope="col" class="text-center">Não atinge/Insatisfatório</th>
+					</tr>
+				</thead>
+				<tbody class="table-group-divider">
+					<tr>
+						<th scope="row">Pontos</th>
+						<td class="text-center">5</td>
+						<td class="text-center">4</td>
+						<td class="text-center">3</td>
+						<td class="text-center">2</td>
+						<td class="text-center">1</td>
+					</tr>
+				</tbody>
+			</table>
+
+			<div class="d-flex justify-content-around">
+				<div class="text-center">
+					<span>______________________________________</span>
+					<br>
+					<span>Responsável</span>
+				</div>
+				<div class="text-center">
+					<span>______________________________________</span>
+					<br>
+					<span>Colaborador(a)</span>
+				</div>
+			</div>
+		</div>
+
+	</body>
+
+</html>

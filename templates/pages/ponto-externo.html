@@ -1,0 +1,74 @@
+{% load static %}
+{% load custom_tags %}
+
+<!doctype html>
+<html lang="pt-br">
+	<head>
+		<title>Crony | Registro de Ponto Externo</title>
+		<link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon.ico' %}">
+
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<meta name="description"
+			content="Website for controlling personnel departments with employee records, time, vacations and more">
+		<meta name="author" content="Gustavo Lisi Dias">
+
+		<link rel="stylesheet" href="/static/compress/css/output.0c1b180bf9ea.css" type="text/css">
+		<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+		<script src="{% static 'main/htmx.min.js' %}"></script>
+
+		<style>
+			body {
+				font-size: 16px;
+			}
+
+			.main-content {
+				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='240' viewBox='0 0 1000 120'%3E%3Cg fill='none' stroke='%23E3E3E3' stroke-width='1.5' stroke-opacity='0.4'%3E%3Cpath d='M-500 75c0 0 125-30 250-30S0 75 0 75s125 30 250 30s250-30 250-30s125-30 250-30s250 30 250 30s125 30 250 30s250-30 250-30'/%3E%3Cpath d='M-500 45c0 0 125-30 250-30S0 45 0 45s125 30 250 30s250-30 250-30s125-30 250-30s250 30 250 30s125 30 250 30s250-30 250-30'/%3E%3Cpath d='M-500 105c0 0 125-30 250-30S0 105 0 105s125 30 250 30s250-30 250-30s125-30 250-30s250 30 250 30s125 30 250 30s250-30 250-30'/%3E%3Cpath d='M-500 15c0 0 125-30 250-30S0 15 0 15s125 30 250 30s250-30 250-30s125-30 250-30s250 30 250 30s125 30 250 30s250-30 250-30'/%3E%3Cpath d='M-500-15c0 0 125-30 250-30S0-15 0-15s125 30 250 30s250-30 250-30s125-30 250-30s250 30 250 30s125 30 250 30s250-30 250-30'/%3E%3Cpath d='M-500 135c0 0 125-30 250-30S0 135 0 135s125 30 250 30s250-30 250-30s125-30 250-30s250 30 250 30s125 30 250 30s250-30 250-30'/%3E%3C/g%3E%3C/svg%3E");
+			}
+		</style>
+	</head>
+
+	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+		{% include "includes/messages.html" %}
+
+		<nav class="navbar bg-secondary">
+			<div class="container-fluid d-flex justify-content-between">
+				<a class="navbar-brand">
+					<img src="{% static 'images/logo-text-light.png' %}" class="img img-fluid img-text rounded" width="160">
+				</a>
+				<div>
+					<div class="d-flex align-items-center">
+						<div class="me-2" style="font-size: 14px">
+							<p class="text-white fw-semibold m-0">{{funcionario}}</p>
+							<a href="{% url 'sair' %}" class="text-white fw-semibold m-0 float-end">Sair</a>
+						</div>
+						<img src="{{ funcionario.id|photo:'url' }}" class="img img-fluid rounded-circle mx-1" style="border: 3px solid {{funcionario.get_perfil.time.cor}}; width: 45px; height: 45px;">
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<div class="container-fluid main-content p-4 min-vh-100">
+			<div class="card w-100 mx-auto mt-4">
+				<div class="card-body">
+					<h2 class="text-center">Registro de Ponto Externo</h2>
+					<a class="d-flex" role="button" hx-post="{% url 'registrar-ponto' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+						<img src="{% static 'images/digital.svg' %}" height="260px" width="100%">
+					</a>
+				</div>
+				<div class="card-footer text-body-secondary d-flex flex-nowrap align-items-center">
+					{% if ponto %}
+						<div class="order-1 pe-2 fs-7 fw-medium" id="textUltimoRegistro">
+							Último registro {{ponto|date:"D"}}, {{ponto|date:"d/m"}} às {{ponto|time:"H:i"}}
+						</div>
+					{% else %}
+						<div class="order-1 pe-2 fs-7 fw-medium">Nenhum ponto registrado</div>
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</body>
+
+</html>

@@ -1,0 +1,1 @@
+python C:\inetpub\wwwroot\crony\tasks\humores.py

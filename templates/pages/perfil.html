@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Meu Perfil{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "includes/alterar-senha.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			Perfil
+			<i class="fa-solid fa-caret-right fa-2xs mx-2"></i> 
+			{{funcionario}}
+		</div>
+
+		<form method="POST" enctype="multipart/form-data" id="formEditarPerfil">
+			{% csrf_token %}
+			<div class="card-body profile">
+				<div class="row">
+					<!-- Foto e Biografia -->
+					<div class="col-md-3">
+						<div class="d-flex flex-column align-items-center text-center p-3 py-5">
+							<div class="d-flex justify-content-center mb-4">
+								<img id="selectedAvatar" src="{{funcionario.id|photo:'url'}}" class="rounded-circle" style="width: 200px; height: 200px; object-fit: cover;">
+							</div>
+							<div class="d-flex justify-content-center">
+								<div class="btn-group" role="group" aria-label="Basic outlined example">
+									<button type="button" class="btn btn-primary text-light" title="Adicionar foto" style="width: 50px;">
+										<label role="button" class="form-label text-light m-1" for="perfilFoto"><i class="fa-duotone fa-image"></i></label>
+										<input type="file" class="form-control d-none" id="perfilFoto" name="foto" onchange="displaySelectedImage(event, 'selectedAvatar')">
+									</button>
+									<button class="btn btn-primary text-light" title="Remover foto" type="submit" name="remover" value="remover" style="width: 50px;">
+										<i class="fa-duotone fa-trash"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+						<textarea class="form-control" rows="7" id="perfilBiografia" name="bio" placeholder="Fale um pouco sobre você...">{{perfil.bio|default_if_none:""}}</textarea>
+					</div>
+					<!-- Editar Perfil -->
+					<div class="col-md-6">
+						<div class="p-3 py-5">
+							<div class="d-flex justify-content-between align-items-center mb-3">
+								<h4 class="text-right">Editar Perfil</h4>
+							</div>
+			
+							<!-- Nome/Nome Social-->
+							<div class="mb-3">
+								<label for="funcionarioNome" class="form-label">Nome Completo</label>
+								<input type="text" class="form-control" id="funcionarioNome" name="nome_completo" value="{{funcionario.nome_completo}}" required>
+							</div>
+							<div class="mb-3">
+								<label for="funcionarioSocial" class="form-label">Nome Social</label>
+								<input type="text" class="form-control" id="funcionarioSocial" name="nome_social" value="{{funcionario.nome_social|default_if_none:""}}">
+							</div>
+			
+							<!-- Nome dos Pais -->
+							<div class="mb-3">
+								<label for="funcionarioMae" class="form-label">Nome Completo da Mãe</label>
+								<input type="text" class="form-control" id="funcionarioMae" name="nome_mae" value="{{funcionario.nome_mae|default_if_none:""}}">
+							</div>
+							<div class="mb-3">
+								<label for="funcionarioPai" class="form-label">Nome Completo do Pai</label>
+								<input type="text" class="form-control" id="funcionarioPai" name="nome_pai" value="{{funcionario.nome_pai|default_if_none:""}}">
+							</div>
+			
+							<!-- CPF, RG e Data de Expedição -->
+							<div class="row">
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioCPF" class="form-label">CPF</label>
+										<input type="text" class="form-control" id="funcionarioCPF" name="cpf" value="{{funcionario.cpf}}" required>
+									</div>
+								</div>
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioRG" class="form-label">RG</label>
+										<input type="text" class="form-control" id="funcionarioRG" name="rg" value="{{funcionario.rg|default_if_none:""}}" required>
+									</div>
+								</div>
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioExpedicao" class="form-label">Data Expedição</label>
+										<input type="date" class="form-control" id="funcionarioExpedicao" name="data_expedicao" value="{{funcionario.data_expedicao|default_if_none:""|date:"Y-m-d"}}">
+									</div>
+								</div>
+							</div>
+			
+							<!-- Emails -->
+							<div class="row">
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioEmail" class="form-label">Email</label>
+										<input type="email" class="form-control" id="funcionarioEmail" name="email" value="{{funcionario.email}}" required>
+									</div>
+								</div>
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioEmailSec" class="form-label">Email Secundário</label>
+										<input type="email" class="form-control" id="funcionarioEmailSec" name="email_sec" value="{{funcionario.email_sec|default_if_none:""}}">
+									</div>
+								</div>
+							</div>
+			
+							<!-- Celular/Contato -->
+							<div class="row">
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioContato" class="form-label">Contato</label>
+										<input type="text" class="form-control" id="funcionarioContato" name="contato" value="{{funcionario.contato}}">
+									</div>
+								</div>
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioContatoSec" class="form-label">Contato Secundário</label>
+										<input type="text" class="form-control" id="funcionarioContatoSec" name="contato_sec" value="{{funcionario.contato_sec|default_if_none:""}}">
+									</div>
+								</div>
+							</div>
+
+							<!-- Responsável Contato -->
+							<div class="mb-3">
+								<label for="funcionarioResponsavelContato" class="form-label">Resp. Contato</label>
+								<input type="text" class="form-control" id="funcionarioResponsavelContato" name="resp_contato_sec" value="{{funcionario.resp_contato_sec|default_if_none:""}}">
+							</div>
+			
+							<!-- Estado Civil e Data Nascimento -->
+							<div class="row">
+								<div class="col">
+									<label class="form-label" for="funcionarioEstadoCivil">Estado Civil</label>
+									<select class="form-select" id="funcionarioEstadoCivil" name="estado_civil" required>
+										<option value="{{funcionario.estado_civil}}" selected hidden>{{funcionario.get_estado_civil_display|default_if_none:"Selecione um Estado Civil"}}</option>
+										{% for civil in civis %}
+											<option value="{{civil.key}}">{{civil.value}}</option>
+										{% endfor %}
+									</select>
+								</div>
+								<div class="col">
+									<div class="mb-3">
+										<label for="funcionarioNascimento" class="form-label">Data Nascimento</label>
+										<input type="date" class="form-control" id="funcionarioNascimento" name="data_nascimento" value="{{funcionario.data_nascimento|default_if_none:""|date:"Y-m-d"}}" required>
+									</div>
+								</div>
+							</div>
+			
+							<!-- Estado e Cidade -->
+							<div class="row mb-3">
+								<div class="col-md-6">
+									<label for="funcionarioEstado" class="form-label">Estado</label>
+									<select class="form-select" id="funcionarioEstado" name="estado" required onchange="updateSelectCidades(this.value)">
+										<option value="{{funcionario.estado.id}}" selected hidden> {{funcionario.estado.name|default_if_none:"Selecione um Estado"}}</option>
+										{% for estado in estados %}
+											<option value="{{estado.id}}">{{estado.name}}</option>
+										{% endfor %}
+									</select>
+								</div>
+								<div class="col-md-6">
+									<label for="funcionarioCidade" class="form-label">Cidade</label>
+									<select class="form-select" id="funcionarioCidade" name="cidade" required>
+										<option value="{{funcionario.cidade.id}}" selected hidden> {{funcionario.cidade.name|default_if_none:"Selecione uma Cidade"}}</option>
+									</select>
+								</div>
+							</div>
+			
+							<!-- Rua -->
+							<div class="mb-3">
+								<label for="funcionarioRua" class="form-label">Endereço</label>
+								<input type="text" class="form-control" id="funcionarioRua" name="rua" value="{{funcionario.rua|default_if_none:""}}" required>
+							</div>
+
+							<!-- Número, Complemento e CEP -->
+							<div class="row">
+								<div class="col-3">
+									<label class="form-label" for="funcionarioNumero">Número *</label>
+									<input type="text" class="form-control" id="funcionarioNumero" name="numero" placeholder required value="{{funcionario.numero|default_if_none:""}}">
+								</div>
+								<div class="col-6">
+									<label class="form-label" for="funcionarioComplemento">Complemento</label>
+									<input type="text" class="form-control" id="funcionarioComplemento" name="complemento" placeholder value="{{funcionario.complemento|default_if_none:""}}">
+								</div>
+								<div class="col-3">
+									<label class="form-label" for="funcionarioCEP">CEP *</label>
+									<input type="text" class="form-control" id="funcionarioCEP" name="cep" placeholder required value="{{funcionario.cep|default_if_none:""}}">
+								</div>
+							</div>
+
+							<div class="mt-5 text-center">
+								<button class="btn btn-primary text-light" type="submit">Salvar alterações</button>
+								<button class="btn btn-primary text-light" type="button" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha">Alterar senha</button>
+							</div>
+						</div>
+					</div>
+					<!-- Jornada -->
+					<div class="col-md-3">
+						<!-- Horarios e Informações Adicionais -->
+						<div class="p-3 py-5">
+							<div class="col-md-12 mb-4">
+								{% for dia, horarios in jornada.items %}
+									{% if forloop.first %}
+										<h5 class="mb-3">Horários ({{ horarios.0.contrato.titulo }})</h5>
+									{% endif %}
+									<p class="mb-2" style="font-size: 12.5px !important">
+										{{dia|weekday}}: {% for hora in horarios %} {{hora.hora}} {% if not forloop.last %}-{% endif %}{% endfor %}
+									</p>
+								{% endfor %}
+							</div>
+							<div class="col-md-12 mb-4">
+								<h5 class="mb-3">Informações Adicionais</h5>
+								{% if funcionario.gerente %}
+									<p>Gestor: {{funcionario.gerente}}</p>
+								{% endif %}
+								<p class="mb-2" style="font-size: 12.5px !important">Setor: {{funcionario.setor}}</p>
+								<p class="mb-2" style="font-size: 12.5px !important">Cargo: {{funcionario.cargo}}</p>
+								<p class="mb-2" style="font-size: 12.5px !important">Data Contratação: {{funcionario.data_contratacao|date:'d/m/Y'}}</p>
+							</div>
+							{% if historico %}
+								<div class="col-md-12 mb-4">
+									<h5 class="mb-3">Histórico</h5>
+									{% for obj in historico %}
+										<p class="mb-2" style="font-size: 12.5px !important">{{obj.setor__setor}} - {{obj.cargo__cargo}}</p>
+									{% endfor %}
+								</div>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	function displaySelectedImage(event, elementId) {
+		const selectedImage = document.getElementById(elementId);
+		const fileInput = event.target;
+
+		if (fileInput.files && fileInput.files[0]) {
+			const reader = new FileReader();
+
+			reader.onload = function(e) {
+				selectedImage.src = e.target.result;
+			};
+
+			reader.readAsDataURL(fileInput.files[0]);
+		}
+	};
+
+	function updateSelectCidades(estado) {
+		$.ajax({
+			type: "GET",
+			url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
+			success: function (data) {
+				let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
+
+				for (let i = 0; i < data.length; i++) {
+					options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
+				};
+
+				$(`[name="cidade"]`).each(function () {
+					$(this).html(options);
+				});
+			},
+			error: function (error) {
+				alert(error.responseJSON.mensagem);
+			}
+		});
+	};
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const cidade = document.getElementById("funcionarioCidade").value;
+
+		updateSelectCidades(document.getElementById("funcionarioEstado").value);
+
+		setTimeout(() => {
+			document.getElementById("funcionarioCidade").value = cidade;
+		}, "500");
+	});
+</script>
+{% endblock %}

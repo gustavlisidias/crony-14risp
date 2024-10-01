@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Notificações{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/notificacoes/adicionar-notificacao.html" %}
+{% include "modals/notificacoes/editar-notificacao.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>Comunicados & Notificações</div>
+
+			{% if request.user.get_access != "common" %}
+				<div class="btn-group">
+					<button class="btn btn-secondary text-light" type="button" title="Nova notificação" data-bs-toggle="modal" data-bs-target="#modalAdicionarNotificacao">
+						Adicionar
+					</button>
+				</div>
+			{% endif %}
+		</div>
+
+		<div class="card-body">
+
+			<div class="nav nav-tabs" id="navComunicados" role="tablist">
+				<button class="nav-link active" id="nav-comunicados" data-bs-toggle="tab" data-bs-target="#tab-comunicados" type="button" role="tab" aria-controls="tab-comunicados" aria-selected="true">
+					Comunicados
+				</button>
+				<button class="nav-link" id="nav-notificacoes" data-bs-toggle="tab" data-bs-target="#tab-notificacoes" type="button" role="tab" aria-controls="tab-notificacoes" aria-selected="false">
+					Notificações
+				</button>
+			</div>
+
+			<div class="tab-content" id="tabNotificacoes">
+				<div class="tab-pane fade show active" id="tab-comunicados" role="tabpanel" aria-labelledby="nav-comunicados" tabindex="0">
+					<div class="table-responsive mt-3">
+						<table class="table table-hover align-middle table-comunicados">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Notificação</th>
+									<th scope="col">Remetente</th>
+									<th scope="col">Destinatario</th>
+									<th scope="col">Data</th>
+									<th scope="col" class="text-center">Lido</th>
+									{% if request.user.get_access == "admin" %}
+										<th scope="col" class="text-center">Ações</th>
+									{% endif %}
+								</tr>
+							</thead>
+							<tbody>
+								{% for notificacao in listagem %}
+									{% if notificacao.level == "communication" %}
+										<tr role="button" onclick="editarNotificacao({{notificacao.id}})">
+											<th scope="row">{{forloop.counter}}</th>
+											<td>{{notificacao.verb}}</td>
+											<td>{{notificacao.remetente}}</td>
+											<td>{{notificacao.destinatario}}</td>
+											<td>{{notificacao.timestamp}}</td>
+			
+											{% if notificacao.unread %}
+												<td class="text-center"><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+											{% else %}
+												<td class="text-center"><i class="fa-duotone fa-circle-check text-success"></i></td>
+											{% endif %}
+			
+											{% if request.user.get_access == "admin" %}
+												<th class="text-center">
+													<a role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-notificacao' notificacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+														<i class="fa-thin fa-x text-danger"></i>
+													</a>
+												</th>
+											{% endif %}
+										</tr>
+									{% endif %}
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div class="tab-pane fade" id="tab-notificacoes" role="tabpanel" aria-labelledby="nav-notificacoes" tabindex="0">
+					<div class="table-responsive mt-3">
+						<table class="table table-hover align-middle table-notificacoes">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Notificação</th>
+									<th scope="col">Remetente</th>
+									<th scope="col">Destinatário</th>
+									<th scope="col">Data</th>
+									<th scope="col">Lido</th>
+									{% if request.user.get_access == "admin" %}
+										<th scope="col" class="text-center">Ações</th>
+									{% endif %}
+								</tr>
+							</thead>
+							<tbody>
+								{% for notificacao in listagem %}
+									{% if notificacao.level != "communication" %}
+										<tr role="button" onclick="editarNotificacao({{notificacao.id}})">
+											<th scope="row">{{forloop.counter}}</th>
+											<td>{{notificacao.verb}}</td>
+											<td>{{notificacao.remetente}}</td>
+											<td>{{notificacao.destinatario}}</td>
+											<td>{{notificacao.timestamp}}</td>
+			
+											{% if notificacao.unread %}
+												<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+											{% else %}
+												<td><i class="fa-duotone fa-circle-check text-success"></i></td>
+											{% endif %}
+			
+											{% if request.user.get_access == "admin" %}
+												<td class="text-center">
+													<a role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-notificacao' notificacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+														<i class="fa-thin fa-x text-danger"></i>
+													</a>
+												</td>
+											{% endif %}
+										</tr>
+									{% endif %}
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+	
+		const table1 = $(".table-comunicados").DataTable(config);
+		const table2 = $(".table-notificacoes").DataTable(config);
+
+		$("#nav-comunicados").on("click", function() {
+			setTimeout(() => {table1.draw(false)}, "200");
+		});
+
+		$("#nav-notificacoes").on( "click", function() {
+			setTimeout(() => {table2.draw(false)}, "200");
+		});
+	});
+</script>
+
+<script>
+	function editarNotificacao(notid) {
+		const notificacoes = {{listagem|safe}};
+		
+		notificacao = notificacoes.filter(item => item.id === notid)[0];
+
+		const description = notificacao.description == null ? '' : notificacao.description
+		const modal = $("#modalEditarNotificacao");
+		const action = `{% url "editar-notificacao" 0 %}`.replace("0", notid);
+
+		modal.find(".modal-title").html(notificacao.verb);
+		modal.find("#notificacaoTitulo").val(notificacao.verb);
+		window.editors["notificacaoEditarDescricao"].setData(description);
+		modal.find("form").attr("action", action);
+		modal.modal("show");
+	};
+
+	document.querySelectorAll("tbody tr td a[role='button']").forEach(function(cell) {
+		cell.addEventListener("click", function(event) {
+			event.stopPropagation();
+		});
+	});
+
+	document.addEventListener("DOMContentLoaded", function() {
+		document.getElementById("notificacoesAgenda").addEventListener("change", function() {
+			const coluna = document.getElementById("notificacaoDatas");
+			const inicio = document.getElementById("notificacaoInicio");
+			const final = document.getElementById("notificacaoFinal");
+			if (this.checked) {
+				coluna.classList.remove("d-none");
+				inicio.setAttribute("required", "required");
+				final.setAttribute("required", "required");
+			} else {
+				coluna.classList.add("d-none");
+				inicio.removeAttribute("required");
+				final.removeAttribute("required");
+			};
+		});
+	});
+</script>
+{% endblock %}

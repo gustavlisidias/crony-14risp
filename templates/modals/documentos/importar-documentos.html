@@ -1,0 +1,17 @@
+<div class="modal fade" id="modalImportarDocumentos" tabindex="-1" aria-labelledby="modalImportarDocumentosLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable modal-lg">
+		<form method="POST" action="{% url 'importar-documentos' %}" class="modal-content" id="formImportarDocumentos">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalImportarDocumentosLabel">Importar Documentos</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body"></div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" name="all" value="true" class="btn btn-info text-light">Importar Tudo</button>
+				<button type="submit" name="selected" value="true" class="btn btn-secondary text-light">Importar</button>
+			</div>
+		</form>
+	</div>
+</div>

@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Agenda{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/agenda/adicionar-atividade.html" %}
+{% include "modals/agenda/editar-atividade.html" %}
+
+<div class="fluid-container p-4 m-0">
+  	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+		{% if request.user.get_access == "admin" %}<div>Calendário de Atividades</div>{% else %}<div>Minhas Atividades</div>{% endif %}
+		<div class="btn-group">
+			<button class="btn btn-secondary text-light" type="button" title="Nova atividade" data-bs-toggle="modal" data-bs-target="#modalAdicionarAtividade">
+				Adicionar
+			</button>
+		</div>
+		</div>
+		<div class="card-body">
+
+			<div class="card mb-4">
+				<div class="card-header">
+					Filtros
+				</div>
+				<div class="card-body">
+					<div class="row">
+						<div class="col-md-4 col-12">
+							<label for="selectTypes" class="form-label fs-6">Tipos</label>
+							<select class="form-select select-types" id="selectTypes" multiple>
+								{% for tipo in tipos %}
+									<option value="{{ tipo.id }}" selected>{{ tipo }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="col-md-4 col-12">
+							<label for="selectStatus" class="form-label fs-6">Status</label>
+							<select class="form-select select-status" id="selectStatus" multiple>
+								<option value="0" selected>Abertos</option>
+								<option value="1">Concluidos</option>
+							</select>
+						</div>
+						<div class="col-md-4 col-12">
+							<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+							<select class="form-select select-users" id="selectUsers" multiple>
+								{% for funcionario in funcionarios %}
+									<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+								{% endfor %}
+							</select>
+						</div>
+					</div>
+					<a href="{% url 'agenda' %}" role="button" class="btn btn-primary text-light float-end mt-3">Limpar</a>
+				</div>
+			</div>
+
+			<div id="calendar"></div>
+
+		</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'fullcalendar/index.global.min.js' %}"></script>
+<script src="{% static 'fullcalendar/pt-br.min.js' %}"></script>
+<script src="{% static 'main/moment.js' %}"></script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		createSelectChoices(document.querySelector(".select-types"), -1);
+		createSelectChoices(document.querySelector(".select-status"), -1);
+		createSelectChoices(document.querySelector(".select-users"), -1);
+	});
+</script>
+
+<script>
+	function adicionar_dias(data_string, nro_dias=1) {
+		const date = new Date(data_string);
+		date.setDate(date.getDate() + nro_dias);
+		return date.toISOString().split('T')[0];
+	};
+</script>
+
+<script>
+  	document.addEventListener("DOMContentLoaded", function () {
+		const calendarEl = document.getElementById("calendar");
+		const eventos = {{listagem|safe}};
+
+		const config = Object.assign(fullcalendar_config, {
+			events: function (info, successCallback, failureCallback) {
+				const tiposSelecionados = Array.from(document.querySelectorAll(".select-types option:checked")).map(option => option.value);
+				const statusSelecionados = Array.from(document.querySelectorAll(".select-status option:checked")).map(option => option.value);
+				const usuariosSelecionados = Array.from(document.querySelectorAll(".select-users option:checked")).map(option => option.value);
+				
+				const eventosFiltrados = eventos.filter(evento => {
+					if (usuariosSelecionados.length == 0) {
+						return (
+							tiposSelecionados.includes(evento.type[0].id) 
+							&& statusSelecionados.includes(evento.concluido)
+						);
+					} else {
+						return (
+							tiposSelecionados.includes(evento.type[0].id) 
+							&& statusSelecionados.includes(evento.concluido) 
+							&& usuariosSelecionados.some(usuario => evento.users.map(u => u.id).includes(usuario))
+						);
+					};
+				});
+
+				successCallback(eventosFiltrados);
+			},
+
+			selectable: true,
+			editable: true,
+
+			// Redimensionar Evento
+			eventResize: function(info) {
+				const tipoEvento = info.event.extendedProps.type[0].name;
+				const nivelAcesso = "{{request.user.get_access}}";
+				const userListado = info.event.extendedProps.users.some(user => user.id === "{{request.user.id}}");
+
+				if (
+					(tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)
+				) {
+					alert("Você não tem permissão para alterar este evento!");
+				} else {
+					$.ajax({
+						type: "POST",	
+						url: `{% url "mover-evento" %}`,					
+						data: {"id": info.event.id, "title": info.event.title, "start": moment(info.event.start).format("YYYY-MM-DD"), "end": moment(info.event.end).format("YYYY-MM-DD")},
+						dataType: "json",
+						beforeSend: function (xhr) {
+							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+						},
+						success: function (data) {
+							const div = document.createElement('div');
+							div.className = 'position-fixed bottom-0 end-0 p-3';
+							div.id = 'msg-agenda';
+							div.style.zIndex = 3;
+							div.innerHTML = `
+								<div class="toast bg-success text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
+									<div class="d-flex">
+									<div class="toast-body">
+										${data.message}
+									</div>
+									<button type="button" class="btn-close btn-close-light me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+									</div>
+								</div>
+							`;
+
+							document.body.appendChild(div);
+
+							const toast = document.querySelector("#msg-agenda .toast");
+							new bootstrap.Toast(toast).show();
+							
+							setTimeout(() => {document.getElementById("msg-agenda").remove()}, "2000");
+
+							eventos.forEach(function(evento) {
+								if (parseInt(evento.id) === data.id) {
+									evento.inicio = data.inicio;
+									evento.final = data.final;
+									evento.start = data.inicio;
+									evento.end = adicionar_dias(data.final);
+								}
+							});
+
+							calendar.refetchEvents();
+
+						},
+						error: function (data) {
+							const div = document.createElement('div');
+							div.className = 'position-fixed bottom-0 end-0 p-3';
+							div.id = 'msg-agenda';
+							div.style.zIndex = 3;
+							div.innerHTML = `
+								<div class="toast bg-danger text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
+									<div class="d-flex">
+									<div class="toast-body">
+										${data.message}
+									</div>
+									<button type="button" class="btn-close btn-close-light me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+									</div>
+								</div>
+							`;
+
+							document.body.appendChild(div);
+
+							const toast = document.querySelector("#msg-agenda .toast");
+							new bootstrap.Toast(toast).show();
+							
+							setTimeout(() => {document.getElementById("msg-agenda").remove()}, "2000");
+						}
+					});
+				};
+			},
+
+			// Mover Evento
+			eventDrop: function(info) {
+				const tipoEvento = info.event.extendedProps.type[0].name;
+				const nivelAcesso = "{{request.user.get_access}}";
+				const userListado = info.event.extendedProps.users.some(user => user.id === "{{request.user.id}}");
+
+				if (
+					(tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)
+				) {
+					alert("Você não tem permissão para alterar este evento!");
+				} else {
+					$.ajax({
+						type: "POST",
+						url: `{% url "mover-evento" %}`,
+						data: {"id": info.event.id, "title": info.event.title, "start": moment(info.event.start).format("YYYY-MM-DD"), "end": moment(info.event.end).format("YYYY-MM-DD")},
+						dataType: "json",
+						beforeSend: function (xhr) {
+							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+						},
+						success: function (data) {
+							const div = document.createElement('div');
+							div.className = 'position-fixed bottom-0 end-0 p-3';
+							div.id = 'msg-agenda';
+							div.style.zIndex = 3;
+							div.innerHTML = `
+								<div class="toast bg-success text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
+									<div class="d-flex">
+									<div class="toast-body">
+										${data.message}
+									</div>
+									<button type="button" class="btn-close btn-close-light me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+									</div>
+								</div>
+							`;
+	
+							document.body.appendChild(div);
+	
+							const toast = document.querySelector("#msg-agenda .toast");
+							new bootstrap.Toast(toast).show();
+							
+							setTimeout(() => {document.getElementById("msg-agenda").remove()}, "2000");
+	
+							eventos.forEach(function(evento) {
+								if (parseInt(evento.id) === data.id) {
+									evento.inicio = data.inicio;
+									evento.final = data.final;
+									evento.start = data.inicio;
+									evento.end = adicionar_dias(data.final);
+								}
+							});
+	
+							calendar.refetchEvents();
+	
+						},
+						error: function (data) {
+							const div = document.createElement('div');
+							div.className = 'position-fixed bottom-0 end-0 p-3';
+							div.id = 'msg-agenda';
+							div.style.zIndex = 3;
+							div.innerHTML = `
+								<div class="toast bg-danger text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
+									<div class="d-flex">
+									<div class="toast-body">
+										${data.message}
+									</div>
+									<button type="button" class="btn-close btn-close-light me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+									</div>
+								</div>
+							`;
+	
+							document.body.appendChild(div);
+	
+							const toast = document.querySelector("#msg-agenda .toast");
+							new bootstrap.Toast(toast).show();
+							
+							setTimeout(() => {document.getElementById("msg-agenda").remove()}, "2000");
+						}
+					});
+				};
+			},
+
+			// Visualizar e Editar Evento
+			eventClick: function(info) {
+				const tipoEvento = info.event.extendedProps.type[0].name;
+				const nivelAcesso = "{{request.user.get_access}}";
+				const userListado = info.event.extendedProps.users.some(user => user.id === "{{request.user.id}}");
+
+				$("#modalEvento form").attr("id", `formEditarAtividade${info.event.id}`);
+				$("#modalEvento .modal-title").html(`Editar Atividade - ${info.event.title}`);
+				$("#modalEvento #atividadeTitulo").val(info.event.title);
+				$("#modalEvento #atividadeEditDescricao").html(info.event.extendedProps.description);
+				window.editors["atividadeEditDescricao"].setData(info.event.extendedProps.description);
+				$("#modalEvento #atividadeInicio").val(info.event.extendedProps.inicio);
+				$("#modalEvento #atividadeFinal").val(info.event.extendedProps.final);
+				$("#modalEvento #autorInfo").html(`Criado por ${info.event.extendedProps.autor} em ${info.event.extendedProps.cadastro}`);
+
+				document.querySelector(`#modalEvento #atividadeTipo option[value="${info.event.extendedProps.type[0].id}"]`).selected = true;
+
+				const selectElement = document.querySelector(`#modalEvento #atividadeUsuarios`);
+            	[...selectElement.options].forEach(option => option.selected = false);
+
+				info.event.extendedProps.users.forEach(user => {
+					const option = document.querySelector(`#modalEvento #atividadeUsuarios option[value="${user.id}"]`);
+					if (option) {
+						option.selected = true;
+					}
+				});
+
+				if (info.event.extendedProps.concluido == "1") {
+					$("#modalEvento #atividadeFinalizado").prop("checked", true);
+				};
+
+				if (info.event.extendedProps.recorrente) {
+					$("#modalEvento #atividadeRecorrencias").parent().parent().removeClass("d-none");
+				} else {
+					$("#modalEvento #atividadeRecorrencias").parent().parent().addClass("d-none")
+				};
+
+				if (
+					(tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)
+				) {
+					$("#modalEvento #btnEditarAtividade").css("display", "none");
+				} else {
+					$("#modalEvento #btnEditarAtividade").css("display", "block");
+				};
+
+				$("#modalEvento").modal("show");
+
+				document.getElementById("btnEditarAtividade").addEventListener("click", function (){
+					let formData = $(`#formEditarAtividade${info.event.id}`).serialize();
+					
+					if (formData.includes("titulo")) {
+						formData += `&id=${info.event.id}`;
+					}
+
+					$.ajax({
+						type: "POST",
+						url: `{% url "editar-evento" %}`,
+						data: formData,
+						dataType: "json",
+						beforeSend: function (xhr) {
+							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+						},
+						success: function () {
+							location.reload();
+						},
+						error: function () {
+							location.reload();
+						}
+					});
+				});
+			},
+		});
+
+		const calendar = new FullCalendar.Calendar(calendarEl, config);
+		calendar.render();
+
+		document.querySelectorAll(".select-types, .select-status, .select-users").forEach(select => {
+			select.addEventListener("change", function () {
+				calendar.refetchEvents();
+			});
+		});
+  });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", (event) => {
+		const recorrencia = document.getElementById("atividadeRecorrencia");
+		const finalRecorrencia = document.getElementById("atividadeFinalRecorrencia");
+		recorrencia.addEventListener("change", function () {
+			console.log(this, this.value);
+			if (this.value != "none") {
+				document.getElementById("atividadeFinalRecorrencia").parentElement.parentElement.classList.remove("d-none");
+			} else {
+				document.getElementById("atividadeFinalRecorrencia").parentElement.parentElement.classList.add("d-none");
+			}
+		});
+    });
+</script>
+{% endblock %}

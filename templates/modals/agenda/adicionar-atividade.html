@@ -1,0 +1,75 @@
+<div class="modal fade" id="modalAdicionarAtividade" data-bs-focus="false" aria-labelledby="modalAdicionarAtividadeLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="{% url 'adicionar-evento' %}" class="modal-content" id="formAdicionarAtividade">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarAtividadeLabel">Nova Atividade</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-floating mb-3">
+					<select class="form-select" id="atividadeTipo" name="tipo" required>
+						{% for tipo in tipos %}
+							{% if tipo.slug != "ferias" %}
+								<option value="{{tipo.id}}">{{tipo}}</option>
+							{% endif %}
+						{% endfor %}
+					</select>
+					<label class="form-label" for="atividadeTipo">Tipo *</label>
+				</div>
+
+				<div class="form-floating mb-3">
+					<select class="form-select" id="atividadeRecorrencia" name="recorrencia">
+						<option value="none">Não Recorrente</option>
+						<option value="daily">Diariamente</option>
+						<option value="weekly">Semanalmente</option>
+						<option value="biweekly">A cada 2 semanas</option>
+						<option value="monthly">Mensalmente</option>
+					</select>
+					<label class="form-label" for="atividadeRecorrencia">Recorrência</label>
+				</div>
+				  
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="atividadeTitulo" name="titulo" placeholder required>
+					<label class="form-label" for="atividadeTitulo">Título *</label>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="atividadeDescricao">Descrição *</label>
+					<textarea class="ck-editor-5" id="atividadeDescricao" name="descricao"></textarea>
+					<span class="word-count" id="atividadeDescricao_script-word-count"></span>
+				</div>
+				<div class="row mb-3">
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="atividadeInicio" name="inicio" placeholder required>
+							<label class="form-label" for="atividadeInicio">Início da Atividade *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="atividadeFinal" name="final" placeholder>
+							<label class="form-label" for="atividadeFinal">Final da Atividade</label>
+							<div id="atividadeFinalHelp" class="form-text fs-7">Uma data vazia deixará a atividade com 1 dia de duração.</div>
+						</div>
+					</div>
+					<div class="col d-none">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="atividadeFinalRecorrencia" name="recorrencia_final" placeholder>
+							<label class="form-label" for="atividadeFinalRecorrencia">Final da Recorrência *</label>
+						</div>
+					</div>
+				</div>
+				<select class="form-select" id="atividadeUsuarios" name="usuarios" multiple required>
+					{% for funcionario in funcionarios %}
+						<option value="{{funcionario.id}}">{{funcionario}}</option>
+					{% endfor %}
+				</select>
+				<small class="fs-7">* Campos obrigatórios</small>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Adicionar</button>
+			</div>
+		</form>
+	</div>
+</div>

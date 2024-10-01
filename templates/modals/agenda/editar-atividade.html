@@ -1,0 +1,72 @@
+<div class="modal fade" id="modalEvento" data-bs-focus="false" aria-labelledby="modalEventoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="" class="modal-content" id="">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEventoLabel">Modal title</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<small class="d-flex justify-content-end mb-3" id="autorInfo"></small>
+				<div class="form-floating mb-3">
+					<select class="form-select" id="atividadeTipo" name="tipo" required>
+						{% for tipo in tipos %}
+							<option value="{{tipo.id}}">{{tipo}}</option>
+						{% endfor %}
+					</select>
+					<label class="form-label" for="atividadeTipo">Tipo *</label>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="atividadeTitulo" name="titulo" placeholder required>
+					<label class="form-label" for="atividadeTitulo">Título *</label>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="atividadeEditDescricao">Descrição *</label>
+					<textarea class="ck-editor-5" id="atividadeEditDescricao" name="descricao"></textarea>
+					<span class="word-count" id="atividadeEditDescricao_script-word-count"></span>
+				</div>
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="atividadeInicio" name="inicio" placeholder required>
+							<label class="form-label" for="atividadeInicio">Início da Atividade *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="atividadeFinal" name="final" placeholder>
+							<label class="form-label" for="atividadeFinal">Final da Atividade</label>
+							<div id="atividadeFinalHelp" class="form-text fs-7">Uma data final vazia deixará a atividade com 1 dia de duração.</div>
+						</div>
+					</div>
+				</div>
+				<select class="form-select mb-3" id="atividadeUsuarios" name="usuarios" multiple required>
+					{% for funcionario in funcionarios %}
+						<option value="{{funcionario.id}}">{{funcionario}}</option>
+					{% endfor %}
+				</select>
+
+				<div class="row">
+					<div class="col">
+						<div class="form-check form-switch d-flex align-items-center">
+							<input class="form-check-input" type="checkbox" role="switch" id="atividadeFinalizado" name="finalizado" style="height: 20px; width: 40px;">
+							<label class="form-check-label ms-2" for="atividadeFinalizado" style="margin-top: 3px;">Atividade concluída</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-check form-switch d-flex align-items-center">
+							<input class="form-check-input" type="checkbox" role="switch" id="atividadeRecorrencias" name="recorrente" style="height: 20px; width: 40px;">
+							<label class="form-check-label ms-2" for="atividadeRecorrencias" style="margin-top: 3px;">Editar todas recorrências</label>
+						</div>
+					</div>
+				</div>
+
+				<small class="fs-7">* Campos obrigatórios</small>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="button" class="btn btn-primary text-light" id="btnEditarAtividade">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

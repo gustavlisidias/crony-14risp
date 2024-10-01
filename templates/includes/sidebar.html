@@ -1,0 +1,136 @@
+{% load static %}
+{% load custom_tags %}
+
+<div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 menu" style="width: 82px;">
+	<div class="d-flex flex-column align-items-center align-items-sm-start px-0 py-3 text-body min-vh-100">
+		<div class="card bg-transparent border-0" style="width: 100%; height: 60px;">
+			<img src="{% static 'images/logo.png' %}" class="img img-fluid rounded m-auto p-1">
+		</div>
+
+		<ul class="nav nav-pills flex-column mb-sm-auto mt-5 mb-0 align-items-center align-items-sm-start">
+			{% url 'inicio' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link align-middle px-0">
+					<i class="fa-thin fa-house-chimney fa-xl"></i><span class="ms-1 d-none">Início</span>
+				</a>
+			</li>
+
+			{% url 'agenda' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-duotone fa-calendar fa-xl"></i><span class="ms-1 d-none">Agenda</span>
+				</a>
+			</li>
+
+			{% comment %} {% url 'pontos' as url %}
+			<li class="nav-item {% if 'ponto' in request.path %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-thin fa-clock fa-xl"></i><span class="ms-1 d-none">Ponto</span>
+				</a>
+			</li> {% endcomment %}
+
+			<hr class="divider">
+
+			{% url 'funcionarios' as url %}
+			<li class="nav-item {% if 'funcionarios' in request.path %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-thin fa-users fa-xl"></i><span class="ms-1 d-none">Colaboradores</span>
+				</a>
+			</li>
+
+			{% url 'documentos' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-duotone fa-folder fa-xl"></i><span class="ms-1 d-none">Documentos</span>
+				</a>
+			</li>
+
+			{% url 'ferias' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-thin fa-umbrella-beach fa-xl"></i><span class="ms-1 d-none">Férias</span>
+				</a>
+			</li>
+
+			<hr class="divider">
+
+			{% comment %} {% url 'desempenho' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-thin fa-list-check fa-xl"></i><span class="ms-1 d-none">Desempenho</span>
+				</a>
+			</li> {% endcomment %}
+
+			{% comment %} {% url 'avaliacao' as url %}
+			<li class="nav-item {% if request.path == url or 'avaliacao' in request.path %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-duotone fa-award fa-xl"></i><span class="ms-1 d-none">Avaliação</span>
+				</a>
+			</li> {% endcomment %}
+
+			{% url 'feedback' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-duotone fa-thumbs-up fa-xl"></i><span class="ms-1 d-none">Feedback</span>
+				</a>
+			</li>
+
+			{% url 'notificacoes' as url %}
+			<li class="nav-item {% if request.path == url %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-thin fa-bullhorn fa-xl"></i><span class="ms-1 d-none">Comunicados</span>
+				</a>
+			</li>
+
+			{% url 'cursos' as url %}
+			<li class="nav-item {% if request.path == url or 'cursos' in request.path %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-duotone fa-graduation-cap fa-xl"></i><span class="ms-1 d-none">Cursos</span>
+				</a>
+			</li>
+
+			{% url 'pesquisa' as url %}
+			<li class="nav-item {% if request.path == url or 'pesquisas' in request.path %} active {% endif %}">
+				<a href="{{url}}" class="nav-link px-0 align-middle">
+					<i class="fa-thin fa-radar fa-xl"></i><span class="ms-1 d-none">Pesquisas</span>
+				</a>
+			</li>
+			
+		</ul>
+	</div>
+</div>
+
+<script defer>
+	document.addEventListener("DOMContentLoaded", function() {
+		const main = document.querySelector(".content");
+		const menu = document.querySelector(".menu");
+		const logo = document.querySelector(".menu .img.img-fluid");
+
+		menu.addEventListener("mouseover", function () {
+			main.style.width = "calc(100vh - 250px)";
+
+			logo.style.width = "200px";
+			logo.style.height = "76px";
+
+			menu.style.width = "250px";
+			menu.querySelectorAll("li a span").forEach(item => {
+				item.classList.remove("d-none");
+				item.classList.add("d-sm-inline");
+			});
+		});
+
+		menu.addEventListener("mouseout", function() {
+			main.style.width = "100vh";
+
+			logo.style.width = "66px";
+			logo.style.height = "38px";
+
+			menu.style.width = "82px";
+			menu.querySelectorAll("li a span").forEach(item => {
+				item.classList.add("d-none");
+				item.classList.remove("d-sm-inline");
+			});
+		});
+
+	});
+</script>

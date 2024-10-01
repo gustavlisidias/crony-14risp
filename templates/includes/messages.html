@@ -1,0 +1,32 @@
+{% for message in messages %}
+	<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 3">
+		<div class="toast text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
+			<div class="d-flex">
+				<div class="toast-body">
+					{{ message }}
+				</div>
+				<button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" style="filter: invert(1);"></button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const toast = document.querySelector(".toast");
+
+		{% if message.tags == "error" %}
+			toast.classList.add("bg-danger");
+		{% elif message.tags == "warning" %}
+			toast.classList.add("bg-warning");
+		{% elif message.tags == "debug" %}
+			toast.classList.add("bg-info");
+		{% elif message.tags == "info" %}
+			toast.classList.add("bg-secondary");
+		{% else %}
+			toast.classList.add("bg-success");
+		{% endif %}
+
+		const delay = 5000;
+		const toastInstance = new bootstrap.Toast(toast, { delay: delay });
+		toastInstance.show();
+	</script>
+{% endfor %}

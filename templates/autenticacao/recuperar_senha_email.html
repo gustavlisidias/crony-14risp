@@ -1,0 +1,9 @@
+{% autoescape off %}
+Olá,
+
+{{ user.email }} clique ou copie o link abaixo para prosseguir com o processo de alteração de senha.
+
+{{ protocol }}://{{ domain }}{% url 'recuperar-senha-alterar' uidb64=uid token=token %}
+
+Mensagem automática, por favor não responda.
+{% endautoescape %}

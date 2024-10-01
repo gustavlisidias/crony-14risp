@@ -1,0 +1,18 @@
+{% if comunicado %}
+<div class="modal fade card-comunicado" id="modalComunicado" tabindex="-1" aria-labelledby="modalComunicadoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalComunicadoLabel">Comunicado: {{comunicado.verb}}</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				{{comunicado.description|safe}}
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary text-light" hx-post="{% url 'ler-notificacao' comunicado.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">Confirmar Leitura</button>
+			</div>
+		</div>
+	</div>
+</div>
+{% endif %}

@@ -1,0 +1,528 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+{% load humanize %}
+
+{% block title %} | Início{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "includes/comunicado.html" %}
+
+{% include "modals/web/adicionar-post.html" %}
+{% include "modals/web/deletar-post.html" %}
+{% include "modals/web/editar-post.html" %}
+{% include "modals/web/deletar-comentario.html" %}
+{% include "modals/web/editar-comentario.html" %}
+{% include "modals/web/adicionar-celebracao.html" %}
+{% include "modals/web/comentar-celebracao.html" %}
+{% include "modals/web/reacoes.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="row">
+		<div class="col-12 col-md-9">
+			<!-- Mood -->
+			{% comment %} <div class="card card-mood p-3 mb-3">
+				<h3 class="text-center">Como você está se sentindo hoje?</h3>
+				<form method="POST" id="formEnviarHumor">
+					{% csrf_token %}
+					<div class="d-flex justify-content-center mb-3">
+						<label class="radio-inline" title="Muito triste">
+							<input type="radio" name="mood" required value="1" {% if humor %} disabled {% endif %}>
+							<img src="{% static 'images/mood/mood-1.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+						</label>
+						<label class="radio-inline" title="Triste">
+							<input type="radio" name="mood" value="2" {% if humor %} disabled {% endif %}>
+							<img src="{% static 'images/mood/mood-2.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+						</label>
+						<label class="radio-inline" title="Neutro">
+							<input type="radio" name="mood" value="3" {% if humor %} disabled {% endif %}>
+							<img src="{% static 'images/mood/mood-3.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+						</label>
+						<label class="radio-inline" title="Feliz">
+							<input type="radio" name="mood" value="4" {% if humor %} disabled {% endif %}>
+							<img src="{% static 'images/mood/mood-4.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+						</label>
+						<label class="radio-inline" title="Muito feliz">
+							<input type="radio" name="mood" value="5" {% if humor %} disabled {% endif %}>
+							<img src="{% static 'images/mood/mood-5.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+						</label>
+					</div>
+				</form>
+				<small class="text-center fs-7">Fique à vontade para falar o que sente. Essa informação é privada e será lida somente por alguém que quer te ver feliz!</small>
+			</div> {% endcomment %}
+
+			{% if pendencias.perfil %}
+				<div class="card-body bg-secondary text-light d-flex align-items-center justify-content-center p-2 mb-3 rounded">
+					<div class="my-2">O cadastro do seu <a class="text-light" href="{% url 'perfil' %}">perfil</a> está incompleto!</div>
+				</div>
+			{% endif %}
+
+			{% if pendencias.pesquisas %}
+				<div class="card-body bg-secondary text-light d-flex align-items-center justify-content-center p-2 mb-3 rounded">
+					<div class="my-2">Você possui <a class="text-light" href="{% url 'pesquisa' %}">pesquisas</a> esperando sua resposta!</div>
+				</div>
+			{% endif %}
+
+			{% if pendencias.cursos %}
+				<div class="card-body bg-secondary text-light d-flex align-items-center justify-content-center p-2 mb-3 rounded">
+					<div class="my-2">Você possui <a class="text-light" href="{% url 'cursos' %}">cursos</a> incompletos!</div>
+				</div>
+			{% endif %}
+
+			<!-- Publicações, curtidas e comentários -->
+			<div class="container-fluid container-posts m-0 p-0">
+				{% if not posts %}
+					<div class="card card-head-post mb-3">
+						<div class="card-body text-center">
+							Nenhuma publicação foi feita!
+							<br><br>
+							<button class="btn btn-secondary text-light" type="button" data-bs-toggle="modal" data-bs-target="#modalAdicionarPost">
+								Publicar primeiro post
+							</button>
+						</div>
+					</div>
+				{% else %}
+					<div class="card card-head-post mb-3">
+						<div class="card-body d-flex align-items-center justify-content-between p-2">
+							<div>Últimas Publicações</div>
+							<div class="btn-group">
+								<button class="btn btn-secondary text-light" type="button" data-bs-toggle="modal" data-bs-target="#modalAdicionarPost">
+									Nova Publicação
+								</button>
+							</div>
+						</div>
+					</div>
+
+					{% for post in posts %}
+						<div class="card mb-3 card-post">
+							<div class="card-body">
+								<!-- Titulo e autor -->
+								<div class="d-flex justify-content-between align-items-center">
+									<div class="d-flex align-items-center">
+										<span style="float: left; width: 34px; height: 34px; border-radius: 40px; overflow: hidden; margin: -2px 10px -2px 0;">
+											<img class="rounded-circle" src="{{post.funcionario.id|photo:'url'}}" style="max-width: 100%; display: block; border-style: none;">
+										</span>
+										<div>
+											<span><b>{{post.funcionario}}</b> fez uma postagem sobre <b>{{post.titulo}}</b></span>
+										</div>
+									</div>
+									<div class="d-flex align-items-center"><small class="fs-7">{{post.data_cadastro|naturaltime}}</small></div>
+								</div>
+								<hr>
+								<!-- Postagem -->
+								<div class="py-3 mb-3">
+									{% if request.user.get_access == "admin" or post.funcionario.usuario == request.user %}
+										<div class="d-flex justify-content-end">
+											<i role="button" title="Editar postagem" id="btnEditarPost" class="fa-thin fa-pen text-body me-2" onclick="editarPostagem({id: '{{post.id}}', titulo: '{{post.titulo}}', texto: `{{post.texto|escape}}`})"></i>
+											<i role="button" title="Excluir postagem" id="btnExcluirPost" class="fa-duotone fa-trash text-body" onclick="excluirPostagem({id: '{{post.id}}'})"></i>
+										</div>
+									{% endif %}
+									<p>
+										<i class="fa-duotone fa-quote-left fa-xl text-body"></i>
+										<br>
+										<div class="post-text">{{post.texto|safe}}</div>
+										<br>
+										<i class="fa-duotone fa-quote-right fa-xl text-body float-end"></i>
+									</p>
+								</div>
+								<hr>
+								<!-- Contador de curtidas e comentários -->
+								<div class="d-flex justify-content-end align-items-center">
+									<div class="d-flex align-items-center me-3">
+										<button class="btn p-0" id="btnCurtirPost" hx-post="{% url 'curtir-post' post.id 'postagem' %}" hx-trigger="click" hx-swap="none" hx-target="this">
+											{% if funcionario.id in post.curtidas_funcionarios %}
+												<i class="fa-duotone fa-thumbs-up fa-lg text-body"></i>
+											{% else %}
+												<i class="fa-thin fa-thumbs-up fa-lg text-body"></i>
+											{% endif %}
+										</button>
+										<span class="ms-2 text-like" role="button" onclick="mostrarReacoes({{post.id}}, 'postagem')">
+											{{post.curtidas.count}}
+										</span>
+									</div>
+									<div class="d-flex align-items-center">
+										<i class="fa-thin fa-comment text-body"></i>
+										<span class="ms-2">{{post.comentarios.count}}</span>
+									</div>
+								</div>
+								<!-- Comentários -->
+								<div class="lista-comentarios mt-3">
+									<ul class="list-group list-group-flush">
+										{% for comentario in post.comentarios.all %}
+											<li class="list-group-item">
+												<p class="card-text mb-1">{{comentario.comentario}}</p>
+												<p class="card-text text-muted fs-7">{{comentario.funcionario}} comentou {{comentario.data_cadastro|naturaltime}}</p>
+												{% if request.user.get_access == "admin" or funcionario.id == comentario.funcionario.id %}
+													<i role="button" title="Editar comentario" id="btnEditarComentario" class="fa-thin fa-pen fa-xs text-body me-2" onclick="editarComentario({id: '{{comentario.id}}', texto: '{{comentario.comentario}}'})"></i>
+													<i role="button" title="Excluir comentario" id="btnExcluirComentario" class="fa-duotone fa-trash text-body fa-xs" onclick="excluirComentario({id: '{{comentario.id}}'})"></i>
+												{% endif %}
+											</li>
+										{% empty %}
+											<li class="list-group-item">Sem comentários ainda.</li>
+										{% endfor %}
+									</ul>
+								</div>
+								<form method="POST" action="{% url 'comentar-post' post.id  'postagem' %}" class="mt-3" id="formAdicionarComentario">
+									{% csrf_token %}
+									<div class="mb-3">
+										<textarea name="comentario" class="form-control" placeholder="Adicione um comentário..." rows="3"></textarea>
+									</div>
+									<button type="submit" class="btn btn-primary text-light float-end">Comentar</button>
+								</form>
+							</div>
+						</div>
+					{% endfor %}
+				{% endif %}
+			</div>
+
+			<!-- Ver publicações antigas -->
+			<div class="d-flex justify-content-center">
+				{% if paginacao.status %}
+					<a id="btnProximaPagina" href="{% url 'inicio' %}?page={{paginacao.count}}" class="btn-more me-4">ver antigos</a>
+				{% endif %}
+				{% if request.GET.page %}
+					<a id="btnVoltarInicio" class="d-none" role="button">voltar ao topo</a>
+				{% endif %}
+			</div>
+		</div>
+
+		<div class="col-12 col-md-3">
+			<!-- Moedas -->
+			{% comment %} <div class="card card-moedas mb-3">
+				<div class="card-body d-flex justify-content-around">
+					<div><h2 class="m-0 p-0">{{moedas|floatformat:0}}</h2><small>NOVA COINS</small></div>
+					<div><img src="{% static 'images/coin.png' %}" width=60 height=60></div>
+				</div>
+			</div> {% endcomment %}
+			<!-- Minhas atividades -->
+			<div class="card card-minhas-atividades mb-3">
+				<div class="card-header bg-primary text-light border-bottom border-light">
+					Minhas Atividades
+				</div>
+				<div class="card-body overflow-auto p-2">
+					{% if atividades %}
+						<ul class="list-group list-group-flush list-group-numbered">
+							{% for atividade in atividades %}
+								<li class="list-group-item fs-6">
+									{{atividade.titulo}}
+									<small class="text-muted fs-7 ms-2">({{atividade.final|date:"d/m/Y"}})</small>
+								</li>
+							{% endfor %}
+						</ul>
+					{% else %}
+						<p class="text-center mt-3">Parabéns! Todas as suas atividades estão concluídas.</p>
+					{% endif %}
+				</div>
+			</div>
+			<!-- Registrar ponto -->
+			{% comment %} <div class="card card-registrar-ponto mb-3">
+				<div class="card-header bg-primary text-light border-bottom border-light">
+					Registrar Ponto
+				</div>
+				<div class="card-body">
+					<a role="button" id="btnRegistrarPonto" hx-post="{% url 'registrar-ponto' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+						<img src="{% static 'images/digital.svg' %}" height="140px" width="100%">
+					</a>
+				</div>
+				<div class="card-footer text-body-secondary d-flex flex-nowrap align-items-center">
+					{% if ponto %}
+						<div class="order-1 pe-2 fs-7 fw-medium" id="textUltimoRegistro">
+							Último registro {{ponto|date:"D"}}, {{ponto|date:"d/m"}} às {{ponto|time:"H:i"}}
+						</div>
+					{% else %}
+						<div class="order-1 pe-2 fs-7 fw-medium">Nenhum ponto registrado</div>
+					{% endif %}
+				</div>
+			</div> {% endcomment %}
+
+			<!-- Celebrações -->
+			<swiper-container style="--swiper-navigation-color: #fff; --swiper-pagination-color: #fff" class="mySwiper" speed="600" parallax="true" pagination="true" pagination-clickable="true" navigation="false" centered-slides="true" autoplay-delay="5000" autoplay-disable-on-interaction="true">
+				<div slot="container-start" class="parallax-bg" data-swiper-parallax="-23%"></div>
+				{% for celebracao in celebracoes %}
+					<swiper-slide>
+						{% if celebracao.celebrante %}
+							<div class="d-flex justify-content-center mb-2">
+								<img class="rounded-circle" src="{{celebracao.celebrante.id|photo:'url'}}" style="width: 50px; height: 50px">
+							</div>
+						{% endif %}
+						<div class="title text-light text-center mb-2" data-swiper-parallax="-300">
+							{{celebracao.titulo}}
+						</div>
+						<div class="text mb-4" data-swiper-parallax="-100">
+							<p class="text-light text-center">{{celebracao.texto}}</p>
+						</div>
+						<!-- Ações da Celebração -->
+						<div class="actions d-flex justify-content-around fixed-bottom d-none">
+							<!-- Botão Adicionar Celebração -->
+							<i role="button" title="Adicionar nova celebração" class="fa-duotone fa-circle-plus fa-xl text-light" onclick="adicionarCelebracao()"></i>
+							<!-- Botão Curtir Celebração -->
+							<div class="ms-3">
+								<button title="Curtir celebração" class="btn m-0 p-0" hx-post="{% url 'curtir-post' celebracao.id 'celebracao' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="curtirCelebracao(this)">
+									{% if funcionario.id in celebracao.curtidas_funcionarios %}
+										<i role="button" class="fa-solid fa-heart fa-xl text-danger"></i>
+									{% else %}
+										<i role="button" class="fa-thin fa-heart fa-xl text-light"></i>
+									{% endif %}
+								</button>
+								<a role="button" title="Ver curtidas" class="text-light link-underline-light" onclick="mostrarReacoes({{celebracao.id}}, 'celebracao')">{{ celebracao.curtidas.count }}</a>
+							</div>
+							<!-- Botão Comentar Celebração -->
+							<div>
+								<button title="Comentar celebração" class="btn m-0 p-0" onclick="mostrarComentarios({{celebracao.id}}, 'celebracao')">
+									<i role="button" class="fa-solid fa-comment fa-xl text-light"></i>
+								</button>
+								<a role="button" class="text-light link-underline-light" onclick="mostrarComentarios({{celebracao.id}}, 'celebracao')">{{ celebracao.comentarios.count }}</a>
+							</div>
+						</div>
+					</swiper-slide>
+				{% empty %}
+					<swiper-slide>
+						<div class="title text-light text-center mb-2" data-swiper-parallax="-300">Celebrações</div>
+						<div class="text mb-4" data-swiper-parallax="-100">
+							<p class="text-light text-center">Nenhuma celebração hoje!</p>
+						</div>
+						<div class="actions d-flex justify-content-center fixed-bottom d-none">
+							<i role="button" title="Adicionar nova celebração" class="fa-duotone fa-circle-plus fa-xl text-light" onclick="adicionarCelebracao()"></i>
+						</div>
+					</swiper-slide>
+				{% endfor %}
+			</swiper-container>
+
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'swiper/swiper-element-bundle.min.js' %}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Enviar humores
+        const radioButtons = document.querySelectorAll(`input[type="radio"]`);
+        radioButtons.forEach(button => {
+            button.addEventListener("click", function() {
+                document.getElementById("formEnviarHumor").submit();
+            });
+        });
+
+        // Curtir posts
+        document.querySelectorAll("#btnCurtirPost").forEach(item => {
+            item.addEventListener("htmx:afterRequest", function(event) {
+                const likeCount = parseInt(this.parentElement.querySelector(".text-like").textContent);
+    
+                if (this.querySelector("svg").getAttribute("data-prefix") == "fad") {
+                    this.querySelector("svg").setAttribute("data-prefix", "fat");
+                    this.parentElement.querySelector(".text-like").textContent = likeCount - 1;
+                } else {
+                    this.querySelector("svg").setAttribute("data-prefix", "fad");
+                    this.parentElement.querySelector(".text-like").textContent = likeCount + 1;
+                };
+    
+            });
+        });
+
+        // Botão voltar ao início da pagina e descer página ao carregar antigos
+        const urlParams = new URLSearchParams(window.location.search);
+        const btnVoltar = document.getElementById("btnVoltarInicio");
+        if (btnVoltar) {
+            btnVoltar.addEventListener("click", function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth"
+                });
+            });
+        };        
+
+        if (urlParams.has("page")) {
+            document.body.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+
+            if (btnVoltar) {
+                document.getElementById("btnVoltarInicio").classList.remove("d-none");
+            };
+        };
+
+		// Adicionando emojis para o texto de celebração
+		$("#celebracaoTexto").emojioneArea({
+			buttonTitle: "Use TAB para abrir os emojis",
+			search: false,
+			recentEmojis: false,
+			pickerPosition: "bottom",
+			tones: false,
+			shortnames: false,
+			shortcuts: false
+		});
+
+		$("#celebracaoComentario").emojioneArea({
+			buttonTitle: "Use TAB para abrir os emojis",
+			search: false,
+			recentEmojis: false,
+			pickerPosition: "bottom",
+			tones: false,
+			shortnames: false,
+			shortcuts: false
+		});
+
+		// Ajustando automaticamente o tamanho máximo do slide de celebrações
+		let newHeight = 0;
+		setTimeout(() => {
+			document.querySelector("swiper-container").shadowRoot.querySelector(".swiper").style.borderRadius = "5px";
+			document.querySelector("swiper-container").querySelectorAll("swiper-slide .text").forEach(slide => {
+				if (newHeight < slide.offsetHeight) {
+					newHeight = slide.offsetHeight;
+				}
+			})
+			document.querySelector("swiper-container").style.height = `${newHeight + 270}px`;
+			document.querySelector("swiper-container .parallax-bg").style.backgroundImage = `url({% static 'images/background/celebration.png' %})`;
+			document.querySelectorAll("swiper-container .actions").forEach(item => {item.classList.remove("d-none")});
+		}, "100");
+
+		// Adicionando modal para comunicado
+		{% if comunicado %}$("#modalComunicado").modal("show");{% endif %}
+    });
+
+    function editarPostagem(post) {
+        const modal = $("#modalEditarPost");
+        const action = `{% url "editar-post" 0 %}`.replace("0", post.id);
+
+        modal.find("#postTitulo").val(post.titulo);
+        window.editors["postEditTexto"].setData(post.texto);
+        modal.find("form").attr("action", action);
+        modal.modal("show");
+    };
+
+    function excluirPostagem(post) {
+        const modal = $("#modalExcluirPost");
+        const action = `{% url "excluir-post" 0 %}`.replace("0", post.id);
+
+        modal.find("form").attr("action", action);
+        modal.modal("show");
+    };
+
+    function editarComentario(comentario) {
+        const modal = $("#modalEditarComentario");
+        const action = `{% url "editar-comentario" 0 %}`.replace("0", comentario.id);
+
+        modal.find("#comentarioTexto").html(comentario.texto);
+        modal.find("form").attr("action", action);
+        modal.modal("show");
+    };
+
+    function excluirComentario(comentario) {
+        const modal = $("#modalExcluirComentario");
+        const action = `{% url "excluir-comentario" 0 %}`.replace("0", comentario.id);
+
+        modal.find("form").attr("action", action);
+        modal.modal("show");
+    };
+
+	function adicionarCelebracao() {
+        const modal = $("#modalAdicionarCelebracao");
+        modal.modal("show");
+    };
+
+	function curtirCelebracao(btnCurtir){
+		const iconHeart = btnCurtir.querySelector("svg");
+		const contadorHeart = btnCurtir.parentElement.querySelector("a");
+		const contador = parseInt(contadorHeart.textContent);
+
+		if (iconHeart.getAttribute("data-prefix") == "fat") {
+			contadorHeart.textContent = contador + 1;
+			iconHeart.setAttribute("data-prefix", "fad");
+			iconHeart.classList.remove("text-light")
+			iconHeart.classList.add("text-danger");
+		} else {
+			contadorHeart.textContent = contador - 1;
+			iconHeart.setAttribute("data-prefix", "fat");
+			iconHeart.classList.remove("text-danger")
+			iconHeart.classList.add("text-light");
+		}
+	};
+
+	function mostrarReacoes(post, modelo) {		
+		$.ajax({
+			type: "GET",
+            url: `{% url "reacoes-post" 0 "modelo" %}`.replace("0", post).replace("modelo", modelo),
+            success: function(response) {
+				const curtidas = response.curtidas;
+				const titulo = response.post;
+
+				if (curtidas.length > 0) {
+					const modal = $("#modalVisualizarReacoes");
+					modal.find("#modalVisualizarReacoesLabel").html(`Reações - ${titulo}`);
+					modal.find(".modal-body .list-group").children().remove();
+
+					curtidas.forEach(item => {
+						const funcionario = item.funcionario__nome_completo;
+						const data = formatarDataHora(item.data_cadastro);
+
+						modal.find(".modal-body .list-group").append(`
+							<li class="list-group-item d-flex justify-content-between align-items-start">
+								<div class="me-auto fs-7">
+									<div class="fw-bold fs-5">
+										${funcionario}
+									</div>
+									${data}
+								</div>
+								<i class="fa-solid fa-heart fa-xl text-danger mt-2"></i>
+							</li>
+						`);
+					});
+					
+					modal.modal("show");
+				}                
+            },
+            error: function(xhr, status, error) {
+                alert('Erro ao buscar reações:', error);
+            }
+        });
+	};
+
+	function mostrarComentarios(post, modelo) {
+		const url = `{% url "comentarios-post" 0 "modelo" %}`.replace("0", post).replace("modelo", modelo);
+
+		$.ajax({
+			type: "GET",
+            url: url,
+            success: function(response) {
+				const modal = $("#modalComentarCelebracao");
+				modal.find("ol").children().remove();
+				modal.find("form").attr("action", url);
+				modal.find("#modalComentarCelebracaoLabel").html(`Comentários - ${response.post}`);
+
+				if (response.comentarios.length > 0) {
+					[...response.comentarios].forEach(item => {
+						if ({{request.user.id}} == item.funcionario__usuario__id || "{{request.user.get_access}}" == "admin") {
+							modal.find("ol").append(`<li class="list-group-item d-flex justify-content-between align-items-start">
+								<div class="ms-2 me-auto">
+									<div class="fw-bold">${item.comentario}</div>
+									<small class="fs-7">${item.funcionario__nome_completo} comentou em ${formatarDataHora(item.data_cadastro)}</small>
+								</div>
+								<button name="remover" value="${item.id}" class=btn badge text-bg-primary rounded-pill" title="Remover comentário">
+									<i class="fa-duotone fa-trash text-body"></i>
+								</button>
+							</li>`);
+						} else {
+							modal.find("ol").append(`<li class="list-group-item d-flex justify-content-between align-items-start">
+								<div class="ms-2 me-auto">
+									<div class="fw-bold">${item.comentario}</div>
+									<small class="fs-7">${item.funcionario__nome_completo} comentou em ${formatarDataHora(item.data_cadastro)}</small>
+								</div>
+							</li>`);
+						};						
+					});
+				} else {
+					modal.find("ol").append(`<li class="list-group-item text-center">Nenhum comentário nesta celebração.</li>`);
+				};
+
+				modal.modal("show");
+            },
+            error: function(xhr, status, error) {
+                alert('Erro ao buscar comentários:', error);
+            }
+        });
+	};
+</script>
+{% endblock %}

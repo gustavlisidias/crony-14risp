@@ -1,0 +1,39 @@
+<div class="modal fade" id="modalAdicionarPesquisa" tabindex="-1" aria-labelledby="modalAdicionarPesquisaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form method="POST" class="modal-content" id="formAdicionarPesquisa">
+            {% csrf_token %}
+            <div class="modal-header bg-body">
+                <h2 class="modal-title fs-5" id="modalAdicionarPesquisaLabel">Adicionar Nova Pesquisa</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+				<div class="form-check mb-3">
+					<input class="form-check-input me-2" type="checkbox" id="anonimo" name="anonimo" style="width: 20px; height: 20px">
+					<label class="form-check-label" for="anonimo" style="margin-top: 3px;">
+						Anônimo
+					</label>
+				</div>
+				<div class="form-floating mb-3">
+                    <input type="date" class="form-control" id="pesquisaEncerramento" name="data_encerramento" placeholder required>
+					<label for="pesquisaEncerramento">Data Encerramento *</label>
+                </div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="pesquisaTitulo" name="titulo" placeholder required>
+					<label for="pesquisaTitulo">Título *</label>
+				  </div>
+				<div class="form-floating mb-3">
+					<textarea class="form-control" id="pesquisaDescricao" name="descricao" placeholder required style="height: 100px"></textarea>
+					<label for="pesquisaDescricao">Descrição *</label>
+				  </div>
+                <div id="perguntasContainer">
+                    <!-- Perguntas serão adicionadas aqui -->
+                </div>
+                <button type="button" class="btn btn-secondary text-light" id="adicionarPergunta">Adicionar Pergunta</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-secondary text-light">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>

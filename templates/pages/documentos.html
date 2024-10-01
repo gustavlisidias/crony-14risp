@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Documentos{% endblock %}
+
+{% block header %}
+<link rel="stylesheet" href="{% static 'uppy/uppy.css' %}">
+<link rel="stylesheet" href="{% static 'jstree/jstree.min.css' %}">
+<script src="{% static 'jstree/jstree.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/documentos/adicionar-documento.html" %}
+{% include "modals/documentos/importar-documentos.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>Documentos Gerais</div>
+			{% if request.user.get_access == "admin" %}
+				<div class="btn-group">
+					<button class="btn btn-secondary text-light" type="button" title="Adicionar Documento" data-bs-toggle="modal" data-bs-target="#modalAdicionarDocumento">
+						Adicionar
+					</button>
+					<button class="btn btn-secondary text-light" type="button" title="Importar Documentos" onclick="carregarArvores()">
+						Importar
+					</button>
+				</div>
+			{% endif %}
+		</div>
+		<div class="card-body">
+
+			<!-- Filtros -->
+			<div class="card card-filtros mb-4">
+				<div class="card-header">
+					Filtros
+				</div>
+				<div class="card-body">
+					<form method="GET" id="formFiltrarDocumentos">
+						<div class="row mb-3">
+							<div class="col-md-3 col-12">
+								<label class="form-label fs-6">Data Inicial</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_inicial" class="form-control" value="{{filtros.inicio}}">
+								</div>
+							</div>
+							<div class="col-md-3 col-12">
+								<label class="form-label fs-6">Data Final</label>
+								<div class="input-group mb-3">
+									<input type="date" name="data_final" class="form-control" value="{{filtros.final}}">
+								</div>
+							</div>
+							<div class="col-md-3 col-12">
+								<label class="form-label fs-6">Documento</label>
+								<div class="input-group mb-3">
+									<input type="text" name="nome" class="form-control" value="{{filtros.nome|default_if_none:""}}">
+								</div>
+							</div>
+							<div class="col-md-3 col-12">
+								<label class="form-label fs-6">Tipo</label>
+								<select class="form-select select-status" name="tipo" multiple>
+									{% for tipo in tipos %}
+										<option value="{{tipo.id}}" {% if tipo.id in request.GET|item_from_dict:"tipo"|value_to_integer %} selected {% endif %}>{{tipo.tipo}}</option>
+									{% endfor %}
+								</select>
+							</div>
+						</div>
+						<button type="submit" class="btn btn-primary text-light float-end ms-2">Aplicar</button>
+						<a href="{% url 'documentos' %}" role="button" class="btn btn-primary text-light float-end">Limpar</a>
+					</form>
+				</div>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table table-hover align-middle table-documentos">
+					<thead>
+						<tr>
+							<th scope="col">#</th>
+							<th scope="col">Documento</th>
+							<th scope="col">Tipo</th>
+							<th scope="col">Data Documento</th>
+							<th scope="col" class="text-center">Ações</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for documento in documentos %}
+							<tr>
+								<th scope="row">{{forloop.counter}}</th>
+								<td>{{documento.caminho}}</td>
+								<td>{{documento.tipo}}</td>
+								<td>{{documento.data_documento|date:"d/m/Y"}}</td>
+								<td class="text-center">
+									<div class="d-flex justify-content-around">
+										<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" title="Visualizar documento">
+											<i class="fa-duotone fa-eye text-body"></i>
+										</a>
+										<a href="{% url 'stream-documento' documento.id 'doc' 'download' %}" download title="Baixar documento">
+											<i class="fa-duotone fa-download text-body"></i>
+										</a>
+										{% if request.user.get_access == "admin" %}
+											<a role="button" title="Excluir documento" onclick="excluirDocumento({ id: {{documento.id}} })">
+												<i class="fa-light fa-xmark text-danger"></i>
+											</a>
+										{% endif %}
+									</div>
+								</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	function carregarArvores() {
+		document.getElementById("overlay").style.display = "block";
+
+		$.ajax({
+			type: "GET",
+			url: `{% url "importar-documentos" %}`,
+			success: function(data) {
+				document.getElementById("overlay").style.display = "none";
+
+				const modal = $("#modalImportarDocumentos");
+				modal.find(".modal-body").html("");
+				modal.find(".modal-body").append(`<input type="hidden" name="nodes" id="nodes">`);
+				modal.find(".modal-body").append(`<small>Atenção: A importação selecionada suporta aproximadamente 80mil arquivos por vez, para quantidades maiores clique em <b>Importar Tudo</b></small><br><br>`);
+		
+				data.forEach(function(arvore, index) {
+					let arvoreDiv = $("<div>").attr("id", "arvore" + index);
+					modal.find(".modal-body").append(arvoreDiv);
+			
+					arvoreDiv.jstree({
+						"core": {
+							"data": arvore,
+							"multiple" : true,
+							"animation" : 100,
+							"themes": {
+								"variant": "large"
+							},
+							"checkbox": {
+								"keep_selected_style": false
+							}
+						},
+						"types": {
+							"default": {
+								"icon": "fa-thin fa-folder"
+							},
+							"file": {
+								"icon": "fa-thin fa-file"
+							}
+						},
+						"plugins": [
+							"checkbox", 
+							"types", 
+							"wholerow",
+							// "contextmenu"
+							// "sort",
+							// "search",
+							// "changed",
+							// "conditionalselect",
+							// "dnd"
+						]
+					});
+				});
+		
+				$("#formImportarDocumentos").submit(function() {
+					let selectedNodes = [];
+
+					data.forEach(function(arvore, index) {
+						let nodes = $("#arvore" + index).jstree("get_checked", true);
+						selectedNodes = selectedNodes.concat(nodes);
+					});
+		
+					let selectedNodeNames = selectedNodes.map(function(node) {
+						if (node.original.type == "file") {
+						return node.original.path;
+						}
+					});
+
+					$("#nodes").val(selectedNodeNames.join(","));
+				});
+		
+				modal.modal("show");
+			},
+			error: function(error) {
+				document.getElementById("overlay").style.display = "none";
+				alert(error.responseJSON.message);
+			}
+		});    
+	};
+  
+	function excluirDocumento(documento) {
+		$.ajax({
+			type: "POST",
+			url: `{% url "excluir-documento" 0 %}`.replace("0", documento.id),
+			beforeSend: function (xhr) {
+				xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+			},
+			success: function (data) {
+				location.reload();
+			},
+			error: function (data) {
+				location.reload();
+			}
+		});
+	};
+
+	function updateTabelaDocumentos() {
+		$.ajax({
+			type: "GET",
+			url: "{% url 'reload-documentos' %}",
+			traditional: true,
+			data: {
+				"data_inicial": "{{ request.GET.data_inicial }}", 
+				"data_final": "{{ request.GET.data_final }}", 
+				"nome": "{{ request.GET.nome }}",
+				"tipo": "{{ request.GET.tipo }}"
+			},
+			success: function (data) {
+				const config = Object.assign(
+					datatables_config, {
+					scrollY: 500,
+				});
+	
+				const dataTableData = data.map(function (documento, index) {
+					return {
+						"row": index + 1,
+						"id": documento.id,
+						"caminho": documento.caminho,
+						"tipo": `${documento.tipo__tipo} - ${documento.tipo__codigo}`,
+						"data": formatarData(documento.data_documento),
+						"viewUrl": `{% url 'stream-documento' 0 'doc' 'visualizar' %}`.replace("0", documento.id),
+						"downloadUrl": `{% url 'stream-documento' 0 'doc' 'download' %}`.replace("0", documento.id)
+					};
+				});
+	
+				config.data = dataTableData;
+				config.columns = [
+					{ data: "row", title: "#" },
+					{ data: "caminho", title: "Documento" },
+					{ data: "tipo", title: "Tipo" },
+					{ data: "data", title: "Data Documento" },
+					{
+						data: null,
+						title: "",
+						render: function (data, type, row) {
+							if (type === "display") {
+								return `<div class="d-flex justify-content-around">
+											<a href="${data.viewUrl}" target="_blank" title="Visualizar documento">
+												<i class="fa-duotone fa-eye text-body"></i>
+											</a>
+											<a href="${data.downloadUrl}" download title="Baixar documento">
+												<i class="fa-duotone fa-download text-body"></i>
+											</a>
+											{% if request.user.get_access == "admin" %}
+												<a role="button" title="Excluir documento" onclick="excluirDocumento({id: ${data.id} })">
+													<i class="fa-light fa-xmark text-danger"></i>
+												</a>
+											{% endif %}
+										</div>`;
+							}
+							return data;
+						}
+					},
+				];
+	
+				$('.table-documentos').DataTable().destroy();
+				$('.table-documentos').DataTable(config);
+			},
+			error: function (error) {
+				alert("Erro ao atualizar a tabela de documentos:", error);
+			}
+		});
+	};	
+	
+	document.addEventListener("DOMContentLoaded", function () {
+		createSelectChoices(document.querySelector(".select-status"), -1);
+	});
+</script>
+
+<script type="module">
+	import { Uppy, Dashboard, ImageEditor, DropTarget, ProgressBar, XHRUpload } from "/static/uppy/uppy.min.mjs";
+	import pt_BR from "/static/uppy/pt_BR.min.js";
+
+	document.addEventListener("DOMContentLoaded", function () {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 500,
+		});
+
+		const table = $(".table-documentos").DataTable(config);
+
+		//####################################################################################
+
+		const uppy = new Uppy({ locale: pt_BR });
+
+		const funcionarios = [{% for funcionario in funcionarios %}{"id": "{{funcionario.id}}", "nome_completo": "{{funcionario.nome_completo}}"},{% endfor %}];
+		const tiposDocumento = [{% for tipo in tipos %}{"opcao": "{{tipo.id}}", "label": "{{tipo.tipo}}"},{% endfor %}];
+
+		uppy.use(Dashboard, {
+			target: "#uppy",
+			theme: "{{funcionario.id|theme}}",
+			inline: true,
+			showLinkToFileUploadResult: false,
+			showProgressDetails: true,
+			hideProgressAfterFinish: false,
+			singleFileFullScreen: false,
+			fileManagerSelectionType: "files",
+			proudlyDisplayPoweredByUppy: false,
+
+			metaFields: [
+				{
+					id: "enviar",
+					name: "Enviar documento para a pasta do Funcionário",
+					render: ({ value, onChange }, h) => {
+						return h("input", {
+							type: "checkbox",
+							onChange: (ev) => onChange(ev.target.checked ? "on" : "off"),
+							defaultChecked: value === "off",
+						});
+					},
+				},
+				{
+					id: "funcionario",
+					name: "Funcionário",
+					render: ({ value, onChange }, h) => {
+						const options = funcionarios.map(funcionario => {
+							return h("option", { value: funcionario.id, selected: funcionario.id === value }, funcionario.nome_completo);
+						});
+						return h("select", { value, onChange: e => onChange(e.target.value) }, [options]);
+					}
+				},
+				{
+					id: "tipo",
+					name: "Tipo Documento",
+					render: ({ value, onChange }, h) => {
+						const options = tiposDocumento.map(tipo => {
+							return h("option", { value: tipo.opcao, selected: tipo.opcao === value }, tipo.label);
+						});
+						return h("select", { value, onChange: e => onChange(e.target.value) }, [options]);
+					}
+				},		
+				{ id: "data", name: "Data Documento", type: "date" }
+			]
+		});
+
+		uppy.use(ImageEditor, DropTarget, ProgressBar, { target: Uppy.Dashboard });
+		uppy.setMeta({"csrfmiddlewaretoken": "{{ csrf_token }}"});
+		uppy.use(XHRUpload, {
+			endpoint: `{% url "adicionar-documento" %}`,
+			method: "POST",
+			formData: true,
+			bundle: false,
+			allowedMetaFields: ["funcionario", "tipo", "enviar", "data", "csrfmiddlewaretoken"],
+		});
+
+		uppy.on("upload-error", (file, error, response) => {
+			setTimeout(() => {
+				document.querySelector(".uppy-StatusBar-statusPrimary").innerText = `${response.body.message}. `;
+			}, "500");
+		});
+
+		uppy.on("upload-success", (status, event) => {
+			updateTabelaDocumentos();
+		});
+	});
+</script>
+{% endblock %}

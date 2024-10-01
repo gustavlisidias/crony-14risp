@@ -1,0 +1,31 @@
+<div class="modal fade" id="modalVerComentarios" aria-hidden="true" aria-labelledby="modalVerComentariosLabel" tabindex="-1">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h2 class="modal-title fs-5" id="modalVerComentariosLabel">Comentários Avaliação - {{avaliacao}}</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="accordion" id="accordionComentario">
+					{% for funcionario, comentarios in dados.comentarios.items %}
+						<div class="accordion-item">
+							<h2 class="accordion-header">
+								<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+									data-bs-target="#collapseComentario{{forloop.counter}}" aria-expanded="false" aria-controls="collapseComentario{{forloop.counter}}">
+									Comentários de {{funcionario}}
+								</button>
+							</h2>
+							<div id="collapseComentario{{forloop.counter}}" class="accordion-collapse collapse" data-bs-parent="#accordionComentario">
+								<div class="accordion-body">
+									{% for comentario in comentarios %}
+										<p class="m-0 p-0">{{comentario}}</p>
+									{% endfor %}
+								</div>
+							</div>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

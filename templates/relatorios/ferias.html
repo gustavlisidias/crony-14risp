@@ -1,0 +1,114 @@
+<!doctype html>
+
+{% load static %}
+{% load custom_tags %}
+
+<html lang="pt-br">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<title>Férias</title>
+
+		<style>
+			@page {
+				size: A4 portrait;
+				margin: 15px 15px 50px 15px;
+				font-family: "Lato", sans-serif;
+				font-weight: 400;
+				font-size: 11px;
+				font-style: normal;
+				letter-spacing: 0.2px;
+				color: #202020;
+				border: 1px solid #d7d7d7;
+				height: 100vh !important;
+				box-sizing: border-box;
+				padding: 1rem;
+
+				@bottom-right {
+					content: "Página " counter(page) " de " counter(pages);
+					white-space: pre;
+					padding: 1rem;
+					font-size: 10px;
+				}
+			}
+
+			body {
+				font-family: "Lato", sans-serif;
+				font-weight: 400;
+				font-size: 11px;
+				font-style: normal;
+				letter-spacing: 0.2px;
+				color: #202020;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="container-fluid">
+			<div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+				<div><img class="img img-fluid" src="{% static 'images/logo-text.png' %}" style="width: 136px; height: 50px"></div>
+				<div class="flex-fill">
+					<p class="text-center fw-bold mb-0">RELATÓRIO - SALDO DE FÉRIAS POR FUNCIONÁRIO</p>
+				</div>
+				<div><p style="font-size: 10px; text-align: end;">Gerado por {{autor}} <br> em {% now "d F Y H:i" %}</p></div>
+			</div>
+
+			<hr>
+
+			<div class="row mb-3">
+				<div class="col-3">
+					<p class="fw-bold mb-0">Unidade de Negócio</p>
+					<p class="fw-bold mb-0">CNPJ</p>
+					<p class="fw-bold mb-0">Inscrição Estadual</p>
+				</div>
+				<div class="col-6">
+					<p class="mb-0">{{dados_empresa.nome}}</p>
+					<p class="mb-0">{{dados_empresa.cnpj}}</p>
+					<p class="mb-0">{{dados_empresa.inscricao}}</p>
+				</div>
+				<div class="col-3">
+					<p class="mb-0"></p>
+				</div>
+			</div>
+		
+			<table class="table table-sm table-bordered">
+				<thead>
+					<tr>
+						<th class="bg-body">Matrícula</th>
+						<th class="bg-body">Nome</th>
+						<th class="bg-body">Admissão</th>
+						<th class="bg-body">Início</th>
+						<th class="bg-body">Data Limite</th>
+						<th class="bg-body">Saldo</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for funcionario, periodos in ferias.items %}
+						{% for periodo in periodos %}
+							<tr>
+								{% for colaborador in funcionarios %}
+								{% if colaborador.nome_completo == funcionario %}
+									<td>{{colaborador.matricula}}</td>
+									<td>{{colaborador.nome_completo}}</td>
+									<td>{{colaborador.data_contratacao|date:"d/m/Y"}}</td>
+								{% endif %}
+								{% endfor %}
+								<td>{{periodo.inicio|date:"d/m/Y"}}</td>
+								<td>{{periodo.vencimento|date:"d/m/Y"}}</td>
+								{% if not periodo.status %}
+									<td>{{periodo.saldo|absolute_days}} dias</td>
+								{% else %}
+									<td>0 dias</td>
+								{% endif %}
+							</tr>
+						{% endfor %}
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+		
+	</body>
+
+</html>

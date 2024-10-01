@@ -1,0 +1,136 @@
+<form method="POST" class="modal-content" id="formAdicionarCurso">
+	{% csrf_token %}
+	<div class="modal fade" id="modalAdicionarAvaliacao" tabindex="-1" aria-labelledby="modalAdicionarAvaliacaoLabel" aria-hidden="true">
+		<div class="modal-dialog modal-xl modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header bg-body">
+					<h2 class="modal-title fs-5" id="modalAdicionarAvaliacaoLabel">Nova Avaliação</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="form-floating mb-3">
+						<input type="text" class="form-control" id="avaliacaoTitulo" name="titulo" placeholder>
+						<label for="avaliacaoTitulo">Título *</label>
+					</div>
+					<div class="mb-3">
+						<label class="form-label" for="avaliacaoDescricao">Descrição *</label>
+						<textarea class="ck-editor-5" id="avaliacaoDescricao" name="descricao"></textarea>
+						<span class="word-count" id="avaliacaoDescricao_script-word-count"></span>
+					</div>
+					<div class="form-floating mb-3">
+						<select class="form-select" id="avaliacaoAvaliado" name="avaliado" style="height: 100%;">
+							{% for funcionario in funcionarios %}
+								<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+							{% endfor %}
+						</select>
+						<label for="avaliacaoAvaliado">Avaliado *</label>
+					</div>
+					<div class="row mb-3">
+						<div class="col">
+							<div class="form-floating">
+								<input type="date" class="form-control" id="avaliacaoInicio" name="inicio" placeholder>
+								<label class="form-label" for="avaliacaoInicio">Periodo Inicial *</label>
+							</div>
+						</div>
+						<div class="col">
+							<div class="form-floating">
+								<input type="date" class="form-control" id="avaliacaoFinal" name="final" placeholder>
+								<label class="form-label" for="avaliacaoFinal">Periodo Final *</label>
+							</div>
+						</div>
+						<div class="col">
+							<div class="form-floating">
+								<input type="date" class="form-control" id="avaliacaoEncerramento" name="encerramento" placeholder>
+								<label class="form-label" for="avaliacaoEncerramento">Data de Encerramento *</label>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-primary text-light" id="btnProximo1">Próximo</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="modalAdicionarAvaliacao2" aria-hidden="true" aria-labelledby="modalAdicionarAvaliacaoLabel2" tabindex="-1">
+		<div class="modal-dialog modal-xl modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="modal-title fs-5" id="modalAdicionarAvaliacaoLabel2">Nova Avaliação</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<label class="form-label">Pesos por Tipo de Avaliador</label>
+					<div class="row mb-3">
+						{% for nivel in niveis %}
+							<div class="col">
+								<div class="form-floating mb-3">
+									<input type="number" class="form-control" id="avaliacao{{nivel.value|title}}" name="{{nivel.value|lower}}" value="0" min="0" max="1" step="0.1" placeholder>
+									<label class="form-label" for="avaliacao{{nivel.value|title}}">{{nivel.value|title}}</label>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					<div class="form-floating mb-3">
+						<select class="form-select" id="avaliacaoFuncionarios" name="funcionarios" multiple style="height: 100%;">
+							{% for funcionario in funcionarios %}
+								<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+							{% endfor %}
+						</select>
+						<label for="avaliacaoFuncionarios">Avaliadores</label>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-primary text-light" data-bs-target="#modalAdicionarAvaliacao" data-bs-toggle="modal">Voltar</button>
+					<button type="button" class="btn btn-primary text-light" id="btnProximo2">Próximo</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="modalAdicionarAvaliacao3" aria-hidden="true" aria-labelledby="modalAdicionarAvaliacaoLabel3" tabindex="-1">
+		<div class="modal-dialog modal-xl modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2 class="modal-title fs-5" id="modalAdicionarAvaliacaoLabel3">Nova Avaliação</h2>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<label class="form-label">Pesos por Critério</label>
+					<div class="row mb-3">
+						{% for criterio in criterios %}
+							<div class="col">
+								<div class="form-floating mb-3">
+									<input type="number" class="form-control" id="avaliacao{{criterio.nome|title}}" name="{{criterio.nome|lower}}" value="0" min="0" max="1" step="0.1" placeholder>
+									<label class="form-label" for="avaliacao{{criterio.nome|title}}">{{criterio.nome|title}}</label>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					{% if perguntas %}
+						<div class="form-floating mb-3">
+							<select class="form-select" id="avaliacaoPerguntas" name="perguntas" multiple style="height: 100%;">
+								{% for pergunta in perguntas %}
+									<option value="{{ pergunta.id }}">{{ pergunta }}</option>
+								{% endfor %}
+							</select>
+							<label for="avaliacaoPerguntas">Perguntas</label>
+						</div>
+					{% endif %}
+
+					<div id="perguntasContainer"></div>
+					<button type="button" class="btn btn-secondary text-light" id="adicionarPergunta">Adicionar Pergunta</button>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-primary text-light" data-bs-target="#modalAdicionarAvaliacao2" data-bs-toggle="modal">Voltar</button>
+					<button type="submit" class="btn btn-secondary text-light">Concluir</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</form>

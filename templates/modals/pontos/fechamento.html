@@ -1,0 +1,48 @@
+<div class="modal fade" id="modalFechamentoPonto" tabindex="-1" aria-labelledby="modalFechamentoPontoLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="{% url 'relatorio-ponto' %}" class="modal-content" id="formFechamentoPonto" onsubmit="gerarRelatorio(this)">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalFechamentoPontoLabel">Fechamento de Ponto</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<input type="hidden" name="tipo" id="fechamentoTipo" value="0">
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 100%;">
+						{% for contrato in contratos %}
+							<option value="{{contrato.id}}">{{contrato}}</option>
+						{% endfor %}
+					</select>
+					<label for="fechamentoContrato">Contrato</label>
+				</div>
+				<div class="row mb-3">
+					<div class="col">
+						<label for="relatorioInicio" class="form-label">Início</label>
+						<input class="form-control" type="date" id="fechamentoInicio" name="relatorio_inicio" required>
+					</div>
+					<div class="col">
+						<label for="relatorioFinal" class="form-label">Final</label>
+						<input class="form-control" type="date" id="fechamentoFinal" name="relatorio_final" required>
+					</div>
+				</div>
+				<div class="form-check mb-3 d-none">
+					<input class="form-check-input me-2" type="checkbox" value="True" id="fechamentoFechamento" name="fechamento" style="width: 20px; height: 20px;" checked>
+					<label class="form-check-label" for="fechamentoFechamento" style="margin-top: 3px;">Fechamento</label>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="fechamentoFuncionario" name="funcionarios" multiple style="height: 100%;">
+						{% for funcionario in funcionarios %}
+							<option value="{{funcionario.id}}">{{funcionario}}</option>
+						{% endfor %}
+					</select>
+					<label for="relatorioFuncionario">Funcionarios</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

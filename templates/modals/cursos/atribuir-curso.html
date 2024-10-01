@@ -1,0 +1,22 @@
+<div class="modal fade" id="modalAtribuirCurso" tabindex="-1" aria-labelledby="modalAtribuirCursoLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" action="" class="modal-content" id="formAtribuirCurso">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAtribuirCursoLabel"></h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<select class="form-select" id="atribuirFuncionarios" name="funcionarios" multiple required>
+					{% for funcionario in funcionarios %}
+						<option value="{{funcionario.id}}">{{funcionario}}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-info text-light" data-bs-dismiss="modal">Fechar</button>
+				<button type="submit" class="btn btn-secondary text-light">Atribuir</button>
+			</div>
+		</form>
+	</div>
+</div>

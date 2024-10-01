@@ -1,0 +1,43 @@
+<div class="modal fade" id="modalAdicionarOuvidoria" data-bs-focus="false" aria-labelledby="modalAdicionarOuvidoriaLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" action="{% url 'adicionar-ouvidoria' %}" class="modal-content" id="formAdicionarOuvidoria">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarOuvidoriaLabel">Enviar Manifestação</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="form-check mb-3">
+					<input class="form-check-input me-2" type="checkbox" value="true" id="ouvidoriaAnonimo" name="anonimo" style="height: 20px; width: 20px;" checked>
+					<label class="form-check-label" for="ouvidoriaAnonimo" style="margin-top: 3px;">Enviar Anonimamente</label>
+					<div id="ouvidoriaAnonimoHelp" class="form-text">
+						Ao selecionar o formato anônimo, seu perfil não será identificado na denúncia enviada. De qualquer modo, 
+						sugerimos que tenha atenção quanto aos dados e informações enviadas no texto da denúncia, pois isso pode tornar possível 
+						uma identificação indireta.
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" id="ouvidoriaCategoria" name="categoria" required>
+						{% for categoria in categorias %}
+							<option value="{{categoria.id}}" selected>{{categoria.title}}</option>
+						{% endfor %}
+					</select>
+					<label for="ouvidoriaCategoria">Categoria *</label>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="ouvidoriaAssunto" name="assunto" placeholder required>
+					<label class="form-label" for="ouvidoriaAssunto">Assunto *</label>
+				</div>
+				<div class="mb-3">
+					<label class="form-label" for="ouvidoriaDescricao">Descrição *</label>
+					<textarea class="ck-editor-5" id="ouvidoriaDescricao" name="descricao"></textarea>
+					<span class="word-count" id="ouvidoriaDescricao_script-word-count"></span>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Enviar</button>
+			</div>
+		</form>
+	</div>
+</div>

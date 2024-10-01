@@ -1,0 +1,681 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Colaboradores | {{colaborador}}{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/funcionarios/editar-funcionario.html" %}
+{% include "modals/funcionarios/observacoes-funcionario.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100">
+		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
+			<div>
+				<a class="text-light" href="{% url 'funcionarios' %}">Colaboradores</a>
+				<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
+				{{colaborador}}
+			</div>
+			{% if request.user.get_access == "admin" %}
+				<div class="btn-group">
+					<form method="POST" class="btn btn-secondary p-0 m-0" id="formHistoricoFuncionario">
+						{% csrf_token %}
+						<button class="btn btn-secondary text-light" name="historico" value="true" type="submit" title="Histórico funcionário">
+							Histórico
+						</button>
+					</form>
+				</div>
+			{% endif %}
+		</div>
+
+		<div class="card-body profile">
+			<!-- Abas de navegação -->
+			<ul class="nav nav-tabs" id="nav-usuario" role="tablist">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link active" id="tab-perfil" data-bs-toggle="tab" data-bs-target="#pane-perfil" type="button" role="tab">
+						Perfil
+					</button>
+				</li>
+				{% comment %} <li class="nav-item" role="presentation">
+					<button class="nav-link" id="tab-dados" data-bs-toggle="tab" data-bs-target="#pane-dados" type="button" role="tab">
+						Dados
+					</button>
+				</li> {% endcomment %}
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="tab-ajustes" data-bs-toggle="tab" data-bs-target="#pane-ajustes" type="button" role="tab">
+						Horários
+					</button>
+				</li>
+			</ul>
+
+			<div class="tab-content" id="tab-usuario">
+				<!-- Perfil -->
+				<div class="tab-pane fade show active" id="pane-perfil" role="tabpanel" tabindex="0">
+					<div class="row mt-3">
+						<div class="col-12 col-md-4">
+							<!-- Card do perfil com background -->
+							<div class="card h-100 profile">
+								<div class="card-body text-center mt-4">
+									<img src="{{colaborador.id|photo:'url'}}" class="img img-fluid rounded-circle" style="width: 150px; height: 150px;">
+									<h5 class="text-light my-3">{{colaborador.usuario.username}}</h5>
+									<p class="text-light mb-1">{{colaborador.cargo}}</p>
+									<p class="text-light mb-4">{{colaborador.setor}}</p>
+									<p class="text-light mb-4 fs-7">Contratado em {{colaborador.data_contratacao}}</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-12 col-md-8">
+							<!-- Informações Pessoais -->
+							<div class="card mt-3 mt-md-0">
+								<div class="card-body mb-4">
+									<div class="row">
+										<div class="col-sm-12">
+											<div class="d-flex justify-content-between mb-4">
+												<h5 class="">Informações Pessoais</h5>
+												<div>
+													<a type="button" data-bs-toggle="modal" data-bs-target="#modalAtividades" title="Ver atividades">
+														<i class="fa-thin fa-calendar-lines fa-lg text-body me-2"></i>
+													</a>
+													<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar funcionário">
+														<i class="fa-thin fa-pen-to-square fa-lg text-body me-2"></i>
+													</a>
+													<a type="button" data-bs-toggle="modal" data-bs-target="#modalObservacoesFuncionario" title="Adicionar anotações">
+														<i class="fa-thin fa-file-pen fa-lg text-body"></i>
+													</a>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="row">
+										<div class="col-sm-3">
+											<p class="mb-0">Matrícula</p>
+										</div>
+										<div class="col-sm-9">
+											<p class="text-muted mb-0">{{colaborador.matricula}}</p>
+										</div>
+									</div>
+									<hr>
+									<div class="row">
+										<div class="col-sm-3">
+											<p class="mb-0">Nome Completo</p>
+										</div>
+										<div class="col-sm-9">
+											<p class="text-muted mb-0">{{colaborador}}</p>
+										</div>
+									</div>
+									<hr>
+									<div class="row">
+										<div class="col-sm-3">
+											<p class="mb-0">Data Nascimento</p>
+										</div>
+										<div class="col-sm-9">
+											<p class="text-muted mb-0">{{colaborador.data_nascimento}}</p>
+										</div>
+									</div>
+									<hr>
+									<div class="row">
+										<div class="col-sm-3">
+											<p class="mb-0">Email</p>
+										</div>
+										<div class="col-sm-9">
+											<p class="text-muted mb-0">{{colaborador.email}}</p>
+										</div>
+									</div>
+									<hr>
+									<div class="row">
+										<div class="col-sm-3">
+											<p class="mb-0">Celular</p>
+										</div>
+										<div class="col-sm-9">
+											<p class="text-muted mb-0">{{colaborador.contato|default_if_none:""}}</p>
+										</div>
+									</div>
+									<hr>
+									<div class="row">
+										<div class="col-sm-3">
+											<p class="mb-0">Endereço</p>
+										</div>
+										<div class="col-sm-9">
+											<p class="text-muted mb-0">{{colaborador.rua|default_if_none:""}}, {{colaborador.numero|default_if_none:""}}</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Modal Visualizar Atividades -->
+					<div class="modal fade" id="modalAtividades" tabindex="-1" aria-labelledby="modalAtividadesLabel" aria-hidden="true">
+						<div class="modal-dialog">
+							<div class="modal-content">
+								<div class="modal-header  bg-body">
+									<h2 class="modal-title fs-5" id="modalAtividadesLabel">Atividades</h2>
+									<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+								</div>
+								<div class="modal-body card-atividades">
+									<div class="overflow-y-auto" style="max-height: 220px;">
+										{% if atividades %}
+											<ul class="list-group list-group-flush list-group-numbered">
+												{% for atividade in atividades %}
+													<li class="list-group-item">{{atividade.titulo}}
+														<small class="text-muted fs-7 ms-2">({{atividade.final|date:"d/m/Y"}})</small>
+													</li>
+												{% endfor %}
+											</ul>
+										{% else %}
+											<p class="text-center mt-3">Nenhuma atividade pendente!</p>
+										{% endif %}
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Documentos -->
+					{% if request.user.get_access == "admin" %}
+						<div class="row mt-3">
+							<div class="col-12 col-md-12">
+								<div class="card mt-3 mt-md-0">
+									<div class="card-header bg-primary text-light">
+										{% if colaborador.usuario == request.user %} Meus Documentos {% else %} Documento Pessoais {% endif %}
+									</div>
+
+									<div class="card-body overflow-y-auto">
+										<!-- Filtros -->
+										<div class="card card-filtros mb-4">
+											<div class="card-header">
+												Filtros
+											</div>
+											<div class="card-body">
+												<form method="GET" id="formFiltrarDocumentos">
+													<div class="row">
+														<div class="col-md-3 col-12">
+															<label class="form-label fs-6">Data Inicial</label>
+															<div class="input-group mb-3">
+																<input type="date" name="data_inicial" class="form-control" value="{{filtros.inicio}}">
+															</div>
+														</div>
+														<div class="col-md-3 col-12">
+															<label class="form-label fs-6">Data Final</label>
+															<div class="input-group mb-3">
+																<input type="date" name="data_final" class="form-control" value="{{filtros.final}}">
+															</div>
+														</div>
+														<div class="col-md-3 col-12">
+															<label class="form-label fs-6">Documento</label>
+															<div class="input-group mb-3">
+																<input type="text" name="nome" class="form-control" value="{{filtros.nome|default_if_none:""}}">
+															</div>
+														</div>
+														<div class="col-md-3 col-12">
+															<label class="form-label fs-6">Tipo</label>
+															<select class="form-select select-status" name="tipo" multiple>
+																{% for tipo in tipos %}
+																	<option value="{{tipo.id}}" {% if tipo.id in request.GET|item_from_dict:"tipo"|value_to_integer %} selected {% endif %}>{{tipo.tipo}}</option>
+																{% endfor %}
+															</select>
+														</div>
+													</div>
+													<button type="submit" class="btn btn-primary text-light float-end ms-2">Aplicar</button>
+													<a href="{% url 'editar-funcionario' colaborador.id  %}" role="button" class="btn btn-primary text-light float-end">Limpar</a>
+												</form>
+											</div>
+										</div>
+
+										<!-- Table Documentos Funcionario  -->
+										<div class="table-responsive">
+											<table class="table table-hover align-middle table-documentos">
+												<thead>
+													<tr>
+														<th scope="col">#</th>
+														<th scope="col">Documento</th>
+														<th scope="col">Tipo</th>
+														<th scope="col">Data Documento</th>
+														<th class="text-center" scope="col">Ações</th>
+													</tr>
+												</thead>
+												<tbody>
+													{% for documento in documentos %}
+														<tr>
+															<th scope="row">{{ forloop.counter }}</th>
+															<td>{{ documento.caminho }}</td>
+															<td>{{ documento.tipo }}</td>
+															<td>{{ documento.data_documento|date:"d/m/Y" }}</td>
+															<td class="text-center">
+																<div class="d-flex justify-content-around">
+																	<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" title="Visualizar documento">
+																		<i class="fa-duotone fa-eye text-body"></i>
+																	</a>
+																	<a href="{% url 'stream-documento' documento.id 'doc' 'download' %}" download title="Baixar documento">
+																		<i class="fa-duotone fa-download text-body"></i>
+																	</a>
+																	{% if request.user.get_access == "admin" %}
+																		<a role="button" title="Excluir documento" onclick="excluirDocumento({ id: {{documento.id}} })">
+																			<i class="fa-light fa-xmark text-danger"></i>
+																		</a>
+																	{% endif %}
+																</div>
+															</td>
+														</tr>
+													{% endfor %}
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					{% endif %}
+				</div>
+
+				<!-- Dados -->
+				<div class="tab-pane fade" id="pane-dados" role="tabpanel" tabindex="0">
+					<div class="row mt-3">
+
+						<!-- Pontualidade -->
+						<div class="col-12 col-md-4">
+							<div class="card h-100">
+								<div class="card-body mb-4">
+									<h5 class="text-center">Pontualidade</h5>
+
+									<!-- Gráfico de Pontualidade -->
+									<div class="d-flex justify-content-center mb-2">
+										<canvas id="pontoGrafico" style="max-width: 500px; max-height: 500px;"></canvas>
+									</div>
+
+									<span class="text-muted fs-7">Horas Totais</span>
+									<div class="progress position-relative">
+										<div class="progress-bar bg-primary" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.total|timedelta }}</small>
+									</div>
+
+									<span class="text-muted fs-7">Saldo de Horas</span>
+									<div class="progress position-relative">
+										<div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.saldo|timedelta }}</small>
+									</div>
+
+									<span class="text-muted fs-7">Score de Pontualidade</span>
+									<div class="progress position-relative">
+										<div class="progress-bar bg-secondary" role="progressbar" style="width: {{graph.scores.1|floatformat:"3u"}}%" aria-valuenow="{{graph.scores.1|floatformat:"3u"}}" aria-valuemin="0" aria-valuemax="100"></div>
+										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.scores.0|floatformat:2}}</small>
+									</div>
+
+									<div class="card bg-primary mt-5 mx-auto p-0" style="width: 13.25rem; height: 4rem;">
+										<div class="card-body p-1">
+											<div class="d-flex justify-content-around align-items-center text-light">
+												<i class="fa-thin fa-clock fa-2xl text-light"></i>
+												<div class="text-center">
+													<span class="text-light fs-7 fw-bold">
+														Saldo Bando de Horas <br> {{graph.banco|timedelta}}
+													</span>
+												</div>
+											</div>
+										</div>
+									</div>
+
+								</div>
+							</div>
+						</div>
+
+						<!-- Avaliação 9Box -->
+						<div class="col-12 col-md-4">
+							<div class="card table-box h-100">
+								<div class="card-body mb-4">
+									<h5 class="text-center">Avaliação 9Box</h5>
+									<div class="row mb-3 mt-5 ps-5">
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/1.png' %}" data-potencial="2" data-desempenho="0" title="Desempenho Abaixo do Esperado e Potencial Alto" style="height: 50px;">
+										</div>
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/2.png' %}" data-potencial="2" data-desempenho="1" title="Desempenho Esperado e Potencial Alto" style="height: 50px;">
+										</div>
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/3.png' %}" data-potencial="2" data-desempenho="2" title="Desempenho Acima do Esperado e Potencial Alto" style="height: 50px;">
+										</div>
+									</div>
+									<div class="row mb-3 ps-5">
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/4.png' %}" data-potencial="1" data-desempenho="0" title="Desempenho Abaixo do Esperado e Potencial Medio" style="height: 50px;">
+										</div>
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/5.png' %}" data-potencial="1" data-desempenho="1" title="Desempenho Esperado e Potencial Medio" style="height: 50px;">
+										</div>
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/6.png' %}" data-potencial="1" data-desempenho="2" title="Desempenho Acima do Esperado e Potencial Medio" style="height: 50px;">
+										</div>
+									</div>
+									<div class="row mb-3 ps-5">
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/7.png' %}" data-potencial="0" data-desempenho="0" title="Desempenho Abaixo do Esperado e Potencial Baixo" style="height: 50px;">
+										</div>
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/8.png' %}" data-potencial="0" data-desempenho="1" title="Desempenho Esperado e Potencial Baixo" style="height: 50px;">
+										</div>
+										<div class="col">
+											<img class="img img-fluid" src="{% static 'images/9box/9.png' %}" data-potencial="0" data-desempenho="2" title="Desempenho Acima do Esperado e Potencial Baixo" style="height: 50px;">
+										</div>
+									</div>
+									<p class="text-muted fs-6 fst-italic mt-5">
+										A nine box é composta por nove caixas, distribuídas em uma grade 3×3, em que o eixo horizontal representa o 
+										desempenho do colaborador, e o eixo vertical, seu potencial. 
+										O desempenho está relacionado à capacidade atual do colaborador em sua função, isso pode incluir os resultados 
+										alcançados, as habilidades técnicas, competências comportamentais e a capacidade de atender ou superar as 
+										expectativas definidas para o seu papel. 
+										Enquanto o potencial refere-se à capacidade futura, ou seja, a capacidade de assumir responsabilidades maiores 
+										no futuro. Isso envolve avaliar aspectos como habilidades de liderança, adaptabilidade, aprendizado rápido e a 
+										visão estratégica. 
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Afetivograma -->
+						<div class="col-12 col-md-4">
+							<div class="card mt-3 mt-md-0 h-100">
+								<div class="card-body mb-4">
+									<h5 class="text-center">Afetivograma</h5>
+
+									<!-- Gráfico de Afetivograma -->
+									<div class="d-flex justify-content-center">
+										<canvas id="humorGrafico" style="max-width: 500px; max-height: 500px;"></canvas>
+									</div>
+
+									<p class="text-muted fs-6 fst-italic mt-4">
+										Um afetivograma é um gráfico que representa a variação da intensidade emocional de um indivíduo ao
+										longo do tempo. É usado em psicologia para avaliar o estado emocional de uma pessoa e
+										identificar padrões ou mudanças em seus sentimentos. Podem ser usados para:
+										<ul class="text-muted fs-6 fst-italic">
+											<li>Monitorar mudanças no estado emocional ao longo do tempo</li>
+											<li>Identificar padrões ou gatilhos que afetam as emoções</li>
+										</ul>
+									</p>
+									<small class="text-muted fs-7 fst-italic">
+										Este é um modelo simplificado com poucas variações, acompanhe o funcionário e se
+										preciso procure ajuda profissional.
+									</small>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Jornada de Trabalho -->
+				<div class="tab-pane fade" id="pane-ajustes" role="tabpanel" tabindex="0">
+					<form method="POST" action="" onsubmit="enviarFormulario()" id="formEditarJornada">
+						{% csrf_token %}
+
+						<input type="hidden" name="dados" id="dados">
+
+						<select class="form-select my-3 w-25" name="contrato" id="jornadaContrato">
+							{% for i in contratos %}
+								<option value="{{i.id}}" {% if i.id == contrato.id %}selected{% endif %}>{{i.titulo}} - {{i.descricao}}</option>
+							{% endfor %}
+						</select>
+						<p class="text-muted fs-6">Atenção: Alterar o contrato irá refazer a jornada de trabalho conforme o novo contrato selecionado</p>
+
+						<div class="table-responsive">
+							<table class="table table-jornada table-borderless align-middle">
+								<thead>
+									<tr>
+										<th scope="col">Dia</th>
+										{% for dia, horarios in jornada.items %}
+											{% if forloop.first %}
+												{% for hora in horarios %}
+													<th scope="col">{{hora.tipo}}</th>
+												{% endfor %}
+											{% endif %}
+										{% endfor %}
+									</tr>
+								</thead>
+								<tbody class="table-group-divider">
+									{% for dia, horarios in jornada.items %}
+										<tr>
+											<th scope="row"><input type="hidden" name="dia" id="jornadaDia" value="{{dia}}">{{dia|weekday}}</th>
+											{% for hora in horarios %}
+												<td>
+													<input type="time" class="form-control" name="{{hora.tipo}}" id="jornada{{hora.tipo}}" value="{{hora.hora|default_if_none:"00:00"}}">
+												</td>
+											{% endfor %}
+											<td style="display: flex;position: relative;top: 10px;padding: 0px 5px;">
+												<i role="button" title="Adicionar horário" onclick="AdicionarHorario(this)" class="fa-duotone fa-plus"></i>
+											</td>
+											<td style="display: flex;position: relative;top: 10px;padding: 0px 5px;">
+												<i role="button" title="Remover horário" onclick="RemoverHorario(this)" class="fa-duotone fa-minus"></i>
+											</td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+
+						<button type="submit" class="btn btn-primary text-light float-end" {% if request.user.get_access == "common" %} disabled {% endif %}>Salvar Alterações</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+{{ humor|json_script:"dados_humor" }}
+<script src="{% static 'chartjs/chart.min.js' %}"></script>
+
+<script>
+	function excluirDocumento(documento) {
+		$.ajax({
+			type: "POST",
+			url: `{% url "excluir-documento" 0 %}`.replace("0", documento.id),
+			beforeSend: function (xhr) {
+				xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+			},
+			success: function (data) {
+				location.reload();
+			},
+			error: function (data) {
+				location.reload();
+			}
+		});
+	};
+
+	function gerarJornada() {
+		const linhas = document.querySelectorAll(".table-jornada tbody tr");
+		const objeto = {};      
+
+		linhas.forEach((linha) => {
+			const dia = parseInt(linha.querySelector(`input[name="dia"]`).value);
+			const horariosEntrada = [];
+			const horariosSaida = [];
+			
+			linha.querySelectorAll(`input[name="Entrada"]`).forEach((input) => {
+				horariosEntrada.push(input.value);
+			});
+			
+			linha.querySelectorAll(`input[name="Saída"]`).forEach((input) => {
+				horariosSaida.push(input.value);
+			});
+
+			const horarios = {};
+			for (let i = 0; i < horariosEntrada.length; i++) {
+				horarios[`entrada${i+1}`] = horariosEntrada[i];
+				horarios[`saida${i+1}`] = horariosSaida[i];
+			}
+
+			objeto[dia] = horarios;
+		});
+
+		return objeto;
+	};
+
+	function enviarFormulario() {
+		const dados = gerarJornada();
+		document.getElementById("dados").value = JSON.stringify(dados);
+	};
+
+	function AdicionarHorario(elemento) {
+		let linha = elemento.closest("tr");
+		let inputs = linha.querySelectorAll("td input");
+		let tipo = "";
+		let id = "";
+
+		if (inputs.length > 0) {
+			tipo = inputs[inputs.length - 1].parentElement.querySelector(".form-control").name == "Entrada" ? "Saída" : "Entrada";
+			id = inputs[inputs.length - 1].parentElement.querySelector(".form-control").name == "Entrada" ? "jornadaSaída" : "jornadaEntrada";
+		} else {
+			tipo = "Entrada";
+			id = "jorandaEntrada";
+		};
+
+		let novoInput = document.createElement("input");
+		novoInput.type = "time";
+		novoInput.className = "form-control";
+		novoInput.name = tipo;
+		novoInput.id = id;
+		novoInput.value = "00:00";
+
+		let novaColuna = document.createElement("td");
+		novaColuna.appendChild(novoInput);
+		linha.insertBefore(novaColuna, elemento.parentElement);
+	};
+
+	function RemoverHorario(elemento) {
+		let linha = elemento.closest("tr");
+		let inputs = linha.querySelectorAll("td input");
+		let ultimaColuna = inputs[inputs.length - 1].parentElement;
+
+		if (inputs) {
+			linha.removeChild(ultimaColuna);
+		}
+	};
+
+	function updateSelectCidades(estado) {
+		$.ajax({
+			type: "GET",
+			url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
+			success: function (data) {
+				let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
+
+				for (let i = 0; i < data.length; i++) {
+					options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
+				}
+
+				$(`[name="cidade"]`).each(function () {
+					$(this).html(options);
+				});
+			},
+			error: function (error) {
+				alert(error.responseJSON.mensagem);
+			}
+		});
+	};
+
+  document.addEventListener("DOMContentLoaded", function () {
+	setTimeout(() => {
+		window.editors["funcionarioObservacoes"].setData(`{{colaborador.observacoes|safe}}`);
+	}, "500");
+
+	//####################################################################################
+
+    // Atualizar listagem de cidades, selecionando a cidade atual do funcionário
+    const cidade = document.getElementById("funcionarioCidade").value;
+    updateSelectCidades(document.getElementById("funcionarioEstado").value);
+    setTimeout(() => {
+      	document.getElementById("funcionarioCidade").value = cidade;
+    }, "500");
+
+    //####################################################################################
+
+    createSelectChoices(document.querySelector(".select-status"), -1);
+
+	//####################################################################################
+
+	const avaliacao = {{avaliacao|safe}};
+	$(".table-box img").each(function () {
+		if ($(this).data("desempenho") == avaliacao.desempenho && $(this).data("potencial") == avaliacao.potencial) {
+			$(this).css("filter", "");
+		} else {
+			$(this).css("filter", "grayscale(1)");
+		}
+	});
+
+  });
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 300,
+		});
+
+		const table = $(".table-documentos").DataTable(config);
+	});
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+		// Construção do gráfico de Afetivograma
+		let dadosHumor = JSON.parse(document.getElementById("dados_humor").textContent);
+		let element = document.getElementById("humorGrafico").getContext("2d");
+		let data = [];
+		let labels = [];    
+
+		dadosHumor.forEach(item => {
+			labels.push(item.humor);
+			data.push(item.contagem);
+		});
+
+		createChart(element, "pie", labels, data, "Total", "Total registrado por tipo de humor");
+		
+		//####################################################################################
+
+		// Construção do gráfico de Pontualidade
+		const dadosPonto = [
+			{% for data, dados in pontos.items %}
+				{% for dado in dados %}
+					{
+						"total": "{{ dado.total|timedelta }}",
+						"saldo": "{{ dado.saldo|timedelta }}",
+						"dia": "{{ data.weekday|add:2|weekday }}",
+					},
+				{% endfor %}
+			{% endfor %}
+		];
+		const horasPorDia = {};
+		
+		dadosPonto.forEach(item => {
+			const dia = item.dia;
+			const horas = item.total.replace(" ", "").replace("h", ":").replace("m", "").split(":").map(Number);
+			const totalHoras = horas[0] / 60 + horas[1] / 3600;
+			
+			if (dia !== "None") {
+				if (!horasPorDia[dia]) {
+					horasPorDia[dia] = {
+						total: totalHoras,
+						contador: 1
+					};
+				} else {
+					horasPorDia[dia].total += totalHoras;
+					horasPorDia[dia].contador += 1;
+				}
+			}
+		});
+		
+		Object.keys(horasPorDia).forEach(dia => {
+			const media = horasPorDia[dia].total / horasPorDia[dia].contador;
+			horasPorDia[dia] = parseFloat(media.toFixed(2));
+		});
+
+		labels = Object.keys(horasPorDia);
+		data = Object.values(horasPorDia);
+
+		element = document.getElementById("pontoGrafico").getContext("2d");
+		createChart(element, "doughnut", labels, data, "Média de horas", "Média de horas por dia da semana");
+
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+<div class="modal fade" id="modalSolicitacoesFeedback" tabindex="-1" aria-labelledby="modalSolicitacoesFeedbackLabel"
+	aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalSolicitacoesFeedbackLabel">Solicitações de Feedback Recebidas</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				{% for solicitacao in solicitacoes %}
+					<div class="accordion {% if not forloop.last %}mb-3{% endif %}" id="accordionSolicitacao">
+						<div class="accordion-item">
+							<h2 class="accordion-header">
+								<button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{forloop.counter}}">
+									{{solicitacao.remetente}} ({% if solicitacao.respondido %}Respondido{% else %}Pendente{% endif %})
+								</button>
+							</h2>
+							<div id="collapse{{forloop.counter}}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#accordionSolicitacao">
+								<div class="accordion-body">
+									{{solicitacao.solicitacao}}
+									<p class="fs-7 mt-2 mb-0">{{solicitacao.data_cadastro}}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				{% empty %}
+					<p>Sem solicitações recebidas</p>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+</div>

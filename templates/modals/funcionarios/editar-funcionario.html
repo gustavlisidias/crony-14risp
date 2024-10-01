@@ -1,0 +1,286 @@
+<div class="modal fade" id="modalEditarFuncionario" tabindex="-1" aria-labelledby="modalEditarFuncionarioLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-scrollable modal-lg">
+		<form method="POST" action="" class="modal-content" id="formEditarFuncionario">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEditarFuncionarioLabel">Editar Informações</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<!-- Matricula e Sexo -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioMatricula" name="matricula" placeholder required value="{{colaborador.matricula}}">
+							<label class="form-label" for="funcionarioMatricula">Matrícula *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-check d-flex">
+							<input class="form-check-input me-2" type="radio" name="sexo" id="funcionarioMasculino" value="M" style="height: 20px; width: 20px;" {% if colaborador.sexo == "M" %} checked {% endif %}>
+							<label class="form-check-label" for="funcionarioMasculino">Masculino</label>
+						</div>
+						<div class="form-check d-flex mb-4">
+							<input class="form-check-input me-2" type="radio" name="sexo" id="funcionarioFeminino" value="F" style="height: 20px; width: 20px;" {% if colaborador.sexo == "F" %} checked {% endif %}>
+							<label class="form-check-label" for="funcionarioFeminino">Feminino</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Nome/Nome Social-->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioNome" name="nome_completo" placeholder required value="{{colaborador.nome_completo}}">
+							<label class="form-label" for="funcionarioNome">Nome Completo *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioSocial" name="nome_social" placeholder value="{{colaborador.nome_social|default_if_none:""}}">
+							<label class="form-label" for="funcionarioSocial">Nome Social</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Nome dos Pais -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioPai" name="nome_mae" placeholder value="{{colaborador.nome_mae|default_if_none:""}}">
+							<label class="form-label" for="funcionarioPai">Nome da Mãe</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioMae" name="nome_pai" placeholder value="{{colaborador.nome_pai|default_if_none:""}}">
+							<label class="form-label" for="funcionarioMae">Nome do Pai</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- CPF, RG e Data de Expedição -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioCPF" name="cpf" placeholder required value="{{colaborador.cpf}}">
+							<label class="form-label" for="funcionarioCPF">CPF *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioRG" name="rg" placeholder required value="{{colaborador.rg}}">
+							<label class="form-label" for="funcionarioRG">RG *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="funcionarioExpedicao" name="data_expedicao" placeholder value="{{colaborador.data_expedicao|date:"Y-m-d"|default_if_none:""}}">
+							<label for="funcionarioExpedicao" class="form-label">Data Expedição *</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Emails -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="email" class="form-control" id="funcionarioEmail" name="email" placeholder required value="{{colaborador.email}}">
+							<label class="form-label" for="funcionarioEmail">Email *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="email" class="form-control" id="funcionarioEmailSecundario" name="email_sec" placeholder value="{{colaborador.email_sec|default_if_none:""}}">
+							<label class="form-label" for="funcionarioEmailSecundario">Email Secundário</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Celular/Contato -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioContato" name="contato" placeholder value="{{colaborador.contato|default_if_none:""}}">
+							<label class="form-label" for="funcionarioContato">Contato</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioContatoSecundario" name="contato_sec" placeholder value="{{colaborador.contato_sec|default_if_none:""}}">
+							<label class="form-label" for="funcionarioContato">Contato Secundário</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioResponsavelContato" name="resp_contato_sec" placeholder value="{{colaborador.resp_contato_sec|default_if_none:""}}">
+							<label class="form-label" for="funcionarioResponsavelContato">Resp. Contato</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Estado Civil e Data Nascimento -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating">
+							<select class="form-select" id="funcionarioEstadoCivil" name="estado_civil" required>
+								<option value="{{colaborador.estado_civil}}" selected hidden>{{colaborador.get_estado_civil_display}}</option>
+								{% for civil in civis %}
+									<option value="{{civil.id}}">{{civil.nome}}</option>
+								{% endfor %}
+							</select>
+							<label class="form-label" for="funcionarioEstadoCivil">Estado Civil *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="funcionarioNascimento" name="data_nascimento" placeholder required value="{{colaborador.data_nascimento|date:"Y-m-d"}}">
+							<label class="form-label" for="funcionarioNascimento">Data Nascimento *</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Estado e Cidade -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="funcionarioEstado" name="estado" required onchange="updateSelectCidades(this.value)">
+								<option value="{{colaborador.estado.id}}" selected hidden>{{colaborador.estado.name|default_if_none:"Selecione um Estado"}}</option>
+								{% for estado in estados %}
+									<option value="{{estado.id}}">{{estado.name}}</option>
+								{% endfor %}
+							</select>
+							<label class="form-label" for="funcionarioEstado">Estado *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="funcionarioCidade" name="cidade" required>
+								<option value="{{colaborador.cidade.id}}" selected hidden>{{colaborador.cidade.name|default_if_none:"Selecione uma Cidade"}}</option>
+							</select>
+							<label class="form-label" for="funcionarioCidade">Cidade *</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Rua -->
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="funcionarioRua" name="rua" placeholder required value="{{colaborador.rua|default_if_none:""}}">
+					<label class="form-label" for="funcionarioRua">Endereço *</label>
+				</div>
+
+				<!-- Número, Complemento e CEP -->
+				<div class="row">
+					<div class="col-3">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioNumero" name="numero" placeholder required value="{{colaborador.numero|default_if_none:""}}">
+							<label class="form-label" for="funcionarioNumero">Número *</label>
+						</div>
+					</div>
+					<div class="col-6">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioComplemento" name="complemento" placeholder value="{{colaborador.complemento|default_if_none:""}}">
+							<label class="form-label" for="funcionarioComplemento">Complemento</label>
+						</div>
+					</div>
+					<div class="col-3">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioCEP" name="cep" placeholder required value="{{colaborador.cep|default_if_none:""}}">
+							<label class="form-label" for="funcionarioCEP">CEP *</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Setor e Cargo -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="funcionarioSetor" name="setor" required>
+								<option value="{{colaborador.setor.id}}" selected hidden>{{colaborador.setor.setor|default_if_none:"Selecione um Setor"}}</option>
+								{% for setor in setores %}
+									<option value="{{setor.id}}">{{setor.setor}}</option>
+								{% endfor %}
+							</select>
+							<label class="form-label" for="funcionarioSetor">Setor *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="funcionarioCargo" name="cargo" required>
+								<option value="{{colaborador.cargo.id}}" selected hidden>{{colaborador.cargo.cargo|default_if_none:"Selecione um Cargo"}}</option>
+								{% for cargo in cargos %}
+									<option value="{{cargo.id}}">{{cargo.cargo}}</option>
+								{% endfor %}
+							</select>
+							<label class="form-label" for="funcionarioCargo">Cargo *</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Salário e Conta Bancária-->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioSalario" name="salario" placeholder value="{{colaborador.salario|default_if_none:"0"}}">
+							<label class="form-label" for="funcionarioSalario">Salário</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="funcionarioBanco" name="conta_banco" placeholder value="{{colaborador.conta_banco|default_if_none:""}}">
+							<label class="form-label" for="funcionarioBanco">Conta Bancária</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Gerente e Data Contratação e Data Rescisão/Demissão -->
+				<div class="row">
+					<div class="col">
+						<div class="form-floating mb-3">
+							<select class="form-select" id="funcionarioGerente" name="gerente">
+								{% if colaborador.gerente %}
+									<option value="{{colaborador.gerente.id}}" selected hidden>{{colaborador.gerente.nome_completo}}</option>
+									<option value="">Nenhum Responsável</option>
+								{% else %}
+									<option value="" selected>Nenhum Responsável</option>
+								{% endif %}								
+								{% for colaborador in funcionarios %}
+									{% if funcionario.usuario.is_gerente %}
+										<option value="{{colaborador.id}}">{{colaborador.nome_completo}}</option>
+									{% endif %}
+								{% endfor %}
+							</select>
+							<label class="form-label" for="funcionarioGerente">Responsável</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="funcionarioContratacao" name="data_contratacao" placeholder required value="{{colaborador.data_contratacao|date:"Y-m-d"}}">
+							<label class="form-label" for="funcionarioContratacao">Data Contratação *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="funcionarioDemissao" name="data_demissao" placeholder value="{{colaborador.data_demissao|date:"Y-m-d"}}">
+							<label class="form-label" for="funcionarioDemissao">Data Rescisão</label>
+						</div>
+					</div>
+				</div>
+
+				<!-- Flag is_gerente  -->
+				<div class="form-check mb-3">
+					<input class="form-check-input me-2" type="checkbox" value="staff" id="funcionarioStaff" name="staff" style="width: 20px; height: 20px;" {% if colaborador.usuario.is_gerente %} checked {% endif %}>
+					<label class="form-check-label" for="funcionarioStaff" style="margin-top: 3px;">Gerente</label>
+				</div>
+
+				<small class="fs-7">Os campos <i>Matrícula, Email, CPF, RG e Conta Bancária</i> são únicos por funcionário</small>
+				<br>
+				<small class="fs-7">* Campos obrigatórios</small>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-primary text-light" {% if request.user.get_access == "common" %} disabled {% endif %}>Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

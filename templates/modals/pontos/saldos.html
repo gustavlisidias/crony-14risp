@@ -1,0 +1,35 @@
+<div class="modal fade" id="modalAdicionarSaldo" tabindex="-1" aria-labelledby="modalAdicionarSaldoLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<form method="POST" class="modal-content" action="{% url 'adicionar-saldo' %}" id="formAdicionarSaldo">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalAdicionarSaldoLabel">Adicionar Saldo</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label" for="saldoData">Início do Saldo *</label>
+					<input type="date" class="form-control" name="data" id="saldoData" required>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" name="intervalo" id="saldoIntervalo" placeholder required>
+					<label class="form-label" for="saldoIntervalo">Total *</label>
+					<div class="form-text" id="saldoIntervaloHelp">Formato: hh:mm:ss</div>
+				</div>
+				<div class="form-floating">
+					<select class="form-select" id="saldoFuncionario" name="funcionario" required>
+					  <option value="">Selecione um Funcionário</option>
+					  {% for funcionario in funcionarios %}
+					  	<option value="{{funcionario.id}}">{{funcionario}}</option>
+					  {% endfor %}
+					</select>
+					<label for="saldoFuncionario">Funcionário *</label>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

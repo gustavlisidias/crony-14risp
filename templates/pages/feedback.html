@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} | Feedbacks{% endblock %}
+
+{% block content %}
+
+{% include "includes/messages.html" %}
+{% include "modals/feedback/enviar-feedback.html" %}
+{% include "modals/feedback/solicitar-feedback.html" %}
+{% include "modals/feedback/solicitacoes-feedback.html" %}
+{% include "modals/feedback/responder-feedback.html" %}
+{% include "modals/feedback/resposta-feedback.html" %}
+
+<div class="fluid-container p-4 m-0">
+	<div class="card w-100 mb-4">
+		<div class="card-header bg-primary text-light border-bottom border-light">
+			Feedbacks
+		</div>
+
+		<div class="card-body">
+
+			<ul class="nav nav-tabs d-flex" id="nav-feedback" role="tablist" style="height: 2.5rem">
+				<li class="nav-item" role="presentation">
+					<button class="nav-link active" id="nav-geral" data-bs-toggle="tab" data-bs-target="#tab-geral" type="button" role="tab" aria-controls="tab-geral" aria-selected="true">
+						Resumo
+					</button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="nav-enviado" data-bs-toggle="tab" data-bs-target="#tab-enviado" type="button" role="tab" aria-controls="tab-enviado" aria-selected="false">
+						Enviados
+					</button>
+				</li>
+				<li class="nav-item {% if request.user.get_access != "admin" %}flex-fill{% endif %}" role="presentation">
+					<button class="nav-link" id="nav-recebido" data-bs-toggle="tab" data-bs-target="#tab-recebido" type="button" role="tab" aria-controls="tab-recebido" aria-selected="false">
+						Recebidos
+					</button>
+				</li>
+				{% if request.user.get_access == "admin" %}
+					<li class="nav-item flex-fill" role="presentation">
+						<button class="nav-link" id="nav-todos" data-bs-toggle="tab" data-bs-target="#tab-todos" type="button" role="tab" aria-controls="tab-todos" aria-selected="false">
+							Todos
+						</button>
+					</li>
+				{% endif %}
+				<li class="nav-item" role="presentation">
+					<button class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalEnviarFeedback">
+						Enviar Feedback
+					</button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalSolicitarFeedback">
+						Solicitar Feedback
+					</button>
+				</li>
+				<li class="nav-item" role="presentation">
+					<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitacoesFeedback">
+						Solicitações Recebidas
+					</button>
+				</li>
+			</ul>
+
+			<div class="tab-content" id="tab-feedback">
+
+				<!-- Resumo -->
+				<div class="tab-pane fade show active" id="tab-geral" role="tabpanel" aria-labelledby="nav-geral" tabindex="0">
+					<h4 class="text-center my-3">Minhas Avaliações</h4>
+					<div class="meu-feedback">
+						<div class="row mb-3">
+							<div class="col text-center">
+								<h5>Comprometimento</h5>
+								<p class="text-muted" style="min-height: 50px">
+									Assiduidade, disponibilidade e compromisso para melhor aproveitamento das atividades internas
+								</p>
+								<div class="rating">
+									<input value="5" name="comprometimento" id="comprometimento5" type="radio" disabled>
+									<label for="comprometimento5"></label>
+									<input value="4" name="comprometimento" id="comprometimento4" type="radio" disabled>
+									<label for="comprometimento4"></label>
+									<input value="3" name="comprometimento" id="comprometimento3" type="radio" disabled>
+									<label for="comprometimento3"></label>
+									<input value="2" name="comprometimento" id="comprometimento2" type="radio" disabled>
+									<label for="comprometimento2"></label>
+									<input value="1" name="comprometimento" id="comprometimento1" type="radio" disabled>
+									<label for="comprometimento1"></label>
+								</div>
+							</div>
+							<div class="col text-center">
+								<h5>Conhecimento</h5>
+								<p class="text-muted" style="min-height: 50px">
+									Conhecimento prático e teórico das atividades relacionas à função
+								</p>
+								<div class="rating">
+									<input value="5" name="conhecimento" id="conhecimento5" type="radio" disabled>
+									<label for="conhecimento5"></label>
+									<input value="4" name="conhecimento" id="conhecimento4" type="radio" disabled>
+									<label for="conhecimento4"></label>
+									<input value="3" name="conhecimento" id="conhecimento3" type="radio" disabled>
+									<label for="conhecimento3"></label>
+									<input value="2" name="conhecimento" id="conhecimento2" type="radio" disabled>
+									<label for="conhecimento2"></label>
+									<input value="1" name="conhecimento" id="conhecimento1" type="radio" disabled>
+									<label for="conhecimento1"></label>
+								</div>
+							</div>
+						</div>
+						<div class="row mb-3">
+							<div class="col text-center">
+								<h5>Produtividade</h5>
+								<p class="text-muted" style="min-height: 50px">
+									Foco no crescimento diário da produtividade com estrita observância aos aspectos de qualidade do trabalho
+								</p>
+								<div class="rating">
+									<input value="5" name="produtividade" id="produtividade5" type="radio" disabled>
+									<label for="produtividade5"></label>
+									<input value="4" name="produtividade" id="produtividade4" type="radio" disabled>
+									<label for="produtividade4"></label>
+									<input value="3" name="produtividade" id="produtividade3" type="radio" disabled>
+									<label for="produtividade3"></label>
+									<input value="2" name="produtividade" id="produtividade2" type="radio" disabled>
+									<label for="produtividade2"></label>
+									<input value="1" name="produtividade" id="produtividade1" type="radio" disabled>
+									<label for="produtividade1"></label>
+								</div>
+							</div>
+							<div class="col text-center">
+								<h5>Comportamento</h5>
+								<p class="text-muted" style="min-height: 50px">
+									Cuidados com o ambiente físico de trabalho, e Postura frente às regras de convivo social
+								</p>
+								<div class="rating">
+									<input value="5" name="comportamento" id="comportamento5" type="radio" disabled>
+									<label for="comportamento5"></label>
+									<input value="4" name="comportamento" id="comportamento4" type="radio" disabled>
+									<label for="comportamento4"></label>
+									<input value="3" name="comportamento" id="comportamento3" type="radio" disabled>
+									<label for="comportamento3"></label>
+									<input value="2" name="comportamento" id="comportamento2" type="radio" disabled>
+									<label for="comportamento2"></label>
+									<input value="1" name="comportamento" id="comportamento1" type="radio" disabled>
+									<label for="comportamento1"></label>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Enviados -->
+				<div class="tab-pane fade" id="tab-enviado" role="tabpanel" aria-labelledby="nav-enviado" tabindex="0">
+					<!-- Tabela de Feedbacks Enviados -->
+					<div class="table-responsive mt-3">
+						<table class="table table-hover align-middle table-enviados">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Modelo</th>
+									<th scope="col">Mensagem</th>
+									<th scope="col">Comprom.</th>
+									<th scope="col">Conhecim.</th>
+									<th scope="col">Produt.</th>
+									<th scope="col">Compor.</th>
+									<th scope="col">Para</th>
+									<th scope="col">Data</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for feedback in feedbacks_enviados %}
+									<tr role="button" onclick="respostaFeedback({
+										'id': {{feedback.id}}, 
+										'mensagem': '{{feedback.mensagem|safe|replace:"\u0027, \u0022"}}',
+										'remetente': {% if not feedback.anonimo %} '{{feedback.remetente}}' {% else %} 'Anônimo' {% endif %},
+										'destinatario': '{{feedback.destinatario}}',
+										'resposta': '{{feedback.resposta|default_if_none:""}}',
+										'util': '{{feedback.util|default_if_none:""}}',
+										'notas': [
+											{'nome': 'Comprometimento', 'nota': {{feedback.comprometimento}}}, 
+											{'nome': 'Conhecimento', 'nota': {{feedback.conhecimento}}}, 
+											{'nome': 'Produtividade', 'nota': {{feedback.produtividade}}}, 
+											{'nome': 'Comportamento', 'nota': {{feedback.comportamento}}}
+										]
+									})">
+										<th scope="row">{{forloop.counter}}</th>
+										<td>{{feedback.get_modelo_display}}</td>
+										<td>{{feedback.mensagem|safe|truncatechars_html:20}}</td>
+										<td>{{feedback.comprometimento}}</td>
+										<td>{{feedback.conhecimento}}</td>
+										<td>{{feedback.produtividade}}</td>
+										<td>{{feedback.comportamento}}</td>
+										<td>{{feedback.destinatario}}</td>
+										<td>{{feedback.data_cadastro|date:"d/m/Y"}}</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- Recebidos -->
+				<div class="tab-pane fade" id="tab-recebido" role="tabpanel" aria-labelledby="nav-recebido"
+					tabindex="0">
+					<!-- Tabela de Feedbacks Recebidos -->
+					<div class="table-responsive mt-3">
+						<table class="table table-hover align-middle table-recebidos">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Modelo</th>
+									<th scope="col">Mensagem</th>
+									<th scope="col">Comprom.</th>
+									<th scope="col">Conhecim.</th>
+									<th scope="col">Produt.</th>
+									<th scope="col">Compor.</th>
+									<th scope="col">De</th>
+									<th scope="col">Data</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for feedback in feedbacks_recebidos %}
+									<tr role="button" onclick="responderFeedback({
+										'id': {{feedback.id}},
+										'mensagem': '{{feedback.mensagem|safe|replace:"\u0027, \u0022"}}',
+										'remetente': {% if not feedback.anonimo %} '{{feedback.remetente}}' {% else %} 'Anônimo' {% endif %},
+										'destinatario': '{{feedback.destinatario}}',
+										'resposta': '{{feedback.resposta|default_if_none:""}}',
+										'util': '{{feedback.util|default_if_none:""}}',
+										'notas': [
+											{'nome': 'Comprometimento', 'nota': {{feedback.comprometimento}}},
+											{'nome': 'Conhecimento', 'nota': {{feedback.conhecimento}}},
+											{'nome': 'Produtividade', 'nota': {{feedback.produtividade}}},
+											{'nome': 'Comportamento', 'nota': {{feedback.comportamento}}}
+										]
+									})">
+										<th scope="row">{{forloop.counter}}</th>
+										<td>{{feedback.get_modelo_display}}</td>
+										<td>{{feedback.mensagem|safe|truncatechars_html:20}}</td>
+										<td>{{feedback.comprometimento}}</td>
+										<td>{{feedback.conhecimento}}</td>
+										<td>{{feedback.produtividade}}</td>
+										<td>{{feedback.comportamento}}</td>
+										<td>{% if not feedback.anonimo %}{{feedback.remetente}}{% else %}Anônimo{% endif %}</td>
+										<td>{{feedback.data_cadastro|date:"d/m/Y"}}</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- Todos -->
+				<div class="tab-pane fade" id="tab-todos" role="tabpanel" aria-labelledby="nav-todos" tabindex="0">
+					<div class="table-responsive mt-3">
+						<table class="table table-hover align-middle table-feedbacks">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Modelo</th>
+									<th scope="col">Mensagem</th>
+									<th scope="col">Comprom.</th>
+									<th scope="col">Conhecim.</th>
+									<th scope="col">Produt.</th>
+									<th scope="col">Compor.</th>
+									<th scope="col">De</th>
+									<th scope="col">Para</th>
+									<th scope="col">Data</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for feedback in feedbacks %}
+									<tr role="button" onclick="respostaFeedback({
+										'id': {{feedback.id}},
+										'mensagem': '{{feedback.mensagem|safe|replace:"\u0027, \u0022"}}',
+										'remetente': {% if not feedback.anonimo %} '{{feedback.remetente}}' {% else %} 'Anônimo' {% endif %},
+										'destinatario': '{{feedback.destinatario}}',
+										'resposta': '{{feedback.resposta|default_if_none:""}}',
+										'util': '{{feedback.util|default_if_none:""}}',
+										'notas': [
+											{'nome': 'Comprometimento', 'nota': {{feedback.comprometimento}}},
+											{'nome': 'Conhecimento', 'nota': {{feedback.conhecimento}}},
+											{'nome': 'Produtividade', 'nota': {{feedback.produtividade}}},
+											{'nome': 'Comportamento', 'nota': {{feedback.comportamento}}}
+										]
+									}, true)">
+										<th scope="row">{{forloop.counter}}</th>
+										<td>{{feedback.get_modelo_display}}</td>
+										<td>{{feedback.mensagem|safe|truncatechars_html:20}}</td>
+										<td>{{feedback.comprometimento}}</td>
+										<td>{{feedback.conhecimento}}</td>
+										<td>{{feedback.produtividade}}</td>
+										<td>{{feedback.comportamento}}</td>
+										<td>{% if not feedback.anonimo %}{{feedback.remetente}}{% else %}Anônimo{% endif %}</td>
+										<td>{{feedback.destinatario}}</td>
+										<td>{{feedback.data_cadastro|date:"d/m/Y"}}</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<div class="d-flex justify-content-center align-items-center">
+				<img src="{% static 'images/background/feedback.svg' %}" class="img img-fluid" width="480">
+			</div>
+
+		</div>
+	</div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const config = Object.assign(
+			datatables_config, {
+			scrollY: 300,
+		});
+
+		const table1 = $(".table-enviados").DataTable(config);
+		const table2 = $(".table-recebidos").DataTable(config);
+		const table3 = $(".table-feedbacks").DataTable(config);
+
+		$("#nav-enviado").on("click", function() {
+			setTimeout(() => {table1.draw(false)}, "200");
+		});
+
+		$("#nav-recebido").on( "click", function() {
+			setTimeout(() => {table2.draw(false)}, "200");
+		});
+
+		$("#nav-todos").on( "click", function() {
+			setTimeout(() => {table3.draw(false)}, "200");
+		});
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		const notas = {{notas|safe}};
+
+		for (const [key, value] of Object.entries(notas)) {
+			$(".meu-feedback").find(`#${key}${value}`).prop("checked", true);
+		};
+
+		$("#respostaTexto").emojioneArea({
+			buttonTitle: "Use TAB para abrir os emojis",
+			search: false,
+			recentEmojis: false,
+			pickerPosition: "bottom",
+			tones: false,
+			shortnames: false,
+			shortcuts: false
+		});
+	});
+</script>
+
+<script>
+	function responderFeedback(feedback) {
+		const modal = $("#modalResponderFeedback");
+        const action = `{% url "responder-feedback" 0 %}`.replace("0", feedback.id);
+
+		modal.find("#feedbackRecebido").empty();
+		modal.find("#feedbackNotas").empty();
+
+		modal.find("#feedbackRecebido").append(`<p class="fw-bold">Feedback de ${feedback.remetente}:</p>`);
+		modal.find("#feedbackRecebido").append(feedback.mensagem);
+
+		if (feedback.resposta) {
+			if (feedback.util == "True") {
+				modal.find("#respostaUtilSim").click();
+			} else {
+				modal.find("#respostaUtilNao").click();
+			};
+			
+			modal.find(".emojionearea-editor").html(feedback.resposta);
+			modal.find("#respostaUtilSim").attr("disabled", "disabled");
+			modal.find("#respostaUtilNao").attr("disabled", "disabled");
+			modal.find("#btnResponderFeedback").css("display", "none");
+
+		} else {
+			modal.find(".emojionearea-editor").html("");
+			modal.find("#respostaUtilSim").removeAttr("disabled");
+			modal.find("#respostaUtilNao").removeAttr("disabled");
+			modal.find("#btnResponderFeedback").css("display", "block");
+		}
+
+		feedback.notas.forEach(item => {
+			modal.find("#feedbackNotas").append(`
+				<div class="card bg-secondary p-1 mx-1 w-100 border border-0">
+					<p class="text-light text-center fw-bold m-0">${item.nome}</p>
+					<p class="text-light text-center fw-bold m-0">Nota: ${item.nota}</p>
+				</div>`
+			);
+		});
+
+		modal.find("form").attr("action", action);
+        modal.modal("show");
+	};
+
+	function respostaFeedback(feedback, forAll=false) {
+		const modal = $("#modalRespostaFeedback");
+
+		modal.find("#feedbackRecebido").empty();
+		modal.find("#feedbackNotas").empty();
+		modal.find("#feedbackResposta").empty();
+
+		if (forAll) {
+			modal.find("#feedbackRecebido").append(`<p class="fw-bold">Feedback de ${feedback.remetente} para ${feedback.destinatario}:</p>`);
+		} else {
+			modal.find("#feedbackRecebido").append(`<p class="fw-bold">Feedback para ${feedback.destinatario}:</p>`);
+		};
+		
+		modal.find("#feedbackRecebido").append(feedback.mensagem);
+
+		feedback.notas.forEach(item => {
+			modal.find("#feedbackNotas").append(`
+				<div class="card bg-secondary p-1 mx-1 w-100 border border-0">
+					<p class="text-light text-center fw-bold m-0">${item.nome}</p>
+					<p class="text-light text-center fw-bold m-0">Nota: ${item.nota}</p>
+				</div>`
+			);
+		});
+
+		if (feedback.resposta) {
+			const icone = feedback.util == "True" ? `<i class="fa-duotone fa-thumbs-up fa-xl text-success"></i>` : `<i class="fa-duotone fa-thumbs-down fa-xl text-danger"></i>`;
+
+			modal.find("#feedbackResposta").append(`<p class="fw-bold">Resposta:</p>`);
+			modal.find("#feedbackResposta").append(feedback.resposta);
+			modal.find("#feedbackResposta").append(`
+				<p class="fw-bold mt-3">Foi útil meu feedback?</p>
+				<p>${icone}</p>
+			`);
+		} else {
+			modal.find("#feedbackResposta").append(`<p class="fw-bold">Sem nenhuma resposta!</p>`);
+		};
+		
+		modal.modal("show");
+	};
+
+	function atualizarModelo(element) {
+		if (element.value == 'PCC') {
+			window.editors["feedbackMensagem"].setData(`
+				<p>
+					<b>Você deve parar de:</b>
+					<br>(descreva o que seu colega deve parar de fazer)
+				</p>
+				<p>
+					<b>Você deve continuar fazendo:</b>
+					<br>(descreva a sugestão que o seu colega faz bem e deve continuar fazendo)
+				</p>
+				<p>
+					<b>Você deve começar a fazer:</b>
+					<br>(descreva algo que seu colega ainda não faz mas você sugere que ele deva fazer)
+				</p>
+			`);
+		} else if (element.value == 'SCI') {
+			window.editors["feedbackMensagem"].setData(`
+				<p>Descreva a situação específica em que algo ocorreu:</p>
+				<p>Explique o comportamento dessa pessoa naquela situação:</p>
+				<p>Descreva qual impacto o comportamento gerou:</p>
+			`);
+		} else if (element.value == 'CNV') {
+			window.editors["feedbackMensagem"].setData(`
+				<p><b>Primeiro passo:</b> Observar o que ocorre sem julgar, falando apenas os fatos.</p>
+				<p><b>Segundo passo:</b> Expressar seu sentimento de acordo com o ocorrido.</p>
+				<p><b>Terceiro passo:</b> Identificar sua necessidade e deixar a pessoa ciente do que você esperava naquela situação.</p>
+				<p><b>Quarto passo:</b> Fazer um pedido para que suas expectativas sejam atendidas.</p>
+			`);
+		} else {
+			window.editors["feedbackMensagem"].setData('');
+		};
+	};
+</script>
+{% endblock %}
