@@ -142,8 +142,8 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 					encerrado = True
 				if i.motivo:
 					motivo = i.motivo
-				else:
-					motivo = ' '
+				if not motivo and i.data.weekday() in [5, 6]:
+					motivo = '.'
 
 			if data.weekday() in [5, 6] and motivo is None:
 				motivo = 'Descanso remunerado'
@@ -273,9 +273,9 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 		mes = datetime.today().month - 1
 
 		for funcionario in funcionarios:
-			ajustes = SolicitacaoPonto.objects.filter(funcionario__nome_completo=funcionario, status=True, data_cadastro__month=mes)
-			abonos = SolicitacaoAbono.objects.filter(funcionario__nome_completo=funcionario, status=True, data_cadastro__month=mes)
-			cargo = Funcionario.objects.filter(funcionario__nome_completo=funcionario).cargo.slug
+			ajustes = SolicitacaoPonto.objects.filter(funcionario=funcionario, status=True, data_cadastro__month=mes)
+			abonos = SolicitacaoAbono.objects.filter(funcionario=funcionario, status=True, data_cadastro__month=mes)
+			cargo = funcionario.cargo.slug
 
 			total_ajustes = ajustes.count() * 0.01
 			total_declaracoes = abonos.filter(tipo=SolicitacaoAbono.Tipo.DECLARACAO).count() * 0.04
@@ -290,17 +290,18 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 			else:
 				total_desconto * 2.25
 			
-			if (score_por_funcionario[funcionario][0] - total_desconto) > 5:
+			nota = score_por_funcionario.get(funcionario, [5, 100, []])
+			nota_final = nota[0] - total_desconto
+			nota_percentual = (nota_final * 100) / 5
+
+			if nota_final > 5:
 				nota_final = 5
 				nota_percentual = 100
-			elif (score_por_funcionario[funcionario][0] - total_desconto) < 0:
+
+			if nota_final < 0:
 				nota_final = 0
 				nota_percentual = 0
-			else:
-				nota_final = (score_por_funcionario[funcionario][0] - total_desconto)
-				nota_percentual = (nota_final * 100) / 5
 			
-			score_por_funcionario[funcionario][0] = nota_final
-			score_por_funcionario[funcionario][1] = nota_percentual
+			score_por_funcionario[funcionario] = [nota_final, nota_percentual, nota[2]]
 	
 	return dias_por_funcionario, score_por_funcionario

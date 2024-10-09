@@ -85,9 +85,9 @@ def RegistrosPontoView(request):
 	
 	for fechamento in fechamentos:
 		fechamento['funcionarios'] = list(Ponto.objects.filter(encerrado=True, data__range=[fechamento['de'], fechamento['ate']]).values('funcionario__id', 'funcionario__nome_completo').distinct())
-
+	
 	# Scores
-	pontuacoes = Score.objects.filter(fechado=True).exclude(funcionario__id__in=[1, 315, 316, 317, 302, 301, 303]).order_by('-pontuacao', '-data_cadastro__date')
+	pontuacoes = Score.objects.filter(fechado=True).order_by('-data_cadastro__date', '-pontuacao')
 	for score in pontuacoes:
 		try:
 			moedas = sum(i.pontuacao for i in Moeda.objects.filter(anomes=score.anomes, funcionario=score.funcionario, fechado=True))

@@ -287,7 +287,7 @@ def AprovarSolicitacaoView(request, solic, categoria):
 					Ponto(
 						funcionario=solicitacao.funcionario,
 						data=dia,
-						hora=time(0),
+						hora=time(23, 59),
 						alterado=True,
 						motivo=solicitacao.motivo
 					).save()

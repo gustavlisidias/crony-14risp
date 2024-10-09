@@ -47,7 +47,11 @@ def theme(value):
 @register.filter
 def index(sequence, position):
 	try:
-		return sequence[position]
+		index = sequence[position]
+		if index != datetime.time(0) and index != datetime.time(23, 59):
+			return index
+		else:
+			return None
 	except IndexError:
 		return None
 
