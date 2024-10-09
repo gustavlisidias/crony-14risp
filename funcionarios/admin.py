@@ -9,7 +9,6 @@ from funcionarios.models import (
 	Score,
 	Setor,
 	TipoDocumento,
-	Time,
 	Feedback,
 	SolicitacaoFeedback,
 	RespostaFeedback,
@@ -23,7 +22,6 @@ admin.site.register(JornadaFuncionario)
 admin.site.register(TipoDocumento)
 admin.site.register(Perfil)
 admin.site.register(Score)
-admin.site.register(Time)
 admin.site.register(Feedback)
 admin.site.register(SolicitacaoFeedback)
 admin.site.register(RespostaFeedback)
