@@ -27,8 +27,11 @@
 					<li class="nav-item" role="presentation">
 						<form method="POST" action="" id="formRelatorioFerias" onsubmit="gerarRelatorio()">
 							{% csrf_token %}
-							<input type="hidden" name="relatorio" value="true" id="feriasRelatorio">
-							<button class="btn btn-secondary text-light" type="submit">Gerar Relatório</button>
+							<!-- <input type="hidden" name="relatorio" value="true" id="feriasRelatorio"> -->
+							<div class="btn-group">
+								<button class="btn btn-secondary text-light" type="submit" name="pdf" value="true">PDF</button>
+								<button class="btn btn-secondary text-light" type="submit" name="csv" value="true">CSV</button>
+							</div>
 						</form>
 					</li>
 				{% endif %}
@@ -154,8 +157,8 @@
 						const modal = $("#modalVisualizarDocumentosFerias");
 
 						modal.find(".modal-title").html(`Solicitação de Férias - ${data.nome}`);
-						modal.find(".text-obs").html(data.observacao);
-						modal.find(".text-data").html(`${formatarData(data.inicio)} até ${formatarData(data.final)}`);
+						modal.find(".text-obs").html(`<p>${data.observacao}</p><small>${data.decimo}<small>`);
+						modal.find(".text-data").html(`${formatarData(data.inicio)} até ${formatarData(data.final)} (Abono: ${data.abono} dias)`);
 						modal.find(".modal-body .row").children().remove();
 
 						if (data.docs.length > 0) {							

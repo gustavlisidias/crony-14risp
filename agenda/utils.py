@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 from slugify import slugify
 
 from agenda.models import Ferias
@@ -9,62 +10,64 @@ def ferias_funcionarios(funcionarios):
 	ferias_por_funcionario = {}
 
 	for funcionario in funcionarios:
-		contrato_funcionario = funcionario.get_contrato.titulo.lower().split('_')[0]
 
 		if funcionario.nome_completo not in ferias_por_funcionario:
 			ferias_por_funcionario[funcionario.nome_completo] = []
 
-		if slugify(contrato_funcionario) == 'estagio':
-			delta = datetime.today().date() - funcionario.data_contratacao
-			intervalos = delta.days // 180
+		if funcionario.get_contrato.slug.split('-')[0] == 'estagio':
+			# Funcionario Estágio tem direito a 15 dias após 6 meses trabalhados
+			# Empresa tem mais 6 meses para liberar as ferias, porém não pode ultrapassar o limite de 1 ano consecutivos de trabalho do funcionario
 
-			periodo = 6
-			inicio = funcionario.data_contratacao + timedelta(days=180)
-			while True:
-				vencimento = inicio + timedelta(days=180 - 16)
-				saldo = timedelta(days=15)
+			# Exemplo: contratação em 01/03/2023, primeiro período de 01/09/2023 até 29/02/2023
+
+			inicio_periodo = funcionario.data_contratacao + relativedelta(months=6)
+
+			while inicio_periodo <= date.today():
+				periodo = (inicio_periodo - relativedelta(months=6)).year
+				final_periodo = inicio_periodo + timedelta(days=179)
+
+				saldo = timedelta(days=30)
 				status = False
-				ferias = Ferias.objects.filter(funcionario=funcionario, inicio__gte=inicio, inicio__lte=vencimento)
+				ferias = Ferias.objects.filter(funcionario=funcionario, ano_referencia=periodo)
 
 				if ferias:
 					for obj in ferias:
-						saldo -= (obj.final - obj.inicio) + timedelta(days=obj.abono)
+						saldo -= (obj.final_ferias - obj.inicio_ferias) + timedelta(days=obj.abono)
 
 					if saldo.days <= 0:
 						status = True
-
+				
 				ferias_por_funcionario[funcionario.nome_completo].append({
 					'periodo': periodo,
 					'status': status,
 					'saldo': saldo,
-					'inicio': inicio,
-					'vencimento': vencimento,
+					'inicio': inicio_periodo,
+					'vencimento': final_periodo,
 				})
-
-				intervalos -= 1
-				periodo += 6
-				inicio = vencimento + timedelta(days=16)
-
-				if intervalos <= 0:
-					break			
+				
+				inicio_periodo += relativedelta(months=6)			
 
 		else:
-			for ano in range(funcionario.data_contratacao.year, datetime.now().year + 1):
-				# funcionario tem direito a 30 dias após 1 ano trabalhado
-				inicio = add_years(funcionario.data_contratacao.replace(year=ano), 1)
-				# empresa tem mais 1 ano para liberar as ferias, porém não pode ultrapassar o limite de 2 anos consecutivos de trabalho do funcionario
-				vencimento = add_years(funcionario.data_contratacao.replace(year=ano), 2) - timedelta(days=31)
+			# Funcionario CLT tem direito a 30 dias após 1 ano trabalhado
+			# Empresa tem mais 1 ano para liberar as ferias, porém não pode ultrapassar o limite de 2 anos consecutivos de trabalho do funcionario
+			
+			# Consulto se houve ferias no periodo calculado
+			# Se houve, calculo o saldo
+			# Se o saldo foi quitado o status é definido como True
 
-				# Consulto se houve ferias no periodo calculado
-				# Se houve, calculo o saldo
-				# Se o saldo foi quitado o status é definido como True
+			# Exemplo: contratação em 20/12/1994, primeiro período de 20/12/1995 até 19/11/1996
+
+			for ano in range(funcionario.data_contratacao.year, datetime.now().year + 1):
+				inicio_periodo = add_years(funcionario.data_contratacao.replace(year=ano), 1)
+				final_periodo = add_years(funcionario.data_contratacao.replace(year=ano), 2) - timedelta(days=31)
+
 				saldo = timedelta(days=30)
 				status = False
-				ferias = Ferias.objects.filter(funcionario=funcionario, inicio__gte=inicio, inicio__lte=vencimento)
+				ferias = Ferias.objects.filter(funcionario=funcionario, ano_referencia=ano)
 
 				if ferias:
 					for obj in ferias:
-						saldo -= (obj.final - obj.inicio) + timedelta(days=obj.abono)
+						saldo -= (obj.final_ferias - obj.inicio_ferias) + timedelta(days=obj.abono)
 
 					if saldo.days <= 0:
 						status = True
@@ -73,8 +76,8 @@ def ferias_funcionarios(funcionarios):
 					'periodo': ano,
 					'status': status,
 					'saldo': saldo,
-					'inicio': inicio,
-					'vencimento': vencimento,
+					'inicio': inicio_periodo,
+					'vencimento': final_periodo,
 				})
 
 	return ferias_por_funcionario

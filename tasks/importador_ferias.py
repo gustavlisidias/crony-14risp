@@ -36,22 +36,28 @@ def importar_ferias(planilha):
 	for _, row in df.iterrows():
 		matricula = f'{int(row["matricula"]):06}'
 		abono = int(row['abono']) if not pd.isna(row['abono']) and row['abono'] not in ['', ' '] else 0
-		inicio = parse_date(row['inicio'])
-		final = inicio + timedelta(days=30-abono)
+		inicio_periodo = parse_date(row['inicio_periodo'])
+		final_periodo = parse_date(row['final_periodo'])
+		inicio_ferias = parse_date(row['inicio_ferias'])
+		final_ferias = parse_date(row['final_ferias']) if not pd.isna(row['final_ferias']) else inicio_ferias + timedelta(days=30-abono)
+		ano_referencia = inicio_periodo.year - 1
 
 		try:
 			funcionario = Funcionario.objects.get(matricula=matricula)
 			Ferias.objects.create(
 				funcionario=funcionario,
-				inicio=inicio,
-				final=final,
+				ano_referencia=ano_referencia,
+				inicio_periodo=inicio_periodo,
+				final_periodo=final_periodo,
+				inicio_ferias=inicio_ferias,
+				final_ferias=final_ferias,
 				abono=abono
 			)
-			logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, inicio: {inicio}, final: {final}, abono: {abono}')
+			logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, inicio: {inicio_ferias}, final: {final_ferias}, abono: {abono}')
 		except Exception:
-			logging.info(f'ERROR::CREATE::matricula: {matricula}, inicio: {inicio}, final: {final}, abono: {abono}')
+			logging.info(f'ERROR::CREATE::matricula: {matricula}, inicio: {inicio_ferias}, final: {final_ferias}, abono: {abono}')
 
 
 if __name__ == '__main__':
-	planilha = os.path.join(BASE_DIR, 'documentacao\\ferias_14risp.xlsx')
+	planilha = os.path.join(BASE_DIR, 'documentacao\\ferias_maria-jesus.xlsx')
 	importar_ferias(planilha)

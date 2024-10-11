@@ -17,10 +17,18 @@ from agenda.models import (
 	SolicitacaoFerias,
 	TipoAtividade,
 )
+from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
-from funcionarios.models import Documento, TipoDocumento, JornadaFuncionario
+from funcionarios.models import Funcionario, Documento, TipoDocumento, JornadaFuncionario
 from ponto.models import Ponto
 from web.utils import not_none_not_empty, add_coins
+
+
+class InvalidPeriodVacation(Exception):
+	def __init__(self, **kwargs):
+		funcionario, inicio, final, saldo = kwargs.get('funcionario'), kwargs.get('inicio'), kwargs.get('final'), kwargs.get('saldo')
+		message = f'Não foi possível encontrar férias disponíveis para o periodo {inicio} até {final} com saldo de {saldo} dias para o funcionario {funcionario}'
+		super().__init__(message)
 
 
 @login_required(login_url='entrar')
@@ -102,14 +110,24 @@ def EditarEventoView(request):
 						final=atividade.final.date(),
 						status=True,
 					)
-					
-					Ferias(
-						funcionario=solicitacao_ferias.funcionario,
-						inicio=solicitacao_ferias.inicio,
-						final=solicitacao_ferias.final,
-						abono=solicitacao_ferias.abono,
-						decimo=solicitacao_ferias.decimo,
-					) .save()
+
+					delta = atividade.final.date() - atividade.inicio.date()
+					dados_ferias = ferias_funcionarios(Funcionario.objects.filter(pk=solicitacao_ferias.funcionario.pk))
+					resultado = [i for i in dados_ferias.get(solicitacao_ferias.funcionario.nome_completo, []) if i['vencimento'] >= solicitacao_ferias.inicio and i['saldo'] >= delta]
+
+					if resultado:
+						Ferias(
+							funcionario=solicitacao_ferias.funcionario,
+							ano_referencia=resultado[0]['periodo'],
+							inicio_periodo=resultado[0]['inicio'],
+							final_periodo=resultado[0]['vencimento'],
+							inicio_ferias=solicitacao_ferias.inicio,
+							final_ferias=solicitacao_ferias.final,
+							abono=solicitacao_ferias.abono,
+							decimo=solicitacao_ferias.decimo,
+						).save()
+					else:
+						raise InvalidPeriodVacation(funcionario=solicitacao_ferias.funcionario.nome_completo, inicio=atividade.inicio.date(), final=atividade.final.date(), saldo=delta.days)
 
 					# Abonar dias não trabalhados nas férias
 					Ponto.objects.filter(
@@ -165,6 +183,8 @@ def ProcurarDocumentosFeriasView(request, solic):
 				'observacao': solicitacao.observacao,
 				'inicio': solicitacao.inicio,
 				'final': solicitacao.final,
+				'abono': solicitacao.abono or 0,
+				'decimo': '13º solicitado' if solicitacao.decimo else '13º não solicitado',
 				'docs': list(documentos.values('id', 'caminho')),
 			}
 			return JsonResponse(data, safe=False, status=200)
@@ -228,6 +248,7 @@ def AprovarSolicitacaoFeriasView(request, solic):
 
 			# Criar agenda de férias
 			atividade = Atividade.objects.create(
+				autor=solicitacao.funcionario,
 				titulo=f'Férias {solicitacao.funcionario}',
 				descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio.strftime('%d/%m/%Y')} até {solicitacao.final.strftime('%d/%m/%Y')}",
 				tipo=TipoAtividade.objects.get(slug='ferias'),

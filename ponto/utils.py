@@ -192,7 +192,7 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 				jornada = jornadas.filter(funcionario=dado['funcionario'], dia=weekday).values_list('hora', flat=True)
 				qtd_jornada = len(jornada)
 
-				tolerancia = timedelta(minutes=10) if dado['funcionario'].get_contrato.slug == 'clt' else timedelta(minutes=5)
+				tolerancia = timedelta(minutes=10) if dado['funcionario'].get_contrato.slug.split('-')[0] == 'clt' else timedelta(minutes=5)
 				total_esperado = timedelta(seconds=0)
 				
 				if jornada:

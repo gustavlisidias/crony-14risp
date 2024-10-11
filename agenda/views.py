@@ -1,10 +1,13 @@
+import codecs
+import pandas as pd
+
 from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.timezone import make_aware
@@ -160,7 +163,11 @@ def FeriasView(request):
 	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
 	funcionario = funcionarios.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-	ferias = ferias_funcionarios(funcionarios)
+
+	if request.user.get_access == 'admin':
+		ferias = ferias_funcionarios(funcionarios)
+	else:
+		ferias = ferias_funcionarios(funcionarios.filter(pk=funcionario.pk))
 
 	if funcionario.usuario.get_access == 'common':
 		solicitacoes = SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False)
@@ -172,22 +179,22 @@ def FeriasView(request):
 		solicitacoes = SolicitacaoFerias.objects.filter(status=False)
 
 	if request.method == 'POST':
-		inicio = request.POST.get('inicio')
-		total_ferias = request.POST.get('total_ferias')
+		inicio_ferias = request.POST.get('inicio')
+		dias_ferias = request.POST.get('total_ferias')
 		observacao = request.POST.get('observacao')
 		arquivos = request.FILES.getlist('arquivo')
 		admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()		
 
-		if not_none_not_empty(inicio, total_ferias, observacao):
-			final = datetime.strptime(inicio, '%Y-%m-%d') + timedelta(days=int(total_ferias))
+		if not_none_not_empty(inicio_ferias, dias_ferias, observacao):
+			final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(dias_ferias))
 			with transaction.atomic():
 				solicitacao = SolicitacaoFerias.objects.create(
 					funcionario=funcionario,
 					aprovador=funcionario.gerente if funcionario.gerente else admin,
 					abono=request.POST.get('total_abono') if not_none_not_empty(request.POST.get('total_abono')) else 0,
 					decimo=True if not_none_not_empty(request.POST.get('decimo')) else False,
-					inicio=inicio,
-					final=final,
+					inicio=inicio_ferias,
+					final=final_ferias,
 					observacao=observacao,
 				)
 
@@ -208,7 +215,7 @@ def FeriasView(request):
 				add_coins(funcionario, 5)
 				messages.success(request, 'Solicitação enviada com sucesso!')
 		
-		elif not_none_not_empty(request.POST.get('relatorio')):
+		elif not_none_not_empty(request.POST.get('pdf')):
 			dados_empresa = {'nome': Variavel.objects.get(chave='NOME_EMPRESA').valor, 'cnpj': Variavel.objects.get(chave='CNPJ').valor, 'inscricao': Variavel.objects.get(chave='INSC_ESTADUAL').valor}
 			filename = 'relatorio_ferias_funcionarios.pdf'
 			context = {
@@ -218,6 +225,30 @@ def FeriasView(request):
 				'dados_empresa': dados_empresa
 			}
 			return RenderToPDF(request, 'relatorios/ferias.html', context, filename).weasyprint()
+		
+		elif not_none_not_empty(request.POST.get('csv')):
+			dataset = []
+			for funcionario, dados in ferias.items():
+				for info in dados:
+					dataset.append({
+						'funcionario': funcionario,
+						'ano_referencia': info['periodo'],
+						'inicio_periodo': info['inicio'],
+						'final_periodo': info['vencimento'],
+						'saldo': info['saldo']
+					})
+			
+			colunas = ['funcionario', 'ano_referencia', 'inicio_periodo', 'final_periodo', 'saldo']
+
+			response = HttpResponse(content_type='text/csv')
+			response['Content-Disposition'] = 'attachment; filename=ferias_funcionarios.csv'
+			
+			response.write(codecs.BOM_UTF8)
+
+			df = pd.DataFrame(dataset, columns=colunas)
+			df.to_csv(response, sep=';', index=False, encoding='utf-8')
+			
+			return response
 		
 		else:
 			messages.warning(request, 'Preencha todos os campos obrigatórios!')

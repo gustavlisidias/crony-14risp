@@ -43,8 +43,11 @@ class DocumentosFerias(models.Model):
 
 class Ferias(models.Model):
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
-	inicio = models.DateField(verbose_name='Saída')
-	final = models.DateField(verbose_name='Retorno')
+	ano_referencia = models.IntegerField(verbose_name='Ano de Referência')
+	inicio_periodo = models.DateField(verbose_name='Início Período')
+	final_periodo = models.DateField(verbose_name='Final Período')
+	inicio_ferias = models.DateField(verbose_name='Início Férias')
+	final_ferias = models.DateField(verbose_name='Final Férias')
 	abono = models.IntegerField(default=0, verbose_name='Total Abono')
 	decimo = models.BooleanField(default=False, verbose_name='13º Salário')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
