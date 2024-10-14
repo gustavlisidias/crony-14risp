@@ -144,6 +144,10 @@
 		let canvas = document.getElementById("pdf-viewer");
 		let ctx = canvas.getContext("2d");
 
+		canvas.addEventListener("contextmenu", function (event) {
+			event.preventDefault();
+		});
+
 		function renderPage(num) {
 			pageRendering = true;
 
