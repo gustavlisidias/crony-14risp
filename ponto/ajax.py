@@ -123,7 +123,7 @@ def EditarPontoView(request, data, func):
 	novos_pontos = request.POST.getlist('hora')
 	motivo = request.POST.get('motivo')
 	gerente = Funcionario.objects.get(usuario=request.user).gerente
-	admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()
+	admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
 	if not_none_not_empty(funcionario, data, novos_pontos):
 		try:
@@ -151,7 +151,7 @@ def EditarPontoView(request, data, func):
 				for hora in novos_pontos:
 					solicitacao = SolicitacaoPonto.objects.create(
 						funcionario=funcionario,
-						aprovador=gerente if gerente else Funcionario.objects.get(usuario=admin.usuario),
+						aprovador=gerente or admin,
 						data=data,
 						hora=hora,
 						motivo=motivo,

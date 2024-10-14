@@ -188,7 +188,7 @@ def SolicitarAbonoView(request):
 		return redirect('pontos')
 
 	funcionario = Funcionario.objects.get(usuario=request.user)
-	admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()
+	admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
 	inicio = request.POST.get('inicio')
 	final = request.POST.get('final')
@@ -215,7 +215,7 @@ def SolicitarAbonoView(request):
 				caminho=f'{nome}.pdf' if nome else None,
 			)
 
-			solicitacao.aprovador = funcionario.gerente if funcionario.gerente else admin
+			solicitacao.aprovador = funcionario.gerente or admin
 			solicitacao.save()
 
 			add_coins(funcionario, 5)

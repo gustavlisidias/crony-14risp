@@ -330,7 +330,7 @@ def PerfilFuncionarioView(request):
 
 		add_coins(funcionario, 5)
 
-		admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()
+		admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 		notify.send(
 			sender=request.user,
 			recipient=admin.usuario,

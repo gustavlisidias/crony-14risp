@@ -41,7 +41,7 @@ def InicioView(request):
 	humor = Humor.objects.filter(funcionario=funcionario, data_cadastro__date=hoje)
 	perfil = Perfil.objects.get(funcionario=funcionario)
 	ponto = Ponto.objects.filter(funcionario=funcionario).order_by('id').last()
-	moedas = Moeda.objects.get(funcionario=funcionario, fechado=False).pontuacao if Moeda.objects.filter(funcionario=funcionario, fechado=False).exists() else 0
+	moedas = sum([i.pontuacao for i in Moeda.objects.filter(funcionario=funcionario, fechado=False)])
 
 	pesquisas_pendentes = False
 	for pesquisa in Pesquisa.objects.filter(funcionarios=funcionario, data_encerramento__gte=datetime.now().replace(tzinfo=pytz.utc)):
@@ -69,6 +69,7 @@ def InicioView(request):
 	if request.method == 'POST':
 		if not_none_not_empty(request.POST.get('mood')) and not humor:
 			try:
+				admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 				humor_choice = [i for i in Humor.Status.choices if i[0] == request.POST.get('mood')][0]
 				Humor(humor=int(humor_choice[0]), funcionario=funcionario).save()
 				add_coins(funcionario, 10)
@@ -76,7 +77,7 @@ def InicioView(request):
 				if int(humor_choice[0]) < 3:
 					notify.send(
 					sender=funcionario.usuario,
-					recipient=funcionarios.filter(Q(usuario__is_admin=True) | Q(usuario__is_superuser=True)).first().usuario,
+					recipient=admin.usuario,
 					verb='Foi enviado um humor negativo',
 					description=f'Atenção ao {funcionario.nome_completo}, está com o humor {humor_choice[1]}!'
 				)
@@ -345,9 +346,10 @@ def AdicionarOuvidoriaView(request):
 
 			add_coins(funcionario, 30)
 
+			admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 			notify.send(
 				sender=request.user,
-				recipient=Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first().usuario,
+				recipient=admin.usuario,
 				verb=f'Uma manifestação foi aberta {ouvidoria.assunto} ({categoria[1]})',
 			)
 

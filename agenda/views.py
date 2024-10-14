@@ -183,7 +183,7 @@ def FeriasView(request):
 		dias_ferias = request.POST.get('total_ferias')
 		observacao = request.POST.get('observacao')
 		arquivos = request.FILES.getlist('arquivo')
-		admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()		
+		admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
 		if not_none_not_empty(inicio_ferias, dias_ferias, observacao):
 			atividade_aberta = Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists()
@@ -196,7 +196,7 @@ def FeriasView(request):
 			with transaction.atomic():
 				solicitacao = SolicitacaoFerias.objects.create(
 					funcionario=funcionario,
-					aprovador=funcionario.gerente if funcionario.gerente else admin,
+					aprovador=funcionario.gerente or admin,
 					abono=request.POST.get('total_abono') if not_none_not_empty(request.POST.get('total_abono')) else 0,
 					decimo=True if not_none_not_empty(request.POST.get('decimo')) else False,
 					inicio=inicio_ferias,
