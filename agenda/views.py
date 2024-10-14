@@ -186,7 +186,9 @@ def FeriasView(request):
 		admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()		
 
 		if not_none_not_empty(inicio_ferias, dias_ferias, observacao):
-			if Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists():
+			atividade_aberta = Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists()
+			solicitacao_aberta = SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False).exists()
+			if atividade_aberta or solicitacao_aberta:
 				messages.warning(request, 'Você já possui férias em aberto!')
 				return redirect('ferias')
 
