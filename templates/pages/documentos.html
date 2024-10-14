@@ -15,6 +15,7 @@
 {% include "includes/messages.html" %}
 {% include "modals/documentos/adicionar-documento.html" %}
 {% include "modals/documentos/importar-documentos.html" %}
+{% include "modals/documentos/visualizador.html" %}
 
 <div class="fluid-container p-4 m-0">
 	<div class="card w-100">
@@ -94,13 +95,19 @@
 								<td>{{documento.data_documento|date:"d/m/Y"}}</td>
 								<td class="text-center">
 									<div class="d-flex justify-content-around">
-										<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" title="Visualizar documento">
-											<i class="fa-duotone fa-eye text-body"></i>
-										</a>
-										<a href="{% url 'stream-documento' documento.id 'doc' 'download' %}" download title="Baixar documento">
-											<i class="fa-duotone fa-download text-body"></i>
-										</a>
-										{% if request.user.get_access == "admin" %}
+										{% if "privado" in documento.tipo|lower %}
+											<a id="verificar-documento" data-id="{{documento.id}}" role="button" title="Visualizar documento">
+												<i class="fa-duotone fa-eye text-body"></i>
+											</a>
+										{% else %}
+											<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" title="Visualizar documento">
+												<i class="fa-duotone fa-eye text-body"></i>
+											</a>
+											<a href="{% url 'stream-documento' documento.id 'doc' 'download' %}" download title="Baixar documento">
+												<i class="fa-duotone fa-download text-body"></i>
+											</a>
+										{% endif %}
+										{% if request.user.get_access != "common" %}
 											<a role="button" title="Excluir documento" onclick="excluirDocumento({ id: {{documento.id}} })">
 												<i class="fa-light fa-xmark text-danger"></i>
 											</a>
@@ -120,6 +127,102 @@
 {% endblock %}
 
 {% block javascript %}
+<script src="{% static 'pdfjs/build/pdf.mjs' %}" type="module"></script>
+<script type="module">
+	const { pdfjsLib } = globalThis;
+	pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'pdfjs/build/pdf.worker.mjs' %}";
+
+	document.getElementById("verificar-documento").addEventListener("click", function () {
+		const modal = $("#modalVisualizarDocumento");
+		const url = `{% url "stream-documento" 0 "doc" "visualizar" %} `.replace("0", this.dataset.id);
+
+		let pdfDoc = null;
+		let pageNum = 1;
+		let pageRendering = false;
+		let pageNumPending = null;
+		let scale = 1;
+		let canvas = document.getElementById("pdf-viewer");
+		let ctx = canvas.getContext("2d");
+
+		function renderPage(num) {
+			pageRendering = true;
+
+			pdfDoc.getPage(num).then(function(page) {
+				const viewport = page.getViewport({scale: scale});
+				canvas.height = viewport.height;
+				canvas.width = viewport.width;
+
+				const renderContext = {
+					canvasContext: ctx,
+					viewport: viewport
+				};
+				const renderTask = page.render(renderContext);
+
+				renderTask.promise.then(function() {
+					pageRendering = false;
+					if (pageNumPending !== null) {
+						renderPage(pageNumPending);
+						pageNumPending = null;
+					}
+				});
+			});
+
+			document.getElementById("page_num").textContent = num;
+		};
+
+		function queueRenderPage(num) {
+			if (pageRendering) {
+				pageNumPending = num;
+			} else {
+				renderPage(num);
+			}
+		};
+
+		function onPrevPage() {
+			if (pageNum <= 1) {
+				return;
+			}
+			pageNum--;
+			queueRenderPage(pageNum);
+		};
+
+		document.getElementById("prev").addEventListener("click", onPrevPage);
+
+		function onNextPage() {
+			if (pageNum >= pdfDoc.numPages) {
+				return;
+			}
+			pageNum++;
+			queueRenderPage(pageNum);
+		};
+
+		document.getElementById("next").addEventListener("click", onNextPage);
+
+		function zoomIn() {
+			scale += 0.1;
+			renderPage(pageNum);
+		};
+
+		function zoomOut() {
+			if (scale > 0.2) {
+				scale -= 0.1;
+				renderPage(pageNum);
+			}
+		};
+
+		document.getElementById("zoom_in").addEventListener("click", zoomIn);
+		document.getElementById("zoom_out").addEventListener("click", zoomOut);
+
+		pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+			pdfDoc = pdfDoc_;
+			document.getElementById("page_count").textContent = pdfDoc.numPages;
+			renderPage(pageNum);
+		});
+
+		modal.modal("show");
+	});
+</script>
+
 <script>
 	function carregarArvores() {
 		document.getElementById("overlay").style.display = "block";
@@ -281,7 +384,7 @@
 				alert("Erro ao atualizar a tabela de documentos:", error);
 			}
 		});
-	};	
+	};
 	
 	document.addEventListener("DOMContentLoaded", function () {
 		createSelectChoices(document.querySelector(".select-status"), -1);

@@ -1,5 +1,6 @@
 import time
 
+from django.db.models import Case, When, Value
 from django.db.models.query import QuerySet
 from django.utils import timezone
 
@@ -13,16 +14,15 @@ def filtrar_abonos(solicitacao):
 	data_inico = timezone.localtime(solicitacao.inicio)
 	data_final = timezone.localtime(solicitacao.final)
 
-	wd_incio = 1 if data_inico.date().weekday() + 2 == 8 else data_inico.date().weekday() + 2
-
 	montar_pontos = {}
 	jornadas_filtradas = {}
 	nro_dias = (data_final.date() - data_inico.date()).days
 
 	if data_inico.date() == data_final.date():
-		jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, dia=wd_incio).order_by('funcionario__id', 'dia', 'ordem')
+		wd_incio = 1 if data_inico.date().weekday() + 2 == 8 else data_inico.date().weekday() + 2
+		jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None, dia=wd_incio).order_by('funcionario__id', 'dia', 'ordem')
 	else:
-		jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario).order_by('funcionario__id', 'dia', 'ordem')
+		jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 
 	for i in range(nro_dias + 1):
 		dia_atual = data_inico.date() + timedelta(days=i)
@@ -102,7 +102,12 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 		return None, None
 
 	pontos = Ponto.objects.filter(data__range=[data_inicial, data_final], funcionario__in=funcionarios).order_by('funcionario', 'data', 'hora')
-	jornadas = JornadaFuncionario.objects.filter(funcionario__in=funcionarios).order_by('funcionario', 'dia', 'ordem')
+	jornadas = JornadaFuncionario.objects.filter(funcionario__in=funcionarios).annotate(
+		vencimento=Case(
+			When(final_vigencia__isnull=True, then=Value(date.today())),
+			default='final_vigencia'
+		)
+	).order_by('funcionario', 'dia', 'ordem')
 	scores = {score.funcionario.id: score.pontuacao for score in Score.objects.filter(fechado=False)}
 
 	if not (pontos and jornadas):
@@ -189,7 +194,7 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 
 				# Calculo do saldo diário
 				weekday = 1 if dia.weekday() + 2 == 8 else dia.weekday() + 2
-				jornada = jornadas.filter(funcionario=dado['funcionario'], dia=weekday).values_list('hora', flat=True)
+				jornada = jornadas.filter(funcionario=dado['funcionario'], inicio_vigencia__lte=dia.date(), vencimento__gt=dia.date(), dia=weekday).values_list('hora', flat=True)
 				qtd_jornada = len(jornada)
 
 				tolerancia = timedelta(minutes=10) if dado['funcionario'].get_contrato.slug.split('-')[0] == 'clt' else timedelta(minutes=5)

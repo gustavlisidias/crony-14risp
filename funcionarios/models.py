@@ -4,7 +4,7 @@ import pytz
 from django.db import models
 from django.utils.text import slugify
 
-from datetime import datetime
+from datetime import datetime, date
 from django_ckeditor_5.fields import CKEditor5Field
 
 from cities_light.models import Region as Estado
@@ -121,7 +121,8 @@ class Funcionario(models.Model):
 	
 	@property
 	def get_contrato(self):
-		return JornadaFuncionario.objects.filter(funcionario=self).first().contrato
+		jornadas = JornadaFuncionario.objects.filter(funcionario=self, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
+		return jornadas.first().contrato
 	
 	@property
 	def is_analista(self):
@@ -165,6 +166,8 @@ class JornadaFuncionario(models.Model):
 	ordem = models.IntegerField(editable=False, verbose_name='Ordem')
 	dia = models.IntegerField(choices=Jornada.Semana.choices, verbose_name='Dia da Semana')
 	hora = models.TimeField(verbose_name='Hora')
+	inicio_vigencia = models.DateField(verbose_name='Início da Vigência')
+	final_vigencia = models.DateField(null=True, blank=True, verbose_name='Final da Vigência')
 	
 	def save(self, *args, **kwargs):
 		if not self.ordem:
@@ -179,6 +182,9 @@ class JornadaFuncionario(models.Model):
 				self.tipo = Jornada.Tipo.ENTRADA
 			else:
 				self.tipo = Jornada.Tipo.SAIDA
+
+		if not self.inicio_vigencia:
+			self.inicio_vigencia = date.today()
 
 		super().save(*args, **kwargs)
 

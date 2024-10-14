@@ -14,7 +14,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from slugify import slugify
 
 from agenda.models import Atividade, Avaliacao
@@ -122,7 +122,7 @@ def EditarFuncionarioView(request, func):
 	humor = list(Humor.objects.filter(funcionario=colaborador).values('humor').annotate(contagem=Count('humor')))
 	civis = [{'id': i[0], 'nome': i[1]} for i in Funcionario.Estados.choices]
 	contratos = Contrato.objects.all()
-	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador).order_by('funcionario__id', 'dia', 'ordem')
+	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 	
 	avaliacoes = Avaliacao.objects.filter(atividade__funcionarios__in=[colaborador])
 	if avaliacoes:
@@ -144,7 +144,7 @@ def EditarFuncionarioView(request, func):
 			item['humor'] = dict(Humor.Status.choices)[item['humor']]
 	
 	jornada = {}
-	for item in jornadas.order_by('dia', 'hora'):
+	for item in jornadas:
 		if item.dia not in jornada:
 			jornada[item.dia] = []
 		jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
@@ -184,17 +184,17 @@ def EditarFuncionarioView(request, func):
 
 		# Atualização de horários da jornada de trabalho do funcionário
 		if not_none_not_empty(request.POST.get('contrato')):
-			jornada_funcionario = JornadaFuncionario.objects.filter(funcionario=colaborador).order_by('funcionario__id', 'dia', 'ordem')
 			contrato = Contrato.objects.get(pk=request.POST.get('contrato'))
+			nova_jornada = Jornada.objects.filter(contrato=contrato).order_by('contrato__id', 'dia', 'ordem')
 
-			if not jornada_funcionario or jornada_funcionario.first().contrato != contrato:
-				if (not jornada_funcionario.first().contrato.titulo.lower().startswith('clt')) and contrato.titulo.lower().startswith('clt'):
-					add_coins(colaborador, 350)
+			if not jornadas or colaborador.get_contrato != contrato:
 
-				if jornada_funcionario:
-					jornada_funcionario.delete()
+				if jornadas:
+					for i in jornadas:
+						i.final_vigencia = date.today()
+						i.save()
 				
-				for horario in Jornada.objects.filter(contrato=contrato).order_by('contrato__id', 'dia', 'ordem'):
+				for horario in nova_jornada:
 					JornadaFuncionario.objects.create(
 						funcionario=colaborador,
 						contrato=horario.contrato,
@@ -203,11 +203,24 @@ def EditarFuncionarioView(request, func):
 						hora=horario.hora,
 						ordem=horario.ordem
 					)
+				
+				if (not colaborador.get_contrato.slug.startswith('clt')) and contrato.slug.startswith('clt'):
+					add_coins(colaborador, 350)
+
+					ultima_matricula = nova_jornada.exclude(funcionario=colaborador).order_by('funcionario__matricula').aggregate(ultimo=Max('funcionario__matricula'))['ultimo']
+
+					if ultima_matricula:
+						max_matricula = f"{(int(ultima_matricula) + 1):06d}"
+						colaborador.matricula = max_matricula
+						colaborador.save()
 
 				messages.success(request, 'Horários alterados conforme novo contrato!')
 				
 			else:
-				jornada_funcionario.delete()
+				for i in jornadas:
+					i.final_vigencia = date.today()
+					i.save()
+
 				for dia, horarios in json.loads(request.POST.get('dados')).items():
 					for index, (tipo, hora) in enumerate(horarios.items()):
 						JornadaFuncionario(
@@ -266,7 +279,7 @@ def EditarFuncionarioView(request, func):
 
 		'avaliacao': avaliacao,
 		'contratos': contratos,
-		'contrato': jornadas.first().contrato,
+		'contrato': colaborador.get_contrato,
 
 		'jornada': jornada,
 		'pontos': pontos,
@@ -290,7 +303,7 @@ def PerfilFuncionarioView(request):
 	historico = HistoricoFuncionario.objects.filter(funcionario=funcionario).values('cargo__cargo', 'setor__setor').distinct()
 
 	jornada = {}
-	for item in JornadaFuncionario.objects.filter(funcionario=funcionario).order_by('funcionario__id', 'dia', 'ordem'):
+	for item in JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem'):
 		if item.dia not in jornada:
 			jornada[item.dia] = []
 		jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})

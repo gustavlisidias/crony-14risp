@@ -136,7 +136,7 @@ def EditarEventoView(request):
 						data__lte=solicitacao_ferias.final,
 					).delete()
 					
-					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao_ferias.funcionario).order_by('funcionario__id', 'dia', 'ordem')
+					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao_ferias.funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 					data_iter = solicitacao_ferias.inicio
 
 					while data_iter <= solicitacao_ferias.final:
@@ -248,12 +248,12 @@ def AprovarSolicitacaoFeriasView(request, solic):
 
 			# Criar agenda de férias
 			atividade = Atividade.objects.create(
-				autor=solicitacao.funcionario,
 				titulo=f'Férias {solicitacao.funcionario}',
 				descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio.strftime('%d/%m/%Y')} até {solicitacao.final.strftime('%d/%m/%Y')}",
 				tipo=TipoAtividade.objects.get(slug='ferias'),
 				inicio=make_aware(datetime.combine(solicitacao.inicio, datetime.min.time())),
 				final=make_aware(datetime.combine(solicitacao.final, datetime.min.time())),
+				autor=solicitacao.funcionario,
 			)
 			atividade.funcionarios.set([solicitacao.funcionario.id])
 

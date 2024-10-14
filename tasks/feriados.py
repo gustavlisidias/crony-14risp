@@ -30,7 +30,7 @@ def abonar_feriados():
 		for feriado in feriados:
 			try:
 				for funcionario in feriado.funcionarios.all():
-					jornada_funcionario = JornadaFuncionario.objects.filter(funcionario=funcionario, dia=weekday).order_by('funcionario__id', 'dia', 'ordem')
+					jornada_funcionario = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None, dia=weekday).order_by('funcionario__id', 'dia', 'ordem')
 
 					for horario in jornada_funcionario:
 						Ponto(

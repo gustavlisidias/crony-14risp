@@ -282,7 +282,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 					funcionario=funcionario,
 					setor=funcionario.setor,
 					cargo=funcionario.cargo,
-					contrato=JornadaFuncionario.objects.filter(funcionario=funcionario).first().contrato,
+					contrato=funcionario.get_contrato,
 					salario=funcionario.salario,
 				).save()
 

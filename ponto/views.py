@@ -142,7 +142,7 @@ def RegistrosPontoFuncinarioView(request, func):
 
 	colaborador = funcionarios.get(pk=func)
 
-	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador).order_by('funcionario__id', 'dia', 'ordem')
+	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 	
 	pontos_funcionario = Ponto.objects.filter(funcionario=colaborador).values_list('data', flat=True).order_by('-data')
 	data_ultimo_ponto = pontos_funcionario.first() if pontos_funcionario else datetime.today()
@@ -254,7 +254,7 @@ def AdicionarFeriadoView(request):
 		cidade = request.POST.get('cidade')
 
 		if not_none_not_empty(titulo, data_feriado):
-			funcionarios = JornadaFuncionario.objects.filter(funcionario__data_demissao=None).order_by('funcionario__id', 'dia', 'ordem').values(
+			funcionarios = JornadaFuncionario.objects.filter(funcionario__data_demissao=None, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem').values(
 				'funcionario__id', 'contrato__titulo', 'funcionario__estado__pk', 'funcionario__cidade__pk'
 			).distinct()
 
@@ -377,7 +377,7 @@ def ExcluirFechamentoView(request):
 			if not pontos:
 				raise ValueError('Nenhum ponto encontrado')
 
-			jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario).order_by('funcionario__id', 'dia', 'ordem')
+			jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 			jornada = {}
 			for item in jornadas.order_by('dia', 'hora'):
 				if item.dia not in jornada:

@@ -1,0 +1,28 @@
+<div class="modal fade" id="modalVisualizarDocumento" tabindex="-1" aria-labelledby="modalVisualizarDocumentoLabel" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header bg-body">
+				<div>
+					<div class="btn-group">
+						<button id="prev" class="btn btn-secondary text-white">Anterior</button>
+						<button id="next" class="btn btn-secondary text-white">Próximo</button>
+					</div>
+					&nbsp; &nbsp;
+					|
+					&nbsp; &nbsp;
+					<div class="btn-group">
+						<button id="zoom_in" class="btn btn-secondary text-white"><i class="fa-regular fa-magnifying-glass-plus"></i></button>
+						<button id="zoom_out" class="btn btn-secondary text-white"><i class="fa-regular fa-magnifying-glass-minus"></i></button>
+					</div>
+					&nbsp; &nbsp;
+					<span>Página: <span id="page_num"></span> / <span id="page_count"></span></span>
+				</div>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+
+			<div class="modal-body text-center bg-dark-subtle">
+				<canvas id="pdf-viewer"></canvas>
+			</div>
+		</div>
+	</div>
+</div>

@@ -32,6 +32,10 @@ def RegistrarPontoView(request):
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
 
+	log_file = 'log_pontos.log'
+	log_path = os.path.join(BASE_DIR, f'logs/{log_file}')
+	logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
+	
 	try:
 		registro_externo = Variavel.objects.filter(chave='REGISTRO_EXTERNO').first()
 		host_externo = Variavel.objects.filter(chave='HOST_EXTERNO').first()
@@ -42,15 +46,16 @@ def RegistrarPontoView(request):
 		hosts = [i.strip() for i in host_externo.valor.split(',')] if host_externo else []
 		matriculas = [i.strip() for i in matriculas_externo.valor.split(',')] if host_externo else []
 
-		log_file = 'log_pontos.log'
-		log_path = os.path.join(BASE_DIR, f'logs/{log_file}')
-		logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
 		logging.info(f'permitir: {permitir}, host: {str(request.get_host())}, hosts_liberados: {hosts}, matriculas_liberadas: {matriculas}, funcionario_matricula: {funcionario.matricula}')
 		
 		if permitir and str(request.get_host().split(':')[0]) in hosts:
 			if funcionario.matricula not in matriculas:
 				messages.error(request, 'Ponto não registrado! Registro externo ou matrícula não configurada!')
 				return JsonResponse({'message': 'error'}, status=400)
+			
+		if not permitir and str(request.get_host().split(':')[0]) in hosts:
+			messages.error(request, 'Ponto não registrado! Registro externo não liberado!')
+			return JsonResponse({'message': 'error'}, status=400)
 		
 		ponto = Ponto.objects.create(funcionario=funcionario, data=timezone.localdate(), hora=timezone.localtime())
 
@@ -361,7 +366,7 @@ def RelatoriosPontoView(request):
 	data_final = request.POST.get('relatorio_final') if not_none_not_empty(request.POST.get('relatorio_final')) else now().strftime('%Y-%m-%d')
 
 	contratos = Contrato.objects.filter(pk__in=[int(i) for i in request.POST.getlist('contrato')]) if not_none_not_empty(request.POST.get('contrato')) else Contrato.objects.all()
-	jornadas_funcionarios = JornadaFuncionario.objects.filter(contrato__id__in=[i.id for i in contratos]).order_by(
+	jornadas_funcionarios = JornadaFuncionario.objects.filter(contrato__id__in=[i.id for i in contratos], final_vigencia=None).order_by(
 		'funcionario__id', 'dia', 'ordem'
 	).values('funcionario__id').distinct()
 	funcionarios = Funcionario.objects.filter(data_demissao=None, pk__in=[i['funcionario__id'] for i in jornadas_funcionarios]).order_by('nome_completo')
@@ -383,7 +388,7 @@ def RelatoriosPontoView(request):
 							msg_erros += f'Nenhum ponto encontrado para {funcionario}\n'
 							raise ValueError('Nenhum ponto encontrado')
 
-						jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario).order_by('dia', 'ordem')
+						jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 						jornada = {}
 						for item in jornadas:
 							if item.dia not in jornada:
@@ -455,7 +460,7 @@ def RelatoriosPontoView(request):
 					msg_erros += f'Nenhum ponto encontrado para {funcionario}\n'
 					raise ValueError('Nenhum ponto encontrado')
 
-				jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario).order_by('dia', 'ordem')
+				jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 				jornada = {}
 				for item in jornadas:
 					if item.dia not in jornada:
