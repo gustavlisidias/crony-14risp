@@ -104,12 +104,7 @@ def EditarEventoView(request):
 
 				if finalizado and atividade.tipo.slug == 'ferias':
 					# Ao finalizar a atividade, a férias é consumada
-					solicitacao_ferias = SolicitacaoFerias.objects.get(
-						funcionario=atividade.funcionarios.first(),
-						inicio=atividade.inicio.date(),
-						final=atividade.final.date(),
-						status=True,
-					)
+					solicitacao_ferias = SolicitacaoFerias.objects.filter(funcionario=atividade.autor, status=True).order_by('id').last()
 
 					delta = atividade.final.date() - atividade.inicio.date()
 					dados_ferias = ferias_funcionarios(Funcionario.objects.filter(pk=solicitacao_ferias.funcionario.pk))
@@ -121,8 +116,8 @@ def EditarEventoView(request):
 							ano_referencia=resultado[0]['periodo'],
 							inicio_periodo=resultado[0]['inicio'],
 							final_periodo=resultado[0]['vencimento'],
-							inicio_ferias=solicitacao_ferias.inicio,
-							final_ferias=solicitacao_ferias.final,
+							inicio_ferias=atividade.inicio,
+							final_ferias=atividade.final,
 							abono=solicitacao_ferias.abono,
 							decimo=solicitacao_ferias.decimo,
 						).save()

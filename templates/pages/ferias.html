@@ -212,6 +212,15 @@
 
 	function solicitarFerias(inicio, final, saldo) {
 		const modal = $("#modalSolicitarFerias");
+		const hoje = new Date();
+
+		if (new Date(inicio) < hoje) {
+			const year = hoje.getFullYear();
+			const month = String(hoje.getMonth() + 1).padStart(2, '0');
+			const day = String(hoje.getDate()).padStart(2, '0');
+			inicio = `${year}-${month}-${day}`;
+		};
+
 		modal.find("#solicitacaoInicio").val(inicio);
 		modal.find("#solicitacaoInicio").attr("min", inicio);
 		modal.find("#solicitacaoInicio").attr("max", final);

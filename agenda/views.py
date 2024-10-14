@@ -186,6 +186,10 @@ def FeriasView(request):
 		admin = Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True).first()		
 
 		if not_none_not_empty(inicio_ferias, dias_ferias, observacao):
+			if Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists():
+				messages.warning(request, 'Você já possui férias em aberto!')
+				return redirect('ferias')
+
 			final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(dias_ferias))
 			with transaction.atomic():
 				solicitacao = SolicitacaoFerias.objects.create(
