@@ -180,27 +180,38 @@ def FeriasView(request):
 
 	if request.method == 'POST':
 		inicio_ferias = request.POST.get('inicio')
-		dias_ferias = request.POST.get('total_ferias')
+		final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(request.POST.get('total_ferias')))
+
+		inicio_periodo = request.POST.get('inicio_periodo')
+		final_periodo = request.POST.get('final_periodo')
+
+		abono = int(request.POST.get('total_abono')) if not_none_not_empty(request.POST.get('total_abono')) else 0
+		decimo = True if not_none_not_empty(request.POST.get('decimo')) else False
+
 		observacao = request.POST.get('observacao')
 		arquivos = request.FILES.getlist('arquivo')
+
 		admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
-		if not_none_not_empty(inicio_ferias, dias_ferias, observacao):
-			atividade_aberta = Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists()
-			solicitacao_aberta = SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False).exists()
-			if atividade_aberta or solicitacao_aberta:
+		if not_none_not_empty(inicio_ferias, inicio_periodo, final_periodo, observacao):
+			if Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists():
 				messages.warning(request, 'Você já possui férias em aberto!')
 				return redirect('ferias')
-
-			final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(dias_ferias))
+			
+			if SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False).exists():
+				messages.warning(request, 'Você possui uma solicitação de férias em aberto!')
+				return redirect('ferias')
+			
 			with transaction.atomic():
 				solicitacao = SolicitacaoFerias.objects.create(
 					funcionario=funcionario,
 					aprovador=funcionario.gerente or admin,
-					abono=request.POST.get('total_abono') if not_none_not_empty(request.POST.get('total_abono')) else 0,
-					decimo=True if not_none_not_empty(request.POST.get('decimo')) else False,
-					inicio=inicio_ferias,
-					final=final_ferias,
+					abono=abono,
+					decimo=decimo,
+					inicio_periodo=inicio_periodo,
+					final_periodo=final_periodo,
+					inicio_ferias=inicio_ferias,
+					final_ferias=final_ferias,
 					observacao=observacao,
 				)
 

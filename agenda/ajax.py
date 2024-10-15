@@ -19,7 +19,7 @@ from agenda.models import (
 )
 from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
-from funcionarios.models import Funcionario, Documento, TipoDocumento, JornadaFuncionario
+from funcionarios.models import Documento, TipoDocumento, JornadaFuncionario
 from ponto.models import Ponto
 from web.utils import not_none_not_empty, add_coins
 
@@ -104,49 +104,51 @@ def EditarEventoView(request):
 
 				if finalizado and atividade.tipo.slug == 'ferias':
 					# Ao finalizar a atividade, a férias é consumada
-					solicitacao_ferias = SolicitacaoFerias.objects.filter(funcionario=atividade.autor, status=True).order_by('id').last()
-
+					solicitacao = SolicitacaoFerias.objects.get(pk=atividade.solic_ferias.pk)
 					delta = atividade.final.date() - atividade.inicio.date()
-					dados_ferias = ferias_funcionarios(Funcionario.objects.filter(pk=solicitacao_ferias.funcionario.pk))
-					resultado = [i for i in dados_ferias.get(solicitacao_ferias.funcionario.nome_completo, []) if i['vencimento'] >= solicitacao_ferias.inicio and i['saldo'] >= delta]
+					dados_ferias = ferias_funcionarios(solicitacao.funcionario).get(solicitacao.funcionario.nome_completo, [])
+
+					# Preciso consultar o estado atual de saldos por período do funcionário
+					# No periodo cadastrado preciso que haja saldo suficiente
+					resultado = [i for i in dados_ferias if i['vencimento'] <= solicitacao.final_periodo and i['inicio'] >= solicitacao.inicio_periodo and i['saldo'] >= delta][0]
 
 					if resultado:
 						Ferias(
-							funcionario=solicitacao_ferias.funcionario,
-							ano_referencia=resultado[0]['periodo'],
-							inicio_periodo=resultado[0]['inicio'],
-							final_periodo=resultado[0]['vencimento'],
+							funcionario=solicitacao.funcionario,
+							ano_referencia=resultado['periodo'],
+							inicio_periodo=solicitacao.inicio_periodo,
+							final_periodo=solicitacao.final_periodo,
 							inicio_ferias=atividade.inicio,
 							final_ferias=atividade.final,
-							abono=solicitacao_ferias.abono,
-							decimo=solicitacao_ferias.decimo,
+							abono=solicitacao.abono,
+							decimo=solicitacao.decimo,
 						).save()
 					else:
-						raise InvalidPeriodVacation(funcionario=solicitacao_ferias.funcionario.nome_completo, inicio=atividade.inicio.date(), final=atividade.final.date(), saldo=delta.days)
+						raise InvalidPeriodVacation(funcionario=solicitacao.funcionario.nome_completo, inicio=atividade.inicio.date(), final=atividade.final.date(), saldo=delta.days)
 
 					# Abonar dias não trabalhados nas férias
 					Ponto.objects.filter(
-						funcionario=solicitacao_ferias.funcionario,
-						data__gte=solicitacao_ferias.inicio,
-						data__lte=solicitacao_ferias.final,
+						funcionario=solicitacao.funcionario,
+						data__gte=solicitacao.inicio_ferias,
+						data__lte=solicitacao.final_ferias,
 					).delete()
 					
-					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao_ferias.funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
-					data_iter = solicitacao_ferias.inicio
+					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
+					data_inicial = solicitacao.inicio_ferias
 
-					while data_iter <= solicitacao_ferias.final:
-						weekday = 1 if data_iter.weekday() + 2 == 8 else data_iter.weekday() + 2
-						data = data_iter
+					while data_inicial <= solicitacao.final_ferias:
+						weekday = 1 if data_inicial.weekday() + 2 == 8 else data_inicial.weekday() + 2
+						data = data_inicial
 
 						for jornada in jornadas.filter(dia=weekday):
 							Ponto(
-								funcionario=solicitacao_ferias.funcionario,
+								funcionario=solicitacao.funcionario,
 								data=data,
 								hora=jornada.hora,
 								alterado=True,
 							).save()
 
-						data_iter += timedelta(days=1)
+						data_inicial += timedelta(days=1)
 
 				message = 'Evento finalizado com sucesso!' if finalizado else 'Evento alterado com sucesso!'
 				messages.success(request, message)
@@ -176,8 +178,8 @@ def ProcurarDocumentosFeriasView(request, solic):
 				'id': solicitacao.id,
 				'nome': solicitacao.funcionario.nome_completo,
 				'observacao': solicitacao.observacao,
-				'inicio': solicitacao.inicio,
-				'final': solicitacao.final,
+				'inicio': solicitacao.inicio_ferias,
+				'final': solicitacao.final_ferias,
 				'abono': solicitacao.abono or 0,
 				'decimo': '13º solicitado' if solicitacao.decimo else '13º não solicitado',
 				'docs': list(documentos.values('id', 'caminho')),
@@ -244,11 +246,12 @@ def AprovarSolicitacaoFeriasView(request, solic):
 			# Criar agenda de férias
 			atividade = Atividade.objects.create(
 				titulo=f'Férias {solicitacao.funcionario}',
-				descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio.strftime('%d/%m/%Y')} até {solicitacao.final.strftime('%d/%m/%Y')}",
+				descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio_ferias.strftime('%d/%m/%Y')} até {solicitacao.final_ferias.strftime('%d/%m/%Y')}<br>Observações: {solicitacao.observacao}",
 				tipo=TipoAtividade.objects.get(slug='ferias'),
-				inicio=make_aware(datetime.combine(solicitacao.inicio, datetime.min.time())),
-				final=make_aware(datetime.combine(solicitacao.final, datetime.min.time())),
+				inicio=make_aware(datetime.combine(solicitacao.inicio_ferias, datetime.min.time())),
+				final=make_aware(datetime.combine(solicitacao.final_ferias, datetime.min.time())),
 				autor=solicitacao.funcionario,
+				solic_ferias=solicitacao
 			)
 			atividade.funcionarios.set([solicitacao.funcionario.id])
 

@@ -1,12 +1,33 @@
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
-from slugify import slugify
+
+from django.db.models.query import QuerySet
 
 from agenda.models import Ferias
+from funcionarios.models import Funcionario
 from web.utils import add_years
 
 
+def parse_employee(objeto):
+	try:
+		if objeto is None:
+			return None
+		elif isinstance(objeto, list):
+			return Funcionario.objects.filter(pk__in=objeto)
+		elif isinstance(objeto, QuerySet):
+			return objeto
+		else:
+			return Funcionario.objects.filter(pk=objeto.pk)
+	except Exception:
+		return None
+
+
 def ferias_funcionarios(funcionarios):
+	funcionarios = parse_employee(funcionarios)
+
+	if not funcionarios:
+		return None
+	
 	ferias_por_funcionario = {}
 
 	for funcionario in funcionarios:

@@ -12,8 +12,10 @@ class SolicitacaoFerias(models.Model):
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='ferias_funcionario', verbose_name='Funcionário')
 	aprovador = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='ferias_aprovador', verbose_name='Aprovador')
 	observacao = models.TextField(verbose_name='Observação')
-	inicio = models.DateField(verbose_name='Saída')
-	final = models.DateField(verbose_name='Volta')
+	inicio_periodo = models.DateField(verbose_name='Início Período')
+	final_periodo = models.DateField(verbose_name='Final Período')
+	inicio_ferias = models.DateField(verbose_name='Início Férias')
+	final_ferias = models.DateField(verbose_name='Final Férias')
 	abono = models.IntegerField(default=0, verbose_name='Total Abono')
 	decimo = models.BooleanField(default=False, verbose_name='13º Salário')
 	status = models.BooleanField(default=False, verbose_name='Aprovado')
@@ -90,7 +92,8 @@ class Atividade(models.Model):
 	funcionarios = models.ManyToManyField(Funcionario, verbose_name='Funcionáro')
 	data_finalizacao = models.DateTimeField(null=True, blank=True, editable=False, verbose_name='Data de Finalização')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
-	autor = models.ForeignKey(Funcionario, on_delete=models.CASCADE, editable=False, related_name='autor_atividade', verbose_name='Autor')
+	autor = models.ForeignKey(Funcionario, on_delete=models.CASCADE, editable=False, related_name='autor_atividade')
+	solic_ferias = models.ForeignKey(SolicitacaoFerias, on_delete=models.SET_NULL, editable=False, null=True, blank=True)
 
 	def save(self, *args, **kwargs):
 		if not self.final:

@@ -71,7 +71,7 @@
 									</div>
 									<div class="col d-flex justify-content-end">
 										<button type="button" class="btn btn-secondary text-light rounded-pill" 
-											onclick="solicitarFerias('{{ferias.inicio|date:"Y-m-d"}}', '{{ferias.vencimento|date:"Y-m-d"}}', {{ferias.saldo|absolute_days}})" style="width: 10rem; height: 4rem;">
+										onclick="solicitarFerias('{{ferias.inicio|date:"Y-m-d"}}', '{{ferias.vencimento|date:"Y-m-d"}}', {{ferias.saldo|absolute_days}}, {{ferias.periodo}})" style="width: 10rem; height: 4rem;">
 											Solicitar Férias
 										</button>
 									</div>
@@ -210,20 +210,20 @@
         });
     });
 
-	function solicitarFerias(inicio, final, saldo) {
+	function solicitarFerias(inicio, final, saldo, periodo) {
 		const modal = $("#modalSolicitarFerias");
 		const hoje = new Date();
+		const year = hoje.getFullYear();
+		const month = String(hoje.getMonth() + 1).padStart(2, '0');
+		const day = String(hoje.getDate()).padStart(2, '0');
 
-		if (new Date(inicio) < hoje) {
-			const year = hoje.getFullYear();
-			const month = String(hoje.getMonth() + 1).padStart(2, '0');
-			const day = String(hoje.getDate()).padStart(2, '0');
-			inicio = `${year}-${month}-${day}`;
-		};
+		data_minima = `${year}-${month}-${day}`;
 
-		modal.find("#solicitacaoInicio").val(inicio);
-		modal.find("#solicitacaoInicio").attr("min", inicio);
-		modal.find("#solicitacaoInicio").attr("max", final);
+		modal.find("#solicitacaoInicio").val(data_minima);
+		modal.find("#solicitacaoInicio").attr("min", data_minima);
+
+		modal.find("#solicitacaoInicioPeriodo").val(inicio);
+		modal.find("#solicitacaoFinalPeriodo").val(final);
 
 		const totalFerias = modal.find("#solicitacaoNroDiasFerias");
 		const totalAbono = modal.find("#solicitacaoNroDiasAbono");
