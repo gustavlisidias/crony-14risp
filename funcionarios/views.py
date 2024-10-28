@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Max
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -122,7 +122,7 @@ def EditarFuncionarioView(request, func):
 	humor = list(Humor.objects.filter(funcionario=colaborador).values('humor').annotate(contagem=Count('humor')))
 	civis = [{'id': i[0], 'nome': i[1]} for i in Funcionario.Estados.choices]
 	contratos = Contrato.objects.all()
-	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
+	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
 	
 	avaliacoes = Avaliacao.objects.filter(atividade__funcionarios__in=[colaborador])
 	if avaliacoes:
@@ -144,10 +144,25 @@ def EditarFuncionarioView(request, func):
 			item['humor'] = dict(Humor.Status.choices)[item['humor']]
 	
 	jornada = {}
-	for item in jornadas:
+	for item in jornadas.filter(final_vigencia=None):
 		if item.dia not in jornada:
 			jornada[item.dia] = []
 		jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
+
+	historico_jornadas = []
+	for item in jornadas:
+		descricao = ' - '.join([i.hora.strftime("%H:%M") for i in jornadas if item.agrupador == i.agrupador and i.dia == 2])
+		historico = {
+			'index': item.agrupador,
+			'inicio_vigencia': item.inicio_vigencia,
+			'final_vigencia': item.final_vigencia,
+			'contrato_id': item.contrato.id,
+			'contrato': item.contrato.titulo,
+			'jornada': descricao
+		}
+
+		if historico not in historico_jornadas:
+			historico_jornadas.append(historico)
 
 	registros = Ponto.objects.filter(funcionario=colaborador).order_by('data', 'hora')
 	if registros:
@@ -174,7 +189,7 @@ def EditarFuncionarioView(request, func):
 			cadastro_funcionario(request, colaborador, True)
 
 		# Atualização das informações/observações do funcionário
-		if not_none_not_empty(request.POST.get('observacao')):
+		elif not_none_not_empty(request.POST.get('observacao')):
 			try:
 				colaborador.observacoes = request.POST.get('observacao')
 				colaborador.save()
@@ -183,12 +198,13 @@ def EditarFuncionarioView(request, func):
 				messages.error(request, f'Informações não foram adicionadas com sucesso: {e}')
 
 		# Atualização de horários da jornada de trabalho do funcionário
-		if not_none_not_empty(request.POST.get('contrato')):
+		elif not_none_not_empty(request.POST.get('contrato')):
+			jornadas = jornadas.filter(final_vigencia=None)
+			agrupador = jornadas.last().agrupador + 1 if jornadas else 1
 			contrato = Contrato.objects.get(pk=request.POST.get('contrato'))
 			nova_jornada = Jornada.objects.filter(contrato=contrato).order_by('contrato__id', 'dia', 'ordem')
 
 			if not jornadas or colaborador.get_contrato != contrato:
-
 				if jornadas:
 					for i in jornadas:
 						i.final_vigencia = date.today()
@@ -201,7 +217,8 @@ def EditarFuncionarioView(request, func):
 						tipo=horario.tipo,
 						dia=horario.dia,
 						hora=horario.hora,
-						ordem=horario.ordem
+						ordem=horario.ordem,
+						agrupador=agrupador
 					)
 				
 				if (not colaborador.get_contrato.slug.startswith('clt')) and contrato.slug.startswith('clt'):
@@ -229,7 +246,8 @@ def EditarFuncionarioView(request, func):
 							tipo=tipo[0].upper(),
 							hora=datetime.strptime(hora, '%H:%M').time(),
 							dia=dia,
-							ordem=(index + 1)
+							ordem=(index + 1),
+							agrupador=agrupador
 						).save()
 
 				messages.success(request, 'Horários atualizados com sucesso!')
@@ -244,19 +262,40 @@ def EditarFuncionarioView(request, func):
 				Score(funcionario=colaborador).save()
 		
 		# Exportar histórico do funcionário
-		if not_none_not_empty(request.POST.get('historico')):
+		elif not_none_not_empty(request.POST.get('historico')):
 			dados = HistoricoFuncionario.objects.filter(funcionario=colaborador).order_by('-data_alteracao')
 			filename = f'historico-{slugify(colaborador.nome_completo.lower())}.pdf'
 			dados_empresa = {'nome': Variavel.objects.get(chave='NOME_EMPRESA').valor, 'cnpj': Variavel.objects.get(chave='CNPJ').valor, 'inscricao': Variavel.objects.get(chave='INSC_ESTADUAL').valor}
 			context = {
 				'dados': dados,
 				'funcionario': colaborador,
-				'contrato': JornadaFuncionario.objects.filter(funcionario=colaborador).first().contrato,
+				'contrato': colaborador.get_contrato,
 				'autor': Funcionario.objects.get(usuario=request.user),
 				'hoje': datetime.now().replace(tzinfo=pytz.utc),
 				'dados_empresa': dados_empresa
 			}
 			return RenderToPDF(request, 'relatorios/historico.html', context, filename).weasyprint()
+
+		# Atualização e edição do histórico de jornadas
+		elif not_none_not_empty(request.POST.get('inicio_vigencia')):
+			if len([i for i in request.POST.getlist('final_vigencia') if i is not None and i != '']) != 1:
+				messages.error(request, 'Apenas 1 jornada pode estar ativa! Final Vigencia deve ter uma célula vazia!')
+				return redirect('editar-funcionario', colaborador.id)
+
+			for index, agrupador in enumerate(request.POST.getlist('agrupador')):
+				inicio_vigencia = datetime.strptime(request.POST.getlist('inicio_vigencia')[index], '%Y-%m-%d')
+
+				if request.POST.getlist('final_vigencia')[index]:
+					final_vigencia = datetime.strptime(request.POST.getlist('final_vigencia')[index], '%Y-%m-%d')
+				else:
+					final_vigencia = None
+
+				jornadas.filter(agrupador=agrupador).update(inicio_vigencia=inicio_vigencia, final_vigencia=final_vigencia)
+
+			messages.success(request, 'Histórico de jornadas alterado!')
+
+		else:
+			messages.warning(request, 'Nenhum dado foi modificado!')
 
 		return redirect('editar-funcionario', colaborador.id)
 	
@@ -279,8 +318,9 @@ def EditarFuncionarioView(request, func):
 
 		'avaliacao': avaliacao,
 		'contratos': contratos,
-		'contrato': colaborador.get_contrato,
+		'contrato': colaborador.get_contrato if jornadas else None,
 
+		'historico_jornadas': historico_jornadas,
 		'jornada': jornada,
 		'pontos': pontos,
 		'graph': graph,
@@ -303,7 +343,7 @@ def PerfilFuncionarioView(request):
 	historico = HistoricoFuncionario.objects.filter(funcionario=funcionario).values('cargo__cargo', 'setor__setor').distinct()
 
 	jornada = {}
-	for item in JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem'):
+	for item in JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem'):
 		if item.dia not in jornada:
 			jornada[item.dia] = []
 		jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})

@@ -451,9 +451,62 @@
 							</table>
 						</div>
 
-						<button type="submit" class="btn btn-primary text-light float-end" {% if request.user.get_access == "common" %} disabled {% endif %}>Salvar Alterações</button>
+						<div class="d-flex justify-content-end">
+							<button type="submit" class="btn btn-primary text-light" {% if request.user.get_access == "common" %} disabled {% endif %}>Salvar Alterações</button>
+						</div>
+					</form>
+
+					<hr class="mt-5">
+
+					<form method="POST" id="formEditarHistoricoJornada">
+						{% csrf_token %}
+						<h5>Histórico de Jornadas</h5>
+
+						<div class="table-responsive my-4">
+							<table class="table table-hover">
+								<thead>
+									<tr>
+										<th scope="col">#</th>
+										<th scope="col">Contrato</th>
+										<th scope="col">Jornada Equi.</th>
+										<th scope="col">Inicio</th>
+										<th scope="col">Fim</th>
+										<th scope="col">Ativo</th>
+										<th scope="col">Ações</th>
+									</tr>
+								</thead>
+								<tbody>
+									{% for historico in historico_jornadas|dictsort:"index" %}
+										<tr>
+											<th scope="row"><input class="form-control" type="hidden" value="{{historico.index}}" name="agrupador">{{historico.index}}</th>
+											<td>{{historico.contrato}}</td>
+											<td>{{historico.jornada}}</td>
+											<td><input class="form-control" type="date" value="{{historico.inicio_vigencia|date:'Y-m-d'}}" name="inicio_vigencia" required></td>
+											<td><input class="form-control" type="date" value="{{historico.final_vigencia|date:'Y-m-d'}}" name="final_vigencia"></td>
+											
+											{% if historico.final_vigencia %}
+												<td><i class="fa-duotone fa-circle-xmark fa-lg text-danger"></i></td>
+											{% else %}
+												<td><i class="fa-duotone fa-circle-check fa-lg text-success"></i></td>
+											{% endif %}
+
+											<td>
+												<a role="button" title="Excluir jornada" onclick="excluirHistoricoJornada({{historico.index}})">
+													<i class="fa-duotone fa-solid fa-trash fa-lg"></i>
+												</a>
+											</td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+						
+						<div class="d-flex justify-content-end">
+							<button type="submit" class="btn btn-primary text-light" {% if request.user.get_access == "common" %} disabled {% endif %}>Salvar Alterações</button>
+						</div>
 					</form>
 				</div>
+
 			</div>
 		</div>
 	</div>
@@ -477,6 +530,25 @@
 				location.reload();
 			},
 			error: function (data) {
+				location.reload();
+			}
+		});
+	};
+
+	function excluirHistoricoJornada(agrupador) {
+		const func = parseInt("{{colaborador.id}}");
+
+		$.ajax({
+			type: "POST",
+			url: `/funcionarios/editar/${func}/excluir/historico-jornada/${agrupador}`,
+			beforeSend: function (xhr) {
+				xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+			},
+			success: function (data) {
+				location.reload();
+			},
+			error: function (error) {
+				// alert(error.responseJSON.mensagem);
 				location.reload();
 			}
 		});
@@ -568,7 +640,7 @@
 				});
 			},
 			error: function (error) {
-				alert(error.responseJSON.mensagem);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};

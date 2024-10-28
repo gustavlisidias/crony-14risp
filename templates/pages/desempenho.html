@@ -133,7 +133,7 @@
 
 		modal.find("#modalVisualizarAvaliacaoLabel").html(`Visualizar Avaliação - ${atividade.titulo}`);
 		modal.find(".modal-observacao div").html(atividade.observacao);
-		modal.find(".modal-funcionarios div").html('');
+		modal.find(".modal-funcionarios div").html("");
 
 		modal.find(".table-box img").each(function () {
 			if ($(this).data("potencial") == atividade.potencial && $(this).data("desempenho") == atividade.desempenho) {

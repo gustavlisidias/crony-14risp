@@ -81,7 +81,7 @@
 	function adicionar_dias(data_string, nro_dias=1) {
 		const date = new Date(data_string);
 		date.setDate(date.getDate() + nro_dias);
-		return date.toISOString().split('T')[0];
+		return date.toISOString().split("T")[0];
 	};
 </script>
 
@@ -137,9 +137,9 @@
 							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
 						},
 						success: function (data) {
-							const div = document.createElement('div');
-							div.className = 'position-fixed bottom-0 end-0 p-3';
-							div.id = 'msg-agenda';
+							const div = document.createElement("div");
+							div.className = "position-fixed bottom-0 end-0 p-3";
+							div.id = "msg-agenda";
 							div.style.zIndex = 3;
 							div.innerHTML = `
 								<div class="toast bg-success text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -172,9 +172,9 @@
 
 						},
 						error: function (data) {
-							const div = document.createElement('div');
-							div.className = 'position-fixed bottom-0 end-0 p-3';
-							div.id = 'msg-agenda';
+							const div = document.createElement("div");
+							div.className = "position-fixed bottom-0 end-0 p-3";
+							div.id = "msg-agenda";
 							div.style.zIndex = 3;
 							div.innerHTML = `
 								<div class="toast bg-danger text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -218,9 +218,9 @@
 							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
 						},
 						success: function (data) {
-							const div = document.createElement('div');
-							div.className = 'position-fixed bottom-0 end-0 p-3';
-							div.id = 'msg-agenda';
+							const div = document.createElement("div");
+							div.className = "position-fixed bottom-0 end-0 p-3";
+							div.id = "msg-agenda";
 							div.style.zIndex = 3;
 							div.innerHTML = `
 								<div class="toast bg-success text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -253,9 +253,9 @@
 	
 						},
 						error: function (data) {
-							const div = document.createElement('div');
-							div.className = 'position-fixed bottom-0 end-0 p-3';
-							div.id = 'msg-agenda';
+							const div = document.createElement("div");
+							div.className = "position-fixed bottom-0 end-0 p-3";
+							div.id = "msg-agenda";
 							div.style.zIndex = 3;
 							div.innerHTML = `
 								<div class="toast bg-danger text-light border-0" role="alert" aria-live="assertive" aria-atomic="true">

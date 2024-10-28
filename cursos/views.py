@@ -85,7 +85,7 @@ def CursoView(request):
 		'cursos': cursos,
 		'cursos_por_funcionario': cursos_por_funcionario,
 		'contratos': contratos,
-		'etapas': etapas_criadas,
+		'etapas': etapas_criadas
 	}
 	return render(request, 'pages/cursos.html', context)
 

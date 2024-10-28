@@ -27,7 +27,6 @@
 					<li class="nav-item" role="presentation">
 						<form method="POST" action="" id="formRelatorioFerias" onsubmit="gerarRelatorio()">
 							{% csrf_token %}
-							<!-- <input type="hidden" name="relatorio" value="true" id="feriasRelatorio"> -->
 							<div class="btn-group">
 								<button class="btn btn-secondary text-light" type="submit" name="pdf" value="true">PDF</button>
 								<button class="btn btn-secondary text-light" type="submit" name="csv" value="true">CSV</button>
@@ -71,7 +70,7 @@
 									</div>
 									<div class="col d-flex justify-content-end">
 										<button type="button" class="btn btn-secondary text-light rounded-pill" 
-										onclick="solicitarFerias('{{ferias.inicio|date:"Y-m-d"}}', '{{ferias.vencimento|date:"Y-m-d"}}', {{ferias.saldo|absolute_days}}, {{ferias.periodo}})" style="width: 10rem; height: 4rem;">
+											onclick="solicitarFerias('{{ferias.inicio|date:"Y-m-d"}}', '{{ferias.vencimento|date:"Y-m-d"}}', {{ferias.saldo|absolute_days}}, {{ferias.periodo}})" style="width: 10rem; height: 4rem;">
 											Solicitar Férias
 										</button>
 									</div>
@@ -178,7 +177,7 @@
 						modal.modal("show");
 					},
 					error: function (error) {
-						alert(error);
+						alert(error.responseJSON ? error.responseJSON.mensagem : error);
 					}
 				});
 			});
@@ -214,8 +213,8 @@
 		const modal = $("#modalSolicitarFerias");
 		const hoje = new Date();
 		const year = hoje.getFullYear();
-		const month = String(hoje.getMonth() + 1).padStart(2, '0');
-		const day = String(hoje.getDate()).padStart(2, '0');
+		const month = String(hoje.getMonth() + 1).padStart(2, "0");
+		const day = String(hoje.getDate()).padStart(2, "0");
 
 		data_minima = `${year}-${month}-${day}`;
 

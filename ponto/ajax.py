@@ -1,28 +1,26 @@
-import codecs
 import logging
-import pandas as pd
+import json
 import os
-import zipfile
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import F
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.timezone import now
 
-from datetime import datetime, timedelta, date, time
-from io import BytesIO
+from datetime import datetime, timedelta, time
 
 from configuracoes.models import Variavel, Contrato
 from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario
 from ponto.models import Ponto, SolicitacaoAbono, SolicitacaoPonto, Saldos
-from ponto.renderers import RenderToPDF
-from ponto.utils import pontos_por_dia, filtrar_abonos
+from ponto.report import gerar_pdf_ponto
+from ponto.utils import filtrar_abonos, total_por_dia
 from notifications.signals import notify
 from settings.settings import BASE_DIR
+from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty, create_log
 
 
@@ -106,7 +104,8 @@ def ConsultarSolicitacaoView(request, solic, categoria):
 			solicitacoes = list(SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data, status=False).values_list(
 				'id', 'funcionario__nome_completo', 'data', 'hora', 'motivo'
 			))
-			return JsonResponse({'solicitacao': solicitacoes, 'categoria': 'ajuste'}, safe=False, status=200)
+			pontos = list(Ponto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data).values_list('hora', flat=True).order_by('data', 'hora'))
+			return JsonResponse({'solicitacao': solicitacoes, 'categoria': 'ajuste', 'pontos': pontos}, safe=False, status=200)
 
 	except Exception as e:
 		return JsonResponse({'message': e}, status=400)
@@ -191,55 +190,6 @@ def EditarPontoView(request, data, func):
 
 
 @login_required(login_url='entrar')
-def ExcluirSolicitacaoView(request, solic, categoria):
-	if not request.method == 'POST':
-		messages.warning(request, 'Método não permitido!')
-		return JsonResponse({'message': 'forbidden'}, status=404)
-
-	try:
-		if categoria.lower() == 'ajuste':
-			solicitacao = SolicitacaoPonto.objects.get(pk=solic)
-			pontos = SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data)
-			modelo = SolicitacaoPonto
-			message = 'Solicitação de Ajuste de Ponto excluída'
-
-		else:
-			solicitacao = SolicitacaoAbono.objects.get(pk=solic)
-			pontos = SolicitacaoAbono.objects.filter(funcionario=solicitacao.funcionario, inicio=solicitacao.inicio, final=solicitacao.final)
-			modelo = SolicitacaoAbono
-			message = 'Solicitação de Abono excluída'
-
-		if solicitacao.funcionario.usuario != request.user and request.user.get_access == 'common':
-			messages.warning(request, 'Você não tem permissão para remover esta solicitação!')
-			return JsonResponse({'message': 'Você não tem permissão para remover esta solicitação!'}, status=200)
-
-		create_log(
-			object_model=modelo,
-			object_id=solicitacao.id,
-			user=request.user,
-			message=message,
-			action=3
-		)
-
-		if request.user != solicitacao.funcionario.usuario:
-			notify.send(
-				sender=request.user,
-				recipient=solicitacao.funcionario.usuario,
-				verb=message,
-				description=request.POST.get('motivo')
-			)
-		
-		pontos.delete()
-		messages.success(request, 'Solicitação removida com sucesso!')
-		return JsonResponse({'message': 'Solicitação removida com sucesso!'}, status=200)
-
-		
-	except Exception as e:
-		messages.error(request, e)
-		return JsonResponse({'message': e}, status=400)
-
-
-@login_required(login_url='entrar')
 def AprovarSolicitacaoView(request, solic, categoria):
 	if not request.method == 'POST':
 		messages.warning(request, 'Método não permitido!')
@@ -286,24 +236,21 @@ def AprovarSolicitacaoView(request, solic, categoria):
 
 			jornada_para_abonar = filtrar_abonos(solicitacao)
 			for dia, pontos in jornada_para_abonar.items():
-				saldo = timedelta(0)
 
-				for _ in pontos:
+				if not Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).exists():
 					Ponto(
 						funcionario=solicitacao.funcionario,
 						data=dia,
-						hora=time(23, 59),
+						hora=time(0, 0),
+						motivo=solicitacao.motivo,
 						alterado=True,
-						motivo=solicitacao.motivo
+						encerrado=True
 					).save()
+				
+				else:
+					Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).update(motivo=solicitacao.motivo)
 
-				if len(pontos) % 2 == 0:
-					for i in range(0, len(pontos), 2):
-						saldo += timedelta(
-							hours=(pontos[i+1].hour - pontos[i].hour),
-							minutes=(pontos[i+1].minute - pontos[i].minute),
-							seconds=(pontos[i+1].second - pontos[i].second)
-						)
+				saldo = total_por_dia(pontos)
 
 				if saldo != timedelta(0):
 					if solicitacao.tipo == SolicitacaoAbono.Tipo.FALTA:
@@ -350,6 +297,226 @@ def AprovarSolicitacaoView(request, solic, categoria):
 	except Exception as e:
 		messages.error(request, e)
 		return JsonResponse({'message': e}, status=400)
+	
+
+@login_required(login_url='entrar')
+def ReprovarSolicitacaoView(request, solic, categoria):
+	if not request.method == 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+
+	try:
+		if categoria.lower() == 'ajuste':
+			solicitacao = SolicitacaoPonto.objects.get(pk=solic)
+			solicitacoes = SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data)
+			modelo = SolicitacaoPonto
+			message = 'Solicitação de Ajuste de Ponto excluída'
+
+		else:
+			solicitacao = SolicitacaoAbono.objects.get(pk=solic)
+			solicitacoes = SolicitacaoAbono.objects.filter(funcionario=solicitacao.funcionario, inicio=solicitacao.inicio, final=solicitacao.final)
+			modelo = SolicitacaoAbono
+			message = 'Solicitação de Abono excluída'
+
+		if solicitacao.funcionario.usuario != request.user and request.user.get_access == 'common':
+			messages.warning(request, 'Você não tem permissão para remover esta solicitação!')
+			return JsonResponse({'message': 'Você não tem permissão para remover esta solicitação!'}, status=200)
+
+		create_log(
+			object_model=modelo,
+			object_id=solicitacao.id,
+			user=request.user,
+			message=message,
+			action=3
+		)
+
+		if request.user != solicitacao.funcionario.usuario:
+			notify.send(
+				sender=request.user,
+				recipient=solicitacao.funcionario.usuario,
+				verb=message,
+				description=request.POST.get('motivo')
+			)
+		
+		solicitacoes.delete()
+		messages.success(request, 'Solicitação removida com sucesso!')
+		return JsonResponse({'message': 'Solicitação removida com sucesso!'}, status=200)
+
+		
+	except Exception as e:
+		messages.error(request, e)
+		return JsonResponse({'message': e}, status=400)
+	
+
+@login_required(login_url='entrar')
+def AprovarSolicitacoesView(request):
+	if not request.method == 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+	
+	if not json.loads(request.body) and not request.POST:
+		messages.warning(request, 'Nenhuma solicitação foi alterada pois não foi enviado nenhum dado!')
+		return JsonResponse({'message': 'Solicitações aprovadas com sucesso!'}, status=200)
+
+	try:
+		data = json.loads(request.body)
+		for ident in data:
+			categoria, solic = ident['value'].split('-')
+
+			if categoria.lower() == 'ajuste':
+				modelo = SolicitacaoPonto
+				message = 'Solicitação de Ajuste de Ponto aprovada'
+				solicitacao = modelo.objects.get(pk=solic)
+
+				if request.user.get_access != 'admin' and solicitacao.aprovador.usuario != request.user:
+					messages.warning(request, 'Você não tem permissão para aprovar esta solicitação!')
+					return JsonResponse({'message': 'Você não tem permissão para aprovar esta solicitação!'}, status=200)
+				
+				solicitacoes = SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data, status=False)
+				with transaction.atomic():
+					Ponto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data).delete()
+
+					for ponto in solicitacoes:
+						Ponto(
+							data=ponto.data, 
+							hora=ponto.hora,
+							funcionario=ponto.funcionario,
+							alterado=True,
+							motivo=ponto.motivo
+						).save()
+
+						ponto.status = True
+						ponto.save()
+
+					solicitacao.aprovador = Funcionario.objects.get(usuario=request.user)
+					solicitacao.status = True
+					solicitacao.save()
+
+			else:
+				modelo = SolicitacaoAbono
+				message = 'Solicitação de Abono aprovada'
+				solicitacao = modelo.objects.get(pk=solic)
+
+				if request.user.get_access != 'admin' and solicitacao.aprovador.usuario != request.user:
+					messages.warning(request, 'Você não tem permissão para aprovar esta solicitação!')
+					return JsonResponse({'message': 'Você não tem permissão para aprovar esta solicitação!'}, status=200)
+
+				jornada_para_abonar = filtrar_abonos(solicitacao)
+				for dia, pontos in jornada_para_abonar.items():
+
+					if not Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).exists():
+						Ponto(
+							funcionario=solicitacao.funcionario,
+							data=dia,
+							hora=time(0, 0),
+							motivo=solicitacao.motivo,
+							alterado=True,
+							encerrado=True
+						).save()
+					
+					else:
+						Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).update(motivo=solicitacao.motivo)
+
+					saldo = total_por_dia(pontos)
+
+					if saldo != timedelta(0):
+						if solicitacao.tipo == SolicitacaoAbono.Tipo.FALTA:
+							saldo *= -1
+
+						Saldos(
+							funcionario=solicitacao.funcionario,
+							saldo=saldo,
+							data=dia
+						).save()
+
+				if solicitacao.caminho:
+					tipo = TipoDocumento.objects.get(tipo=solicitacao.get_tipo_display())
+					Documento(
+						funcionario=solicitacao.funcionario,
+						tipo=tipo,
+						documento=solicitacao.documento,
+						caminho=solicitacao.caminho,
+						data_documento=timezone.localdate(),
+					).save()
+
+				solicitacao.aprovador = Funcionario.objects.get(usuario=request.user)
+				solicitacao.status = True
+				solicitacao.save()
+			
+			create_log(
+				object_model=modelo,
+				object_id=solicitacao.id,
+				user=request.user,
+				message=message,
+				action=2
+			)
+
+			if request.user != solicitacao.funcionario.usuario:
+				notify.send(
+					sender=request.user,
+					recipient=solicitacao.funcionario.usuario,
+					verb=message,
+				)
+
+		messages.success(request, 'Solicitações aprovadas com sucesso!')
+		return JsonResponse({'message': 'Solicitações aprovadas com sucesso!'}, status=200)
+
+	except Exception as e:
+		messages.error(request, e)
+		return JsonResponse({'message': e}, status=400)
+	
+
+@login_required(login_url='entrar')
+def ReprovarSolicitacoesView(request):
+	if not request.method == 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+	
+	if not json.loads(request.body) and not request.POST:
+		messages.warning(request, 'Nenhuma solicitação foi alterada pois não foi enviado nenhum dado!')
+		return JsonResponse({'message': 'Solicitações aprovadas com sucesso!'}, status=200)
+	
+	try:
+		data = json.loads(request.body)
+		for ident in data:
+			categoria, solic = ident['value'].split('-')
+
+			if categoria.lower() == 'ajuste':
+				solicitacao = SolicitacaoPonto.objects.get(pk=solic)
+				solicitacoes = SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data)
+				modelo = SolicitacaoPonto
+				message = 'Solicitação de Ajuste de Ponto excluída'
+
+			else:
+				solicitacao = SolicitacaoAbono.objects.get(pk=solic)
+				solicitacoes = SolicitacaoAbono.objects.filter(funcionario=solicitacao.funcionario, inicio=solicitacao.inicio, final=solicitacao.final)
+				modelo = SolicitacaoAbono
+				message = 'Solicitação de Abono excluída'
+
+			create_log(
+				object_model=modelo,
+				object_id=solicitacao.id,
+				user=request.user,
+				message=message,
+				action=3
+			)
+
+			if request.user != solicitacao.funcionario.usuario:
+				notify.send(
+					sender=request.user,
+					recipient=solicitacao.funcionario.usuario,
+					verb=message,
+					description='Reprovado'
+				)
+			
+			solicitacoes.delete()
+
+		messages.success(request, 'Solicitações removidas com sucesso!')
+		return JsonResponse({'message': 'Solicitações removidas com sucesso!'}, status=200)
+
+	except Exception as e:
+		messages.error(request, e)
+		return JsonResponse({'message': e}, status=400)
 
 
 @login_required(login_url='entrar')
@@ -357,19 +524,15 @@ def RelatoriosPontoView(request):
 	if not request.method == 'POST':
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
-	 
-	colunas, filename = None, None
-	msg_erros = ''
-	dados_empresa = {'nome': Variavel.objects.get(chave='NOME_EMPRESA').valor, 'cnpj': Variavel.objects.get(chave='CNPJ').valor, 'inscricao': Variavel.objects.get(chave='INSC_ESTADUAL').valor}
-
-	data_inicial = request.POST.get('relatorio_inicio') if not_none_not_empty(request.POST.get('relatorio_inicio')) else (now() - timedelta(days=30)).strftime('%Y-%m-%d')
-	data_final = request.POST.get('relatorio_final') if not_none_not_empty(request.POST.get('relatorio_final')) else now().strftime('%Y-%m-%d')
-
+	
 	contratos = Contrato.objects.filter(pk__in=[int(i) for i in request.POST.getlist('contrato')]) if not_none_not_empty(request.POST.get('contrato')) else Contrato.objects.all()
+	
 	jornadas_funcionarios = JornadaFuncionario.objects.filter(contrato__id__in=[i.id for i in contratos], final_vigencia=None).order_by(
-		'funcionario__id', 'dia', 'ordem'
+		'funcionario__id', 'agrupador', 'dia', 'ordem'
 	).values('funcionario__id').distinct()
+
 	funcionarios = Funcionario.objects.filter(data_demissao=None, pk__in=[i['funcionario__id'] for i in jornadas_funcionarios]).order_by('nome_completo')
+
 	if not_none_not_empty(request.POST.getlist('funcionarios')):
 		funcionarios = funcionarios.filter(pk__in=[int(i) for i in request.POST.getlist('funcionarios')])
 	
@@ -378,144 +541,11 @@ def RelatoriosPontoView(request):
 		return redirect('pontos')
 	
 	if request.POST.get('tipo') == '0':
-		if len(funcionarios) > 1:
-			zip_buffer = BytesIO()
-			with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
-				for funcionario in funcionarios:
-					try:
-						pontos, _ = pontos_por_dia(data_inicial, data_final, funcionario)
-						if not pontos:
-							msg_erros += f'Nenhum ponto encontrado para {funcionario}\n'
-							raise ValueError('Nenhum ponto encontrado')
-
-						jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
-						jornada = {}
-						for item in jornadas:
-							if item.dia not in jornada:
-								jornada[item.dia] = []
-							jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
-
-						nro_colunas = 0
-						saldos = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'banco': timedelta(seconds=0), 'credito': timedelta(seconds=0), 'debito': timedelta(seconds=0)}
-						for data, dados in pontos.items():
-							for dado in dados:
-								saldos['total'] += dado['total']
-								saldos['saldo'] += dado['saldo']
-								saldos['banco'] += dado['banco']
-
-								if dado['saldo'] < timedelta(0):
-									saldos['debito'] += dado['saldo']
-								else:
-									saldos['credito'] += dado['saldo']
-
-								if len(dado['pontos']) % 2 != 0:
-									msg_erros += f'Número ímpar de pontos do {funcionario} no dia {data}\n'
-									raise ValueError('Número ímpar de registros de pontos')
-								if len(dado['pontos']) > nro_colunas:
-									nro_colunas = len(dado['pontos'])
-						
-						filename = f'espelho_ponto_{funcionario.nome_completo.lower()}.pdf'
-						context = {
-							'pontos': pontos,
-							'saldos': saldos,
-							'funcionario': funcionario,
-							'periodo': {'inicio': datetime.strptime(data_inicial, "%Y-%m-%d"), 'final': datetime.strptime(data_final, "%Y-%m-%d")},
-							'nro_colunas': range(nro_colunas),
-							'autor': Funcionario.objects.get(usuario=request.user),
-							'jornada': jornada,
-							'dados_empresa': dados_empresa
-						}
-
-						# Ecerrar ciclo se fechamento marcado
-						if not_none_not_empty(request.POST.get('fechamento')):
-							for ponto in Ponto.objects.filter(funcionario=funcionario, data__range=[data_inicial, data_final]).order_by('data', 'hora'):
-								ponto.encerrado = True
-								ponto.data_fechamento = date.today()
-								ponto.save()
-
-						pdf = RenderToPDF(request, 'relatorios/espelho_ponto.html', context, filename).weasyprint()
-						zip_file.writestr(filename, pdf.content)
-
-					except ValueError:
-						continue
-			
-			if msg_erros:
-				notify.send(
-					sender=request.user,
-					recipient=request.user,
-					verb='Houve erros ao gerar espelho de ponto',
-					description=msg_erros,
-				)
-
-			zip_buffer.seek(0)
-			response = HttpResponse(zip_buffer, content_type='application/zip')
-			response['Content-Disposition'] = 'attachment; filename=espelhos_ponto.zip'
-			return response
-		
-		else:
-			try:
-				funcionario = funcionarios.first()
-				pontos, _ = pontos_por_dia(data_inicial, data_final, funcionario)
-				if not pontos:
-					msg_erros += f'Nenhum ponto encontrado para {funcionario}\n'
-					raise ValueError('Nenhum ponto encontrado')
-
-				jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
-				jornada = {}
-				for item in jornadas:
-					if item.dia not in jornada:
-						jornada[item.dia] = []
-					jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
-
-				nro_colunas = 0
-				saldos = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'banco': timedelta(seconds=0), 'credito': timedelta(seconds=0), 'debito': timedelta(seconds=0)}
-				for data, dados in pontos.items():
-					for dado in dados:
-						saldos['total'] += dado['total']
-						saldos['saldo'] += dado['saldo']
-						saldos['banco'] += dado['banco']
-
-						if dado['saldo'] < timedelta(0):
-							saldos['debito'] += dado['saldo']
-						else:
-							saldos['credito'] += dado['saldo']
-
-						if len(dado['pontos']) % 2 != 0:
-							msg_erros += f'Número ímpar de pontos do {funcionario} no dia {data}\n'
-							raise ValueError('Número ímpar de registros de pontos')
-						if len(dado['pontos']) > nro_colunas:
-							nro_colunas = len(dado['pontos'])
-				
-				filename = f'espelho_ponto_{funcionario.nome_completo.lower()}.pdf'
-				context = {
-					'pontos': pontos,
-					'saldos': saldos,
-					'funcionario': funcionario,
-					'periodo': {'inicio': datetime.strptime(data_inicial, "%Y-%m-%d"), 'final': datetime.strptime(data_final, "%Y-%m-%d")},
-					'nro_colunas': range(nro_colunas),
-					'autor': Funcionario.objects.get(usuario=request.user),
-					'jornada': jornada,
-					'dados_empresa': dados_empresa
-				}
-
-				# Ecerrar ciclo se fechamento marcado
-				if not_none_not_empty(request.POST.get('fechamento')):
-					for ponto in Ponto.objects.filter(funcionario=funcionario, data__range=[data_inicial, data_final]).order_by('data', 'hora'):
-						ponto.encerrado = True
-						ponto.data_fechamento = date.today()
-						ponto.save()
-
-				return RenderToPDF(request, 'relatorios/espelho_ponto.html', context, filename).weasyprint()
-			
-			except ValueError:
-				if msg_erros:
-					notify.send(
-						sender=request.user,
-						recipient=request.user,
-						verb='Houve erros ao gerar espelho de ponto',
-						description=msg_erros,
-					)
-				return redirect('pontos')
+		data_inicial = request.POST.get('relatorio_inicio') if not_none_not_empty(request.POST.get('relatorio_inicio')) else (now() - timedelta(days=30)).strftime('%Y-%m-%d')
+		data_final = request.POST.get('relatorio_final') if not_none_not_empty(request.POST.get('relatorio_final')) else now().strftime('%Y-%m-%d')
+	
+		response = gerar_pdf_ponto(request, funcionarios, data_inicial, data_final)
+		return response if response else redirect('pontos')
 			
 	if request.POST.get('tipo') == '1':
 		filename = 'relatorio_abonos'
@@ -528,6 +558,8 @@ def RelatoriosPontoView(request):
 		for solicitacao in solicitacoes:
 			solicitacao['tipo_display'] = dict(SolicitacaoAbono.Tipo.choices).get(solicitacao['tipo_display'])
 			dataset.append(list(solicitacao.values()))
+
+		return gerar_relatorio_csv(colunas, dataset, filename)
 		
 	if request.POST.get('tipo') == '2':
 		filename = 'relatorio_ajustes'
@@ -536,12 +568,4 @@ def RelatoriosPontoView(request):
 			'data', 'hora', 'motivo', 'status', 'funcionario__nome_completo', 'aprovador__nome_completo'
 		))
 
-	response = HttpResponse(content_type='text/csv')
-	response['Content-Disposition'] = f'attachment; filename={filename}.csv'                                
-	response.write(codecs.BOM_UTF8)
-
-	with codecs.getwriter('utf-8')(response) as csv_file:
-		df = pd.DataFrame(dataset, columns=colunas)
-		df.to_csv(csv_file, sep=';', index=False)
-
-	return response
+		return gerar_relatorio_csv(colunas, dataset, filename)

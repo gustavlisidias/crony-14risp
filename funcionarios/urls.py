@@ -3,6 +3,7 @@ from django.urls import path
 from funcionarios.ajax import (
 	AdicionarDocumentoView,
 	ExcluirDocumentoView,
+	ExcluirHistoricoJornadaView,
 	RealoadDocumentosView,
 	ExportarFuncionariosView,
 	StreamDocumentoView,
@@ -27,6 +28,7 @@ urlpatterns = [
 	path('funcionarios/adicionar', AdicionarFuncionarioView, name='adicionar-funcionario'),
 	path('funcionarios/editar/<int:func>', EditarFuncionarioView, name='editar-funcionario'),
 	path('funcionarios/exportar', ExportarFuncionariosView, name='exportar-funcionarios'),
+	path('funcionarios/editar/<int:func>/excluir/historico-jornada/<int:agrupador>', ExcluirHistoricoJornadaView, name='excluir-historico-jornada'),
 
 	path('perfil', PerfilFuncionarioView, name='perfil'),
 	path('perfil/alterar-senha', AlterarSenhaView, name='alterar-senha'),

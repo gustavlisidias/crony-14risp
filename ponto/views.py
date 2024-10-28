@@ -1,17 +1,12 @@
-# ruff: noqa: F401
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Max, Min, Q, Value, CharField, Case, When
-from django.db.models.functions import TruncDate
+from django.db.models import Min, Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
-from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from datetime import datetime, timedelta
-from itertools import chain
-from slugify import slugify
 
 from cities_light.models import Region as Estado
 from cities_light.models import SubRegion as Cidade
@@ -19,7 +14,7 @@ from configuracoes.models import Contrato, Variavel
 from funcionarios.models import Funcionario, JornadaFuncionario, Score
 from funcionarios.utils import converter_documento
 from ponto.models import Ponto, SolicitacaoAbono, SolicitacaoPonto, Feriados, Saldos
-from ponto.renderers import RenderToPDF
+from ponto.report import gerar_pdf_ponto
 from ponto.utils import pontos_por_dia
 from notifications.models import Notification
 from web.models import Moeda
@@ -35,65 +30,80 @@ def RegistrosPontoView(request):
 	estados = Estado.objects.all().order_by('name')
 	cidades = Cidade.objects.all().order_by('name')
 	contratos = Contrato.objects.all().order_by('titulo')
-	tipos = [{'key': i[0], 'value': i[1]} for i in SolicitacaoAbono.Tipo.choices]
+	tipos = {i[0]: i[1] for i in SolicitacaoAbono.Tipo.choices}
 
 	# Filtros
 	filtros = {'inicio': None, 'final': None, 'funcionarios': None}
 
 	if request.user.get_access == 'admin':
+		funcionarios = funcionarios.exclude(id__in=[1, 315, 316, 317, 302, 301, 303])
 		filtros['funcionarios'] = funcionarios.filter(pk__in=[int(i) for i in request.GET.getlist('funcionarios')]) if request.GET.get('funcionarios') else funcionarios
+		delta = timedelta(days=0)
 	elif request.user.get_access == 'manager':
 		funcionarios = funcionarios.filter(Q(gerente=funcionario) | Q(pk=funcionario.pk)).distinct()
 		filtros['funcionarios'] = funcionarios.filter(pk__in=[int(i) for i in request.GET.getlist('funcionarios')]) if request.GET.get('funcionarios') else funcionarios
+		delta = timedelta(days=2)
 	else:
 		funcionarios = funcionarios.filter(pk=funcionario.pk)
 		filtros['funcionarios'] = funcionarios.filter(pk=funcionario.pk)
+		delta = timedelta(days=6)
 
 	data_ultimo_ponto = Ponto.objects.filter(funcionario__in=funcionarios).values_list('data', flat=True).distinct().order_by('-data').first()
 	data_ultimo_ponto = data_ultimo_ponto if data_ultimo_ponto else datetime.today()
 	filtros['final'] = request.GET.get('data_final') if request.GET.get('data_final') else data_ultimo_ponto.strftime('%Y-%m-%d')
-	filtros['inicio'] = request.GET.get('data_inicial') if request.GET.get('data_inicial') else (data_ultimo_ponto - timedelta(days=6)).strftime('%Y-%m-%d')
+	filtros['inicio'] = request.GET.get('data_inicial') if request.GET.get('data_inicial') else (data_ultimo_ponto - delta).strftime('%Y-%m-%d')
 
 	# Pontos e score por dia
 	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), filtros['funcionarios'])
 
 	# Abonos e Solicitações de Ajuste de Ponto
-	abonos = SolicitacaoAbono.objects.filter(status=False, funcionario__in=funcionarios).annotate(
-		tipo_label=Case(
-			When(tipo=SolicitacaoAbono.Tipo.ATESTADO, then=Value('Atestado')),
-			When(tipo=SolicitacaoAbono.Tipo.AUSENCIA, then=Value('Ausência Justificada')),
-			When(tipo=SolicitacaoAbono.Tipo.DECLARACAO, then=Value('Declaração')),
-			When(tipo=SolicitacaoAbono.Tipo.FALTA, then=Value('Falta')),
-			output_field=CharField(),
-	)).values(
-		'inicio__date', 'funcionario__nome_completo', 'funcionario__usuario__id', 'motivo', 
-		'aprovador__nome_completo', 'aprovador__usuario__id', 'caminho', 'tipo_label'
-	).annotate(id=Min('id'), data=Max('inicio__date')).order_by('inicio__date').distinct()
+	solicitacoes_ajuste = SolicitacaoPonto.objects.filter(funcionario__in=funcionarios, status=False).values('funcionario__usuario__id', 'funcionario__nome_completo', 'aprovador__usuario__id' ,'aprovador__nome_completo', 'data', 'motivo').annotate(id=Min('id')).order_by('data').distinct()
+	solicitacoes_abono = SolicitacaoAbono.objects.filter(funcionario__in=funcionarios, status=False).values('id', 'funcionario__usuario__id', 'funcionario__nome_completo', 'aprovador__usuario__id' ,'aprovador__nome_completo', 'inicio__date', 'motivo', 'tipo', 'caminho').order_by('inicio__date').distinct()
+	
+	solicitacoes = [{
+		'id': i['id'], 'funcionario': i['funcionario__nome_completo'], 'funcionario_id': i['funcionario__usuario__id'], 
+		'aprovador': i['aprovador__nome_completo'], 'aprovador_id': i['aprovador__usuario__id'], 
+		'data': i['data'], 'motivo': i['motivo'], 'tipo': 'Ajuste', 'caminho': None
+	} for i in solicitacoes_ajuste]
 
-	ajustes = SolicitacaoPonto.objects.filter(status=False, funcionario__in=funcionarios).values(
-		'data', 'funcionario__nome_completo', 'funcionario__usuario__id', 'motivo', 
-		'aprovador__nome_completo', 'aprovador__usuario__id'
-	).annotate(id=Min('id'), tipo_label=Value('Ajuste', output_field=CharField())).order_by('data').distinct()
+	solicitacoes.extend([{
+		'id': i['id'], 'funcionario': i['funcionario__nome_completo'], 'funcionario_id': i['funcionario__usuario__id'], 
+		'aprovador': i['aprovador__nome_completo'], 'aprovador_id': i['aprovador__usuario__id'], 
+		'data': i['inicio__date'], 'motivo': i['motivo'], 'tipo': tipos.get(i['tipo']), 'caminho': i['caminho']
+	} for i in solicitacoes_abono])
 
-	solicitacoes = list(chain(abonos, ajustes))
-	solicitacoes.sort(key=lambda x: x.get('inicio__date') or x.get('data'))
+	solicitacoes = sorted(solicitacoes, key=lambda x: x['data'])
 
 	# Fechamentos de Ponto
-	fechamentos = Ponto.objects.filter(encerrado=True).values('data_fechamento').annotate(
-		de=Min('data'), ate=Max('data')
-	).order_by('data_fechamento')
+	fechamentos_dict = {}
+	for i in Ponto.objects.filter(encerrado=True).exclude(data_fechamento=None).values('data_fechamento', 'data', 'funcionario__id', 'funcionario__nome_completo').distinct():
+		if i['data_fechamento'] not in fechamentos_dict:
+			fechamentos_dict[i['data_fechamento']] = {'de': None, 'ate': None, 'funcionarios': []}
+		
+		if not fechamentos_dict[i['data_fechamento']]['de'] or i['data'] < fechamentos_dict[i['data_fechamento']]['de']:
+			fechamentos_dict[i['data_fechamento']]['de'] = i['data']
+		
+		if not fechamentos_dict[i['data_fechamento']]['ate'] or i['data'] > fechamentos_dict[i['data_fechamento']]['ate']:
+			fechamentos_dict[i['data_fechamento']]['ate'] = i['data']
+		
+		ele = {
+			'funcionario__id': i['funcionario__id'],
+			'funcionario__nome_completo': i['funcionario__nome_completo']
+		}
+
+		if ele not in fechamentos_dict[i['data_fechamento']]['funcionarios']:
+			fechamentos_dict[i['data_fechamento']]['funcionarios'].append(ele)
 	
-	for fechamento in fechamentos:
-		fechamento['funcionarios'] = list(Ponto.objects.filter(encerrado=True, data__range=[fechamento['de'], fechamento['ate']]).values('funcionario__id', 'funcionario__nome_completo').distinct())
-	
+	fechamentos = [
+		{'data_fechamento': data_fechamento, 'de': dados['de'], 'ate': dados['ate'], 'funcionarios': dados['funcionarios']}
+		for data_fechamento, dados in fechamentos_dict.items()
+	]
+
 	# Scores
-	pontuacoes = Score.objects.filter(fechado=True).order_by('-data_cadastro__date', '-pontuacao')
+	moedas = Moeda.objects.filter(fechado=True).values('funcionario__id', 'pontuacao', 'anomes')
+	pontuacoes = Score.objects.filter(fechado=True).exclude(funcionario__id__in=[1, 315, 316, 317, 302, 301, 303]).order_by('-data_cadastro__date', '-pontuacao')
 	for score in pontuacoes:
-		try:
-			moedas = sum(i.pontuacao for i in Moeda.objects.filter(anomes=score.anomes, funcionario=score.funcionario, fechado=True))
-		except Exception:
-			moedas = 0
-		score.moedas = moedas
+		score.moedas = sum([q['pontuacao'] for q in moedas if q['funcionario__id'] == score.funcionario.id and q['anomes'] == score.anomes])
 
 	# Grafico
 	graph = {'plot': False}
@@ -142,7 +152,10 @@ def RegistrosPontoFuncinarioView(request, func):
 
 	colaborador = funcionarios.get(pk=func)
 
-	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
+	jornada = []
+	for i in JornadaFuncionario.objects.filter(funcionario=colaborador, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem'):
+		if i.dia == 2:
+			jornada.append(i.hora)
 	
 	pontos_funcionario = Ponto.objects.filter(funcionario=colaborador).values_list('data', flat=True).order_by('-data')
 	data_ultimo_ponto = pontos_funcionario.first() if pontos_funcionario else datetime.today()
@@ -171,7 +184,7 @@ def RegistrosPontoFuncinarioView(request, func):
 		'funcionario': funcionario,
 		'notificacoes': notificacoes,
 		'colaborador': colaborador,
-		'jornadas': jornadas,
+		'jornada': jornada,
 		'filtros': filtros,
 		'pontos': pontos,
 		'dados': dados,
@@ -254,7 +267,7 @@ def AdicionarFeriadoView(request):
 		cidade = request.POST.get('cidade')
 
 		if not_none_not_empty(titulo, data_feriado):
-			funcionarios = JornadaFuncionario.objects.filter(funcionario__data_demissao=None, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem').values(
+			funcionarios = JornadaFuncionario.objects.filter(funcionario__data_demissao=None, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem').values(
 				'funcionario__id', 'contrato__titulo', 'funcionario__estado__pk', 'funcionario__cidade__pk'
 			).distinct()
 
@@ -371,49 +384,9 @@ def ExcluirFechamentoView(request):
 			messages.success(request, 'Pontos reabertos!')
 
 		elif request.POST.get('relatorio'):
-			dados_empresa = {'nome': Variavel.objects.get(chave='NOME_EMPRESA').valor, 'cnpj': Variavel.objects.get(chave='CNPJ').valor, 'inscricao': Variavel.objects.get(chave='INSC_ESTADUAL').valor}
 			funcionario = Funcionario.objects.get(pk=int(request.POST.get('relatorio')))
-			pontos, _ = pontos_por_dia(data_inicial, data_final, funcionario)
-			if not pontos:
-				raise ValueError('Nenhum ponto encontrado')
-
-			jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
-			jornada = {}
-			for item in jornadas.order_by('dia', 'hora'):
-				if item.dia not in jornada:
-					jornada[item.dia] = []
-					jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
-
-			nro_colunas = 0
-			saldos = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'credito': timedelta(seconds=0), 'debito': timedelta(seconds=0)}
-			for _, dados in pontos.items():
-				for dado in dados:
-					saldos['total'] += dado['total']
-					saldos['saldo'] += dado['saldo']
-
-					if dado['saldo'] < timedelta(0):
-						saldos['debito'] += dado['saldo']
-					else:
-						saldos['credito'] += dado['saldo']
-
-					if len(dado['pontos']) % 2 != 0:
-						raise ValueError('Número ímpar de registros de pontos')
-					if len(dado['pontos']) > nro_colunas:
-						nro_colunas = len(dado['pontos'])
-			
-			filename = f'espelho_ponto_{funcionario.nome_completo.lower()}.pdf'
-			context = {
-				'pontos': pontos,
-				'saldos': saldos,
-				'funcionario': funcionario,
-				'periodo': {'inicio': data_inicial, 'final': data_final},
-				'nro_colunas': range(nro_colunas),
-				'autor': Funcionario.objects.get(usuario=request.user),
-				'jornada': jornada,
-				'dados_empresa': dados_empresa
-			}
-
-			return RenderToPDF(request, 'relatorios/espelho_ponto.html', context, filename).weasyprint()
+			response = gerar_pdf_ponto(request, funcionario, data_inicial, data_final)
+			return response if response else redirect('pontos')
 
 		else:
 			pontos = Ponto.objects.filter(encerrado=True, data__range=[data_inicial, data_final])

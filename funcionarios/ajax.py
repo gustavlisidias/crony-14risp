@@ -1,10 +1,10 @@
-import codecs
-import pandas as pd
 import os
 import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Max
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 
@@ -13,9 +13,10 @@ from pathlib import Path
 
 from agenda.models import DocumentosFerias
 from configuracoes.models import Variavel
-from funcionarios.models import Documento, Funcionario, TipoDocumento
+from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario
 from funcionarios.utils import converter_documento
 from ponto.models import SolicitacaoAbono
+from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty
 
 
@@ -111,11 +112,51 @@ def ExcluirDocumentoView(request, document):
 
 
 @login_required(login_url='entrar')
+def ExcluirHistoricoJornadaView(request, func, agrupador):
+	if not request.method == 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+	
+	if request.user.get_access == 'common':
+		messages.error(request, 'Você não tem permissão para excluir o arquivo!')
+		return JsonResponse({'message': 'not allowed'}, status=400)
+	
+	try:
+		with transaction.atomic():
+			jornadas = JornadaFuncionario.objects.filter(funcionario__pk=func).order_by('agrupador', 'dia', 'ordem')
+
+			if jornadas.values('agrupador').distinct().count() < 2:
+				messages.error(request, 'Funcionário precisa de ao menos 1 jornada ativa!')
+				return JsonResponse({'message': 'error'}, status=400)
+			
+			jorndas_para_excluir = jornadas.filter(agrupador=agrupador)
+			jornada_ativa = jorndas_para_excluir.first().final_vigencia is None
+			jorndas_para_excluir.delete()
+
+			if jornada_ativa:
+				jornadas.filter(agrupador=agrupador-1).update(final_vigencia=None)
+
+			for jornada in jornadas:					
+				if jornada.agrupador > agrupador:
+					jornada.agrupador -= 1
+				jornada.save()
+
+		messages.success(request, 'Histórico removido com sucesso!')
+	
+	except Exception as e:
+		messages.error(request, f'Erro ao tentar remover histórico de jornada: {e}')
+
+	return JsonResponse({'message': 'success'}, status=200)
+
+
+
+@login_required(login_url='entrar')
 def ExportarFuncionariosView(request):
 	if not request.method == 'GET':
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
 	
+	filename = 'funcionarios'
 	dataset = list(Funcionario.objects.all().values_list(
 		'matricula', 'nome_completo', 'nome_social', 'nome_mae', 'nome_pai', 'email', 'cpf', 'rg', 'data_expedicao', 'sexo', 'contato', 'data_nascimento', 'estado__name', 'cidade__name', 'rua', 'numero', 'complemento', 'cep', 'setor__setor', 
 		'cargo__cargo', 'gerente__nome_completo', 'salario', 'data_contratacao', 'data_demissao', 'data_cadastro'
@@ -126,15 +167,7 @@ def ExportarFuncionariosView(request):
 		'Gerente', 'Salário', 'Data de Contratação', 'Data de Demissão', 'Data de Cadastro'
 	]
 	
-	response = HttpResponse (content_type='text/csv')
-	response['Content-Disposition'] = 'attachment; filename=funcionarios.csv'                                
-	response.write(codecs.BOM_UTF8)
-
-	with codecs.getwriter('utf-8')(response) as csv_file:
-		df = pd.DataFrame(dataset, columns=colunas)
-		df.to_csv(csv_file, sep=';', index=False)
-	
-	return response
+	return gerar_relatorio_csv(colunas, dataset, filename)
 
 
 # Stream

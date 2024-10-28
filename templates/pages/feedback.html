@@ -439,7 +439,7 @@
 	};
 
 	function atualizarModelo(element) {
-		if (element.value == 'PCC') {
+		if (element.value == "PCC") {
 			window.editors["feedbackMensagem"].setData(`
 				<p>
 					<b>Você deve parar de:</b>
@@ -454,13 +454,13 @@
 					<br>(descreva algo que seu colega ainda não faz mas você sugere que ele deva fazer)
 				</p>
 			`);
-		} else if (element.value == 'SCI') {
+		} else if (element.value == "SCI") {
 			window.editors["feedbackMensagem"].setData(`
 				<p>Descreva a situação específica em que algo ocorreu:</p>
 				<p>Explique o comportamento dessa pessoa naquela situação:</p>
 				<p>Descreva qual impacto o comportamento gerou:</p>
 			`);
-		} else if (element.value == 'CNV') {
+		} else if (element.value == "CNV") {
 			window.editors["feedbackMensagem"].setData(`
 				<p><b>Primeiro passo:</b> Observar o que ocorre sem julgar, falando apenas os fatos.</p>
 				<p><b>Segundo passo:</b> Expressar seu sentimento de acordo com o ocorrido.</p>
@@ -468,7 +468,7 @@
 				<p><b>Quarto passo:</b> Fazer um pedido para que suas expectativas sejam atendidas.</p>
 			`);
 		} else {
-			window.editors["feedbackMensagem"].setData('');
+			window.editors["feedbackMensagem"].setData("");
 		};
 	};
 </script>

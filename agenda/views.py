@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.timezone import make_aware
@@ -163,20 +163,16 @@ def FeriasView(request):
 	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
 	funcionario = funcionarios.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+	ferias = ferias_funcionarios(funcionarios.filter(pk=funcionario.pk))
 
-	if request.user.get_access == 'admin':
-		ferias = ferias_funcionarios(funcionarios)
-	else:
-		ferias = ferias_funcionarios(funcionarios.filter(pk=funcionario.pk))
-
+	# Filtro de solicitações por role
 	if funcionario.usuario.get_access == 'common':
 		solicitacoes = SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False)
-	
 	elif funcionario.usuario.get_access == 'manager':
 		solicitacoes = SolicitacaoFerias.objects.filter(Q(funcionario=funcionario) | Q(aprovador=funcionario), status=False)
-
 	else:
 		solicitacoes = SolicitacaoFerias.objects.filter(status=False)
+		ferias = ferias_funcionarios(funcionarios)
 
 	if request.method == 'POST':
 		inicio_ferias = request.POST.get('inicio')

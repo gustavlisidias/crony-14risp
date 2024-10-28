@@ -20,8 +20,8 @@
 				</div>
 				<div class="form-floating mb-3">
 					<select class="form-select" name="tipo" id="abonoTipo" onchange="alertaAbono(this)" required>
-						{% for tipo in tipos %}
-							<option value="{{tipo.key}}">{{tipo.value}}</option>
+						{% for key, value in tipos.items %}
+							<option value="{{key}}">{{value}}</option>
 						{% endfor %}
 					</select>
 					<label for="abonoTipo">Tipo</label>

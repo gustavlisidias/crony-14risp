@@ -46,41 +46,40 @@
 
 			<hr>
 
-			<div class="row mb-3">
-				<div class="col-3">
-					<p class="fw-semibold mb-0">Unidade de Negócio</p>
-					<p class="fw-semibold mb-0">CNPJ</p>
-					<p class="fw-semibold mb-0">Funcionário(a)</p>
-					<p class="fw-semibold mb-0">CPF</p>
-					<p class="fw-semibold mb-0">Equipe</p>
-					<p class="fw-semibold mb-0">Cargo</p>
-					<p class="fw-semibold mb-0">Matrícula</p>
-					<p class="fw-semibold mb-0">Data de Admissão</p>
-				</div>
-				<div class="col-3">
-					<p class="mb-0">{{dados_empresa.nome}}</p>
-					<p class="mb-0">{{dados_empresa.cnpj}}</p>
-					<p class="mb-0">{{funcionario.nome_completo|default_if_none:"---"}}</p>
-					<p class="mb-0">{{funcionario.cpf|default_if_none:"---"}}</p>
-					<p class="mb-0">{{funcionario.setor.setor|default_if_none:"---"}}</p>
-					<p class="mb-0">{{funcionario.cargo.cargo|default_if_none:"---"}}</p>
-					<p class="mb-0">{{funcionario.matricula|default_if_none:"---"}}</p>
-					<p class="mb-0">{{funcionario.data_contratacao|default_if_none:"---"}}</p>
-				</div>
-				<div class="col-6">
+			<div class="d-flex justify-content-between">
+					<div class="p-2">
+						<p class="fw-semibold mb-0">Unidade de Negócio</p>
+						<p class="fw-semibold mb-0">CNPJ</p>
+						<p class="fw-semibold mb-0">Funcionário(a)</p>
+						<p class="fw-semibold mb-0">CPF</p>
+						<p class="fw-semibold mb-0">Equipe</p>
+						<p class="fw-semibold mb-0">Cargo</p>
+						<p class="fw-semibold mb-0">Matrícula</p>
+						<p class="fw-semibold mb-0">Data de Admissão</p>
+					</div>
+					<div class="p-2 flex-grow-1">
+						<p class="mb-0">{{dados_empresa.nome}}</p>
+						<p class="mb-0">{{dados_empresa.cnpj}}</p>
+						<p class="mb-0">{{funcionario.nome_completo|default_if_none:"---"}}</p>
+						<p class="mb-0">{{funcionario.cpf|default_if_none:"---"}}</p>
+						<p class="mb-0">{{funcionario.setor.setor|default_if_none:"---"}}</p>
+						<p class="mb-0">{{funcionario.cargo.cargo|default_if_none:"---"}}</p>
+						<p class="mb-0">{{funcionario.matricula|default_if_none:"---"}}</p>
+						<p class="mb-0">{{funcionario.data_contratacao|default_if_none:"---"}}</p>
+					</div>
+
+				<div class="p-2">
 					{% for dia, horarios in jornada.items %}
 						{% if forloop.first %}
 							<p class="fw-semibold mb-1">Horários ({{ horarios.0.contrato }})</p>
 						{% endif %}
-						<div class="d-flex">
-							<div style="min-width: 120px"><b>{{ dia|weekday }}:</b></div>
-							<div style="flex: 1">
-								{% for hora in horarios %}
-									{{hora.hora}}
-									{% if not forloop.last %}-{% endif %}
-								{% endfor %}
-							</div>
-						</div>
+
+						<p class="mb-1">
+							<b>{{ dia|weekday }}:</b>
+							{% for hora in horarios %}
+								{{hora.hora}}{% if not forloop.last %}-{% endif %}
+							{% endfor %}
+						</p>
 					{% endfor %}
 				</div>
 			</div>
@@ -97,9 +96,9 @@
 							{% endif %}
 						{% endfor %}
 						<th class="bg-body">Saldo</th>
-						<th class="bg-body">Banco</th>
+						{% comment %} <th class="bg-body">Banco</th> {% endcomment %}
 						<th class="bg-body">Motivo</th>
-						<th class="bg-body">Cálculo Compens.</th>
+						{% comment %} <th class="bg-body">Cálculo Compens.</th> {% endcomment %}
 					</tr>
 				</thead>
 				<tbody>
@@ -108,16 +107,16 @@
 							<tr>
 								<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
 								{% for nro in nro_colunas %}
-									<td>{{ dado.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
+									<td {% if not dado.pontos|length|divisibleby:"2" %} class="text-danger" {% endif %}>{{ dado.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
 								{% endfor %}
 								<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
 									{{dado.saldo|timedelta}}
 								</td>
-								<td class="{% if "-" in dado.banco|timedelta %} text-danger {% elif dado.banco|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+								{% comment %} <td class="{% if "-" in dado.banco|timedelta %} text-danger {% elif dado.banco|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
 									{{dado.banco|timedelta}}
-								</td>
+								</td> {% endcomment %}
 								<td>{{dado.motivo|default_if_none:""}}</td>
-								<td>{{dado.regra}}</td>
+								{% comment %} <td>{{dado.regra}}</td> {% endcomment %}
 							</tr>
 						{% endfor %}
 					{% endfor %}

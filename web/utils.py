@@ -1,12 +1,14 @@
+
 from django.apps import apps
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 from django.db import models
+from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from datetime import date
+from datetime import datetime, date, time
 from typing import Type, Literal
 
 from configuracoes.models import Usuario
@@ -35,6 +37,14 @@ def add_coins(funcionario, value):
 		moeda = model.objects.get(fechado=False, funcionario=funcionario, data_cadastro__month=timezone.now().month)
 		moeda.pontuacao += value
 		moeda.save()
+
+		create_log(
+			object_model=model,
+			object_id=moeda.id,
+			user=moeda.funcionario.usuario,
+			message=f'Moeda adicionada (+{value})',
+			action=1
+		)
 
 	except MultipleObjectsReturned:
 		model.objects.filter(fechado=False, funcionario=funcionario, data_cadastro__month=timezone.now().month).update(fechado=True)
@@ -82,3 +92,40 @@ def create_log(
 	)
 
 	return object_log
+
+
+def parse_date(data):
+	try:
+		if isinstance(data, str):
+			if '-' in data:
+				try:
+					return datetime.strptime(data, '%Y-%m-%d')
+				except Exception:
+					return datetime.strptime(data, '%d-%m-%Y')
+			if '/' in data:
+				return datetime.strptime(data, '%d/%m/%Y')
+		elif isinstance(data, datetime):
+			return data
+		elif isinstance(data, date):
+			return datetime.combine(data, datetime.min.time())
+		elif isinstance(data, time):
+			return datetime.combine(datetime.min.date(), data)
+		else:
+			return None
+	except Exception:
+		return None
+	
+
+def parse_employee(objeto):
+	from funcionarios.models import Funcionario
+	try:
+		if objeto is None:
+			return None
+		elif isinstance(objeto, list):
+			return Funcionario.objects.filter(pk__in=objeto)
+		elif isinstance(objeto, QuerySet):
+			return objeto
+		else:
+			return Funcionario.objects.filter(pk=objeto.pk)
+	except Exception:
+		return None

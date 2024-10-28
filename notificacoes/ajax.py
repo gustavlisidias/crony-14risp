@@ -62,3 +62,16 @@ def ExcluirNotificacaoView(request, notid):
 	
 	except Exception as e:
 		return JsonResponse({'error': e}, status=400)
+
+
+@login_required(login_url='entrar')
+def ConsultarNotificacaoView(request, notid):
+	if not request.method == 'GET':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+	
+	try:
+		notificacao = Notification.objects.get(pk=notid)
+		return JsonResponse({'notificacao': {'verb': notificacao.verb, 'description': notificacao.description}}, status=200)
+	except Exception as e:
+		return JsonResponse({'error': e}, status=400)

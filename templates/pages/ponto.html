@@ -148,6 +148,9 @@
 						<table class="table table-hover align-middle table-solicitacoes">
 							<thead>
 								<tr>
+									<th>
+										<input class="form-check-input" type="checkbox" value="" id="solicitacao-marcar-tudo" onclick="marcarTodasSolicitacoes(event, this);">
+									</th>
 									<th scope="col">#</th>
 									<th scope="col">Funcionário</th>
 									<th scope="col">Tipo</th>
@@ -157,13 +160,16 @@
 							</thead>
 							<tbody>
 								{% for solicitacao in solicitacoes reversed %}
-									<tr role="button" onclick="visualizarSolicitacao('{{solicitacao.id}}', '{{solicitacao.tipo_label}}')">
+									<tr role="button" onclick="visualizarSolicitacao('{{solicitacao.id}}', '{{solicitacao.tipo}}')">
+										<td>
+											<input class="form-check-input" type="checkbox" value="{{solicitacao.tipo}}-{{solicitacao.id}}" name="solicitacao_marcadores" id="solicitacao-{{solicitacao.tipo}}-{{solicitacao.id}}" onclick="event.stopPropagation();">
+										</td>
 										<th scope="row">{{forloop.counter}}</th>
-										<td>{{solicitacao.funcionario__nome_completo}}</td>
-										<td>{{solicitacao.tipo_label}}</td>
+										<td>{{solicitacao.funcionario}}</td>
+										<td>{{solicitacao.tipo}}</td>
 
 										<td class="text-center">
-											{% if solicitacao.tipo_label != "Ajuste" and solicitacao.caminho %}
+											{% if solicitacao.tipo != "Ajuste" and solicitacao.caminho %}
 												<a href="{% url 'stream-documento' solicitacao.id 'abono' 'visualizar' %}">
 													<i class="fa-duotone fa-download text-body"></i>
 												</a>
@@ -195,7 +201,7 @@
 									{% for funcionario in funcionarios %}
 										</tr>
 											<th scope="row" class="d-flex align-items-center">
-												<img class="rounded-circle" src="{{funcionario.id|photo:'url'}}" style="width: 30px; height: 30px; display: block; border-style: none; border: 3px solid {{funcionario.get_perfil.time.cor}};">
+												<img class="lazyload rounded-circle" data-src="{{funcionario.id|photo:'url'}}" style="width: 30px; height: 30px; display: block; border-style: none; border: 3px solid {{funcionario.get_perfil.time.cor}};">
 												<p class="ms-3 mb-0">{{funcionario}}</p>
 											</th>
 											<td>{{funcionario.cargo}}</td>
@@ -230,7 +236,7 @@
 											<td>{{fechamento.de}} - {{fechamento.ate}}</td>
 											<td>{{fechamento.data_fechamento|default_if_none:""|date:"d/m/Y"}}</td>
 											<td class="text-center">
-												<a role="button" title="Visualizar fechamento" onclick="mostrarFechamento({{fechamento}})">
+												<a role="button" title="Visualizar fechamento" onclick="mostrarFechamento({{fechamento|safe}})">
 													<i class="fa-solid fa-bars fa-lg text-body"></i>
 												</a>
 											</td>
@@ -331,6 +337,7 @@
 
 {% block javascript %}
 <script src="{% static 'chartjs/chart.min.js' %}"></script>
+<script src="{% static 'lazyload/lazyload.min.js' %}"></script>
 <script>
 	function aprovarSolicitacao(solicitacaoId, categoria) {
 		$.ajax({
@@ -401,11 +408,24 @@
 
 				} else {
 					modal.find(".modal-title").html("Solicitação de Ajuste de Ponto");
-					modal.find(".modal-body .infos").append(`<p class="text-muted fs-6"><b>Data:</b> ${formatarData(solicitacao[2])}</p>`);
+					modal.find(".modal-body .infos").append(`<p class="text-muted fs-6 mb-1"><b>Data:</b> ${formatarData(solicitacao[2])}</p>`);
+					modal.find(".modal-body .infos").append(`<p class="text-muted fs-6" id="info-pontos"><b>Pontos Anteriores: </b></p>`);
+
+					modal.find(".modal-body .horas").append(`<p class="text-muted fs-6 fw-bold">Pontos Novos</p>`);
+
 					data.solicitacao.forEach(item => {						
 						modal.find(".modal-body .horas").append(`
 							<input type="time" class="form-control mb-3 w-100" name="hora" value="${item[3]}" disabled>
 						`);
+					});
+
+					data.pontos.forEach((item, index) => {
+						let ponto = item.split(":");
+						if (index == data.pontos.length - 1) {
+							modal.find(".modal-body #info-pontos").append(`${ponto[0] + ":" + ponto[1]}`);
+						} else {
+							modal.find(".modal-body #info-pontos").append(`${ponto[0] + ":" + ponto[1]} - `);
+						};						
 					});
 				};
 
@@ -427,8 +447,20 @@
 				modal.modal("show");
 			},
 			error: function (error) {
-				alert(error);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
+		});
+	};
+
+	function marcarTodasSolicitacoes(event, element) {
+		event.stopPropagation();
+		
+		Array.from(document.getElementsByName("solicitacao_marcadores")).forEach(item => {
+			if (element.checked) {
+				item.checked = true;
+			} else {
+				item.checked = false;
+			};
 		});
 	};
 
@@ -509,7 +541,7 @@
 				modal.modal("show");
 			},
 			error: function (error) {
-				alert(error);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};
@@ -540,23 +572,23 @@
 	};
 
 	function updateRegiao(regiao) {
-		if (regiao === 'Estadual') {
-			document.getElementById('feriadoEstado').disabled = false;
-			document.getElementById('feriadoEstado').required = true;
-			document.getElementById('feriadoCidade').disabled = true;
-			document.getElementById('feriadoCidade').required = false;
+		if (regiao === "Estadual") {
+			document.getElementById("feriadoEstado").disabled = false;
+			document.getElementById("feriadoEstado").required = true;
+			document.getElementById("feriadoCidade").disabled = true;
+			document.getElementById("feriadoCidade").required = false;
 
-		} else if (regiao === 'Municipal') {
-			document.getElementById('feriadoEstado').disabled = false;
-			document.getElementById('feriadoEstado').required = true;
-			document.getElementById('feriadoCidade').disabled = false;
-			document.getElementById('feriadoCidade').required = true;
+		} else if (regiao === "Municipal") {
+			document.getElementById("feriadoEstado").disabled = false;
+			document.getElementById("feriadoEstado").required = true;
+			document.getElementById("feriadoCidade").disabled = false;
+			document.getElementById("feriadoCidade").required = true;
 
 		} else {
-			document.getElementById('feriadoEstado').disabled = true;
-			document.getElementById('feriadoEstado').required = false;
-			document.getElementById('feriadoCidade').disabled = true;
-			document.getElementById('feriadoCidade').required = false;
+			document.getElementById("feriadoEstado").disabled = true;
+			document.getElementById("feriadoEstado").required = false;
+			document.getElementById("feriadoCidade").disabled = true;
+			document.getElementById("feriadoCidade").required = false;
 		};
 	};
 
@@ -576,7 +608,7 @@
 				});
 			},
 			error: function (error) {
-				alert(error.responseJSON.mensagem);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};
@@ -644,6 +676,20 @@
 	
 		return false;
 	};
+
+	function adicionarMoedas(func, anomes) {
+		const modal = $("#modalAdicionarMoedas");
+		const action = `moedas/adicionar/${func}/${anomes}`;
+
+		modal.find("#formAdicionarMoedas").attr("action", action);
+        modal.modal("show");
+	};
+
+	function alertaAbono(element) {
+		if (element.value == "FT") {
+			alert("Abonos do tipo falta não terão compensação de horas. As horas desta solicitação serão negativadas em seu banco de horas!")
+		};
+	};
 </script>
 
 <script>
@@ -653,6 +699,7 @@
 		//####################################################################################
 
 		const numberPages = {{funcionarios|length}} > 1 ? {{funcionarios|length}} : 7;
+		const hasAccess = "{{request.user.get_access}}" !== "common" ? true : false;
 		
 		const config = Object.assign(
 			datatables_config, {
@@ -662,17 +709,97 @@
 
 		const config2 = Object.assign({}, datatables_config, {
 			scrollY: 500,
-			buttons: datatables_config.buttons.concat({
-				text: 'Fechamento',
-				className: 'bg-primary border-primary ms-2 rounded',
-				action: function (e, dt, node, config) {
+			initComplete: function () {
+				let buttonFechamento = document.createElement("button");
+				buttonFechamento.innerHTML = "Novo Fechamento";
+				buttonFechamento.className = "btn btn-outline-primary btn-sm text-body bg-body";
+				buttonFechamento.style = "--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem; height: 32px; margin-bottom: 3px;";
+				buttonFechamento.onclick = function () {
 					$("#modalFechamentoPonto").modal("show");
-				}
-			})
+				};
+				
+				if (hasAccess) {
+					$("#fechamentos-pane").find("#DataTables_Table_3_filter").prepend(`<small class="ms-2">|</small>`);
+					$("#fechamentos-pane").find("#DataTables_Table_3_filter").prepend(buttonFechamento);
+					// $("#fechamentos-pane").find("#DataTables_Table_3_filter").prepend(`<small class="me-2">Ações:</small>`);
+				};				
+			},
+		});
+
+		const config3 = Object.assign({}, datatables_config, {
+			scrollY: 500,
+			initComplete: function () {
+				let buttonAprovar = document.createElement("button");
+				buttonAprovar.innerHTML = "Aprovar Selecionados";
+				buttonAprovar.className = "btn btn-outline-primary btn-sm text-body bg-body me-2";
+				buttonAprovar.style = "--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem; height: 32px; margin-bottom: 3px;";
+				buttonAprovar.onclick = function () {
+					let data = [];
+
+					Array.from(document.getElementsByName("solicitacao_marcadores")).forEach(item => {
+						if (item.checked) {
+							data.push({value: item.value});
+						};
+					});
+
+					$.ajax({
+						type: "POST",
+						url: "{% url 'aprovar-solicitacoes' %}",
+						data: JSON.stringify(data),
+						contentType: "application/json",
+						beforeSend: function (xhr) {
+							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+						},
+						success: function (response) {
+							window.location.reload();
+						},
+						error: function (error) {
+							alert(error.responseJSON ? error.responseJSON.mensagem : error);
+						}
+					});
+				};
+
+				let buttonReprovar = document.createElement("button");
+				buttonReprovar.innerHTML = "Reprovar Selecionados";
+				buttonReprovar.className = "btn btn-outline-primary btn-sm text-body bg-body";
+				buttonReprovar.style = "--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem; height: 32px; margin-bottom: 3px;";
+				buttonReprovar.onclick = function () {
+					let data = [];
+
+					Array.from(document.getElementsByName("solicitacao_marcadores")).forEach(item => {
+						if (item.checked) {
+							data.push({value: item.value});
+						};
+					});
+
+					$.ajax({
+						type: "POST",
+						url: "{% url 'reprovar-solicitacoes' %}",
+						data: JSON.stringify(data),
+						contentType: "application/json",
+						beforeSend: function (xhr) {
+							xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+						},
+						success: function (response) {
+							window.location.reload();
+						},
+						error: function (error) {
+							alert(error.responseJSON ? error.responseJSON.mensagem : error);
+						}
+					});
+				};
+				
+				if (hasAccess) {
+					$("#solicitacoes-pane").find("#DataTables_Table_1_filter").prepend(`<small class="ms-2">|</small>`);
+					$("#solicitacoes-pane").find("#DataTables_Table_1_filter").prepend(buttonReprovar);
+					$("#solicitacoes-pane").find("#DataTables_Table_1_filter").prepend(buttonAprovar);
+					// $("#solicitacoes-pane").find("#DataTables_Table_1_filter").prepend(`<small class="me-2">Ações:</small>`);
+				};
+			},
 		});
 
 		const table1 = $(".table-pontos").DataTable(config);
-		const table2 = $(".table-solicitacoes").DataTable(config);
+		const table2 = $(".table-solicitacoes").DataTable(config3);
 		const table3 = $(".table-colaboradores").DataTable(config);
 		const table4 = $(".table-fechamentos").DataTable(config2);
 		const table5 = $(".table-scores").DataTable(config);
@@ -690,10 +817,7 @@
 		});
 
 		$("#fechamentos-tab").on("click", function() {
-			setTimeout(() => {
-				table4.draw(false)
-				$("#fechamentos-pane").find(".buttons-pdf").addClass("rounded-end");
-			}, "200");
+			setTimeout(() => {table4.draw(false)}, "200");
 		});
 
 		$("#scores-tab").on("click", function() {
@@ -743,22 +867,6 @@
 </script>
 
 <script>
-	function adicionarMoedas(func, anomes) {
-		const modal = $("#modalAdicionarMoedas");
-		const action = `moedas/adicionar/${func}/${anomes}`;
-
-		modal.find("#formAdicionarMoedas").attr("action", action);
-        modal.modal("show");
-	};
-
-	function alertaAbono(element) {
-		if (element.value == "FT") {
-			alert("Abonos do tipo falta não terão compensação de horas. As horas desta solicitação serão negativadas em seu banco de horas!")
-		};
-	};
-</script>
-
-<script>
 	document.addEventListener("DOMContentLoaded", function () {
 		if (document.getElementById("saldoGrafico")) {
 			const dados = [
@@ -781,7 +889,10 @@
 			const ctx = document.getElementById("saldoGrafico").getContext("2d");
 
 			createChart(ctx, "line", labels, banco, "Total em horas", "Banco de Horas");
-		};		
+		};
+		
+		let images = document.querySelectorAll(".lazyload");
+		lazyload(images);
 	});
 </script>
 {% endblock %}

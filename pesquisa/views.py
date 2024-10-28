@@ -1,11 +1,8 @@
 import pytz
-import codecs
-import pandas as pd
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
 from datetime import datetime
@@ -13,6 +10,7 @@ from datetime import datetime
 from funcionarios.models import Funcionario
 from notifications.models import Notification
 from pesquisa.models import Pesquisa, Pergunta, Resposta
+from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty, add_coins
 
 
@@ -96,23 +94,14 @@ def VisualizarRespostasView(request, pesqid):
 		})
 
 	if request.GET.get('exportar'):
+		filename = f'relatorio_pesquisa_{pesquisa.titulo.lower()}'
+		colunas = ['Funcionário', 'Pergunta', 'Resposta']
+
 		dataset = list(pesquisa.respostas.values_list(
 			'funcionario__nome_completo', 'pergunta__texto', 'texto'
-		))
-		
-		colunas = [
-			'Funcionário', 'Pergunta', 'Resposta',
-		]
-		
-		response = HttpResponse (content_type='text/csv')
-		response['Content-Disposition'] = f'attachment; filename=relatorio_pesquisa_{pesquisa.titulo.lower()}.csv'                                
-		response.write(codecs.BOM_UTF8)
+		))		
 
-		with codecs.getwriter('utf-8')(response) as csv_file:
-			df = pd.DataFrame(dataset, columns=colunas)
-			df.to_csv(csv_file, sep=';', index=False)
-		
-		return response
+		return gerar_relatorio_csv(colunas, dataset, filename)
 
 	context = {
 		'funcionarios': funcionarios,

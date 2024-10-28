@@ -288,7 +288,7 @@
 	};
 
 	function removerItemLista(element, nroEle) {
-		const listItem = $(element).closest('li');
+		const listItem = $(element).closest("li");
 		const hiddenInputs = listItem.prevAll('input[type="hidden"]').slice(0, nroEle);
 		listItem.remove();
 		hiddenInputs.remove();
@@ -338,10 +338,10 @@
 	};
 
 	document.addEventListener("DOMContentLoaded", function () {
-		$('#btnAdicionarSetor').on('click', function() {
-			const setor = $('#novoSetor').val();
+		$("#btnAdicionarSetor").on("click", function() {
+			const setor = $("#novoSetor").val();
 	
-			$('.list-setores').prepend(`
+			$(".list-setores").prepend(`
 				<input type="hidden" name="setor" value="${setor}">
 				<li class="list-group-item d-flex justify-content-between align-items-start">
 					${setor}
@@ -349,13 +349,13 @@
 				</li>
 			`);
 
-			$('#novoSetor').val('');
+			$("#novoSetor").val("");
 		});
 
-		$('#btnAdicionarCargo').on('click', function() {
-			const cargo = $('#novoCargo').val();
+		$("#btnAdicionarCargo").on("click", function() {
+			const cargo = $("#novoCargo").val();
 	
-			$('.list-cargos').prepend(`
+			$(".list-cargos").prepend(`
 				<input type="hidden" name="cargo" value="${cargo}">
 				<li class="list-group-item d-flex justify-content-between align-items-start">
 					${cargo}
@@ -363,14 +363,14 @@
 				</li>
 			`);
 
-			$('#novoCargo').val('');
+			$("#novoCargo").val("");
 		});
 
-		$('#btnAdicionarAtividade').on('click', function() {
-			const tipo = $('#novoTipoAtividade').val();
-			const cor = $('#novoCorAtividade').val();	
+		$("#btnAdicionarAtividade").on("click", function() {
+			const tipo = $("#novoTipoAtividade").val();
+			const cor = $("#novoCorAtividade").val();	
 	
-			$('.list-atividades').prepend(`
+			$(".list-atividades").prepend(`
 				<input type="hidden" name="tipo" value="${tipo}">
 				<input type="hidden" name="cor" value="${cor}">
 				<li class="list-group-item d-flex justify-content-between align-items-start">
@@ -382,13 +382,13 @@
 				</li>
 			`);
 
-			$('#novoTipoAtividade').val('');
-			$('#novoCorAtividade').val('#000000');
+			$("#novoTipoAtividade").val("");
+			$("#novoCorAtividade").val("#000000");
 		});
 
-		$('#btnAdicionarDocumento').on('click', function() {
-			const documento = $('#novoDocumento').val();
-			const codigo = $('#novoCodigoDocumento').val();
+		$("#btnAdicionarDocumento").on("click", function() {
+			const documento = $("#novoDocumento").val();
+			const codigo = $("#novoCodigoDocumento").val();
 			let codigoExistente = false;
 
 			$('.list-documentos input[name="codigo"]').each(function() {
@@ -399,7 +399,7 @@
 			});
 
 			if (!codigoExistente) {
-				$('.list-documentos').prepend(`
+				$(".list-documentos").prepend(`
 					<input type="hidden" name="documento" value="${documento}">
 					<input type="hidden" name="codigo" value="${codigo}">
 					<li class="list-group-item d-flex justify-content-between align-items-start">
@@ -408,8 +408,8 @@
 					</li>
 				`);
 
-				$('#novoDocumento').val('');
-				$('#novoCodigoDocumento').val('');
+				$("#novoDocumento").val("");
+				$("#novoCodigoDocumento").val("");
 			};
 		});
 	});

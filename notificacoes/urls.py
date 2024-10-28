@@ -2,7 +2,7 @@ import notifications.urls
 
 from django.urls import include, path
 
-from notificacoes.ajax import LerNotificacaoView, LerTodasNotificacoesView, ExcluirNotificacaoView
+from notificacoes.ajax import LerNotificacaoView, LerTodasNotificacoesView, ExcluirNotificacaoView, ConsultarNotificacaoView
 from notificacoes.views import NotificacoesView, AdicionarNotificacaoView, EditarNotificacaoView
 
 
@@ -16,4 +16,5 @@ urlpatterns = [
 
 	path('notificacao/ler/<int:notid>', LerNotificacaoView, name='ler-notificacao'),
 	path('notificacao/ler/todas', LerTodasNotificacoesView, name='ler-notificacoes'),
+	path('notificacao/detalhes/<int:notid>', ConsultarNotificacaoView, name='detalhes-notificacao'),
 ]

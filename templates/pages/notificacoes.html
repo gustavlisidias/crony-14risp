@@ -160,19 +160,24 @@
 
 <script>
 	function editarNotificacao(notid) {
-		const notificacoes = {{listagem|safe}};
-		
-		notificacao = notificacoes.filter(item => item.id === notid)[0];
+		$.ajax({
+			type: "GET",
+			url: `{% url "detalhes-notificacao" 0 %}`.replace("0", notid),
+			success: function(response) {
+				const description = response.notificacao.description == null ? "" : response.notificacao.description
+				const modal = $("#modalEditarNotificacao");
+				const action = `{% url "editar-notificacao" 0 %}`.replace("0", notid);
 
-		const description = notificacao.description == null ? '' : notificacao.description
-		const modal = $("#modalEditarNotificacao");
-		const action = `{% url "editar-notificacao" 0 %}`.replace("0", notid);
-
-		modal.find(".modal-title").html(notificacao.verb);
-		modal.find("#notificacaoTitulo").val(notificacao.verb);
-		window.editors["notificacaoEditarDescricao"].setData(description);
-		modal.find("form").attr("action", action);
-		modal.modal("show");
+				modal.find(".modal-title").html(response.notificacao.verb);
+				modal.find("#notificacaoTitulo").val(response.notificacao.verb);
+				window.editors["notificacaoEditarDescricao"].setData(description);
+				modal.find("form").attr("action", action);
+				modal.modal("show");
+			},
+			error: function(error) {
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
+			}
+		});
 	};
 
 	document.querySelectorAll("tbody tr td a[role='button']").forEach(function(cell) {

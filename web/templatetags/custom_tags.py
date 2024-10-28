@@ -48,7 +48,7 @@ def theme(value):
 def index(sequence, position):
 	try:
 		index = sequence[position]
-		if index != datetime.time(0) and index != datetime.time(23, 59):
+		if index != datetime.time(0):
 			return index
 		else:
 			return None
@@ -153,9 +153,11 @@ def is_today(value):
 
 
 @register.filter
-def soma(obj, value):
-	soma = round(float(obj) + float(value), 2)
-	return soma
+def soma_dict(obj):
+	if isinstance(obj, dict):
+		return round(sum([v for _, v in obj.items()]), 2)
+	else:
+		return 0
 
 
 @register.filter

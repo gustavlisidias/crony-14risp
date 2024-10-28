@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.text import slugify
 
 from datetime import datetime, date
+from colorfield.fields import ColorField
 from django_ckeditor_5.fields import CKEditor5Field
 
 from cities_light.models import Region as Estado
@@ -168,12 +169,16 @@ class JornadaFuncionario(models.Model):
 	hora = models.TimeField(verbose_name='Hora')
 	inicio_vigencia = models.DateField(verbose_name='Início da Vigência')
 	final_vigencia = models.DateField(null=True, blank=True, verbose_name='Final da Vigência')
+	agrupador = models.IntegerField(editable=False, verbose_name='Agrupador')
 	
 	def save(self, *args, **kwargs):
 		if not self.ordem:
-			jornadas = JornadaFuncionario.objects.filter(contrato=self.contrato, dia=self.dia).order_by('ordem')
-			if jornadas.exists():
-				self.ordem = jornadas.last().ordem + 1
+			jornadas_ordem = JornadaFuncionario.objects.filter(
+				funcionario=self.funcionario, contrato=self.contrato, dia=self.dia
+			).order_by('ordem')
+
+			if jornadas_ordem.exists():
+				self.ordem = jornadas_ordem.last().ordem + 1
 			else:
 				self.ordem = 1
 
@@ -182,9 +187,12 @@ class JornadaFuncionario(models.Model):
 				self.tipo = Jornada.Tipo.ENTRADA
 			else:
 				self.tipo = Jornada.Tipo.SAIDA
-
+		
 		if not self.inicio_vigencia:
 			self.inicio_vigencia = date.today()
+
+		if not self.agrupador:
+			self.agrupador = 1
 
 		super().save(*args, **kwargs)
 

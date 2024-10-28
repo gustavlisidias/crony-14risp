@@ -268,7 +268,7 @@
 				});
 			},
 			error: function (error) {
-				alert(error.responseJSON.mensagem);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};

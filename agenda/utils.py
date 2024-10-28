@@ -1,25 +1,8 @@
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 
-from django.db.models.query import QuerySet
-
 from agenda.models import Ferias
-from funcionarios.models import Funcionario
-from web.utils import add_years
-
-
-def parse_employee(objeto):
-	try:
-		if objeto is None:
-			return None
-		elif isinstance(objeto, list):
-			return Funcionario.objects.filter(pk__in=objeto)
-		elif isinstance(objeto, QuerySet):
-			return objeto
-		else:
-			return Funcionario.objects.filter(pk=objeto.pk)
-	except Exception:
-		return None
+from web.utils import add_years, parse_employee
 
 
 def ferias_funcionarios(funcionarios):
@@ -66,7 +49,7 @@ def ferias_funcionarios(funcionarios):
 					'vencimento': final_periodo,
 				})
 				
-				inicio_periodo += relativedelta(months=6)			
+				inicio_periodo += relativedelta(months=6)
 
 		else:
 			# Funcionario CLT tem direito a 30 dias após 1 ano trabalhado

@@ -160,6 +160,7 @@
 					canvasContext: ctx,
 					viewport: viewport
 				};
+				
 				const renderTask = page.render(renderContext);
 
 				renderTask.promise.then(function() {
@@ -301,7 +302,7 @@
 			},
 			error: function(error) {
 				document.getElementById("overlay").style.display = "none";
-				alert(error.responseJSON.message);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});    
 	};
@@ -381,11 +382,11 @@
 					},
 				];
 	
-				$('.table-documentos').DataTable().destroy();
-				$('.table-documentos').DataTable(config);
+				$(".table-documentos").DataTable().destroy();
+				$(".table-documentos").DataTable(config);
 			},
 			error: function (error) {
-				alert("Erro ao atualizar a tabela de documentos:", error);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};

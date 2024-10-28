@@ -30,7 +30,11 @@
 								<div>
 									<p class="ms-3 mb-0">{{colaborador.nome_completo}}</p>
 									<p class="ms-3 mb-0">{{colaborador.cargo}} - {{colaborador.setor}}</p>
-									<p class="ms-3 mb-0">{{jornadas.first.contrato.descricao}}</p>
+									<p class="ms-3 mb-0">Jornada atual:
+										{% for hora in jornada %}
+											{{hora}}{% if not forloop.last %} - {% endif %}
+										{% endfor %}
+									</p>
 									<p class="ms-3 mb-0">Banco de Horas: <b class="{% if '-' in dados.banco|timedelta %} text-danger {% else %} text-success {% endif %}">{{dados.banco|timedelta}}</b></p>
 									<p class="ms-3 mb-0">Score (Período): <b>{{dados.notas.0|floatformat:02}}</b></p>
 								</div>

@@ -42,7 +42,8 @@ def dados_avaliacao(avaliacao, respostas):
 
 		notas[nivel]['media'] = x
 
-	nota_final = (sum([notas[i]['media'] * PesoAvaliador.objects.get(avaliacao=avaliacao, nivel=i).peso for i in notas]) + score_periodo[avaliacao.avaliado][0]) / 2
+	score = score_periodo[avaliacao.avaliado][0] if score_periodo else 0
+	nota_final = (sum([notas[i]['media'] * PesoAvaliador.objects.get(avaliacao=avaliacao, nivel=i).peso for i in notas]) + score) / 2
 
 	time = Perfil.objects.get(funcionario=avaliacao.avaliado).time.titulo.lower()
 
@@ -79,7 +80,7 @@ def dados_avaliacao(avaliacao, respostas):
 		'total_participantes': total_participantes,
 		'total_participantes_ativos': total_participantes_ativos,
 		'total_perguntas': total_perguntas,
-		'score': score_periodo[avaliacao.avaliado][0],
+		'score': score_periodo[avaliacao.avaliado][0] if score_periodo else 0,
 		'notas': notas,
 		'comentarios': comentarios,
 		'nota_final': nota_final,

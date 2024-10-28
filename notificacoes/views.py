@@ -13,42 +13,33 @@ from web.utils import not_none_not_empty
 # Page
 @login_required(login_url='entrar')
 def NotificacoesView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
+	funcionarios = Funcionario.objects.all()
 	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-
-	colaboradores = Funcionario.objects.all()
-	comunicados = Notification.objects.all()
+	comunicados = list(Notification.objects.values('id', 'level', 'verb', 'description', 'unread', 'timestamp', 'recipient', 'actor_object_id'))
 
 	if request.user.get_access == 'common':
-		comunicados = comunicados.filter(recipient=request.user)
+		comunicados = [i for i in comunicados if i['recipient'] == request.user.id]
 
 	if request.user.get_access == 'manager':
-		filtro = funcionarios.filter(Q(gerente=funcionario) | Q(pk=funcionario.pk)).distinct().values_list('usuario__id', flat=True)
-		comunicados = comunicados.filter(recipient__in=filtro).distinct()
+		funcionarios = funcionarios.filter(data_demissao=None).filter(Q(gerente=funcionario) | Q(pk=funcionario.pk)).distinct()
+		comunicados = [i for i in comunicados if i['recipient'] in [j.usuario.id for j in funcionarios]]
 
 	listagem = []
-
-	for notificacao in comunicados:
-		notificacao.remetente = colaboradores.get(usuario__id=int(notificacao.actor_object_id)).nome_completo
-		notificacao.destinatario = colaboradores.get(usuario=notificacao.recipient).nome_completo
-		
+	for comunicado in comunicados:		
 		listagem.append({
-			'id': notificacao.id,
-			'level': notificacao.level,
-			'verb': notificacao.verb,
-			'description': notificacao.description,
-			'remetente': notificacao.remetente,
-			'destinatario': notificacao.destinatario,
-			'unread': notificacao.unread,
-			'timestamp': notificacao.timestamp.strftime("%d/%m/%Y"),
+			'id': comunicado['id'],
+			'level': comunicado['level'],
+			'verb': comunicado['verb'],
+			'description': comunicado['description'],
+			'remetente': funcionarios.get(usuario__id=int(comunicado['actor_object_id'])).nome_completo,
+			'destinatario': funcionarios.get(usuario=comunicado['recipient']).nome_completo,
+			'unread': comunicado['unread'],
+			'timestamp': comunicado['timestamp'].strftime('%d/%m/%Y'),
 		})
 
-
 	context = {
-		'funcionarios': funcionarios,
+		'funcionarios': funcionarios.filter(data_demissao=None).order_by('nome_completo'),
 		'funcionario': funcionario,
-		'notificacoes': notificacoes,
 		'listagem': listagem,
 	}
 	return render(request, 'pages/notificacoes.html', context)

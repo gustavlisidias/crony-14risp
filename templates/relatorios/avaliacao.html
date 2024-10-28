@@ -95,17 +95,17 @@
 							<td class="text-center">{{ niveis.0|floatformat:02 }}</td>
 							<td class="text-center">{{ niveis.1|floatformat:02 }}</td>
 							<td class="text-center">{{ niveis.2|floatformat:02 }}</td>
-							<td class="bg-body-secondary text-center fw-bold">{{ niveis.0|soma:niveis.1|soma:niveis.2 }}</td>
+							<td class="bg-body-secondary text-center fw-bold">{{niveis|soma_dict}}</td>
 						</tr>
 					{% endfor %}
 				</tbody>
 				<tfoot>
 					<tr>
 						<th class="bg-body-secondary text-start">Total por Nível</th>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.0|floatformat:02}}</td>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.1|floatformat:02}}</td>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.2|floatformat:02}}</td>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.0|soma:dados.tabela_footer.1|soma:dados.tabela_footer.2}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.0|floatformat:02|default:"0"}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.1|floatformat:02|default:"0"}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.2|floatformat:02|default:"0"}}</td>
+						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer|soma_dict}}</td>
 					</tr>
 				</tfoot>
 			</table>

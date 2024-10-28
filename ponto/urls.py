@@ -5,9 +5,11 @@ from ponto.ajax import (
 	ConsultarPontoView,
 	ConsultarSolicitacaoView,
 	EditarPontoView,
-	ExcluirSolicitacaoView,
+	ReprovarSolicitacaoView,
 	RegistrarPontoView,
-	RelatoriosPontoView
+	RelatoriosPontoView,
+	AprovarSolicitacoesView,
+	ReprovarSolicitacoesView
 )
 from ponto.views import (
 	RegistrosPontoView,
@@ -28,9 +30,11 @@ urlpatterns = [
 	path('ponto/consultar/data/<str:data>/funcionario/<int:func>', ConsultarPontoView, name='consultar-ponto'),
 	path('ponto/editar/data/<str:data>/funcionario/<int:func>', EditarPontoView, name='editar-ponto'),
 	path('ponto/solicitar/abono', SolicitarAbonoView, name='solicitar-abono'),
-	path('ponto/excluir/solicitacao/<int:solic>/<str:categoria>', ExcluirSolicitacaoView, name='excluir-solicitacao'),
+	path('ponto/excluir/solicitacao/<int:solic>/<str:categoria>', ReprovarSolicitacaoView, name='excluir-solicitacao'),
 	path('ponto/aprovar/solicitacao/<int:solic>/<str:categoria>', AprovarSolicitacaoView, name='aprovar-solicitacao'),
 	path('ponto/consultar/solicitacao/<int:solic>/<str:categoria>', ConsultarSolicitacaoView, name='consultar-solicitacao'),
+	path('ponto/aprovar/solicitacoes', AprovarSolicitacoesView, name='aprovar-solicitacoes'),
+	path('ponto/reprovar/solicitacoes', ReprovarSolicitacoesView, name='reprovar-solicitacoes'),
 	path('ponto/feriado/adicionar', AdicionarFeriadoView, name='adicionar-feriado'),
 	path('ponto/saldo/adicionar', AdicionarSaldoView, name='adicionar-saldo'),
 	path('ponto/funcionario/<int:func>/detalhes', RegistrosPontoFuncinarioView, name='detalhes-ponto'),

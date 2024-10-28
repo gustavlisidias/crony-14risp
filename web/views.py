@@ -6,13 +6,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render, get_object_or_404
 from django.utils import timezone
 
 from agenda.models import Atividade, TipoAtividade
 from cursos.models import ProgressoEtapa
+from configuracoes.models import Variavel
 from funcionarios.models import Funcionario, Perfil
 from pesquisa.models import Pesquisa, Resposta
 from ponto.models import Ponto

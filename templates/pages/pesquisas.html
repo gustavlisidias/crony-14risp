@@ -164,7 +164,7 @@
 				modal.modal("show");
 			},
 			error: function (error) {
-				alert(error);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};
@@ -223,20 +223,20 @@
 					justified: true,
 					autoAdjustHeight: true,
 					transition: {
-						animation: 'fade', // Animation effect on navigation, none|fade|slideHorizontal|slideVertical|slideSwing|css(Animation CSS class also need to specify)
-						speed: '400', // Animation speed. Not used if animation is 'css'
-						easing: '', // Animation easing. Not supported without a jQuery easing plugin. Not used if animation is 'css'
-						prefixCss: '', // Only used if animation is 'css'. Animation CSS prefix
-						fwdShowCss: '', // Only used if animation is 'css'. Step show Animation CSS on forward direction
-						fwdHideCss: '', // Only used if animation is 'css'. Step hide Animation CSS on forward direction
-						bckShowCss: '', // Only used if animation is 'css'. Step show Animation CSS on backward direction
-						bckHideCss: '', // Only used if animation is 'css'. Step hide Animation CSS on backward direction
+						animation: "fade", // Animation effect on navigation, none|fade|slideHorizontal|slideVertical|slideSwing|css(Animation CSS class also need to specify)
+						speed: "400", // Animation speed. Not used if animation is "css"
+						easing: "", // Animation easing. Not supported without a jQuery easing plugin. Not used if animation is "css"
+						prefixCss: "", // Only used if animation is "css". Animation CSS prefix
+						fwdShowCss: "", // Only used if animation is "css". Step show Animation CSS on forward direction
+						fwdHideCss: "", // Only used if animation is "css". Step hide Animation CSS on forward direction
+						bckShowCss: "", // Only used if animation is "css". Step show Animation CSS on backward direction
+						bckHideCss: "", // Only used if animation is "css". Step hide Animation CSS on backward direction
 					},
 					toolbar: {
-						position: 'top', // none|top|bottom|both
+						position: "top", // none|top|bottom|both
 						showNextButton: true, // show/hide a Next button
 						showPreviousButton: true, // show/hide a Previous button
-						extraHtml: '' // Extra html to show on toolbar
+						extraHtml: "" // Extra html to show on toolbar
 					},
 					lang: {
 						next: "Proximo",
@@ -247,7 +247,7 @@
 				modal.modal("show");
 			},
 			error: function (error) {
-				alert(error);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
 	};

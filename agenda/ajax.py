@@ -133,17 +133,16 @@ def EditarEventoView(request):
 						data__lte=solicitacao.final_ferias,
 					).delete()
 					
-					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
+					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
 					data_inicial = solicitacao.inicio_ferias
 
 					while data_inicial <= solicitacao.final_ferias:
 						weekday = 1 if data_inicial.weekday() + 2 == 8 else data_inicial.weekday() + 2
-						data = data_inicial
 
 						for jornada in jornadas.filter(dia=weekday):
 							Ponto(
 								funcionario=solicitacao.funcionario,
-								data=data,
+								data=data_inicial,
 								hora=jornada.hora,
 								alterado=True,
 							).save()

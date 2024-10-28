@@ -132,7 +132,7 @@
 				modal.modal("show");
 			},
 			error: function (error) {
-				alert(error);
+				alert(error.responseJSON ? error.responseJSON.mensagem : error);
 			}
 		});
     };

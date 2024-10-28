@@ -98,7 +98,7 @@
 		{% if pesquisa.respostas %}
 			{% for dado in dados %}
 				createChart(
-					document.getElementById("chart-{{ forloop.counter }}").getContext('2d'),
+					document.getElementById("chart-{{ forloop.counter }}").getContext("2d"),
 					"pie",
 					{{ dado.respostas|safe }},
 					{{ dado.count|safe }},

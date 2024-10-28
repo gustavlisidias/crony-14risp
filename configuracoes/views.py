@@ -214,7 +214,7 @@ def ConfiguracoesView(request):
 
 			messages.success(request, 'Jornadas foram salvas com sucesso!')
 			return redirect('configuracoes')
-		
+
 		# Formulário para alterar/salvar configurações de registro de ponto externo
 		matriculas = request.POST.get('matriculas_externo')
 		registrar = request.POST.get('registrar_externo', 'False')
