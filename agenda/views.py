@@ -176,7 +176,7 @@ def FeriasView(request):
 
 	if request.method == 'POST':
 		inicio_ferias = request.POST.get('inicio')
-		final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(request.POST.get('total_ferias')))
+		final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(request.POST.get('total_ferias'))) if not_none_not_empty(request.POST.get('inicio')) else None
 
 		inicio_periodo = request.POST.get('inicio_periodo')
 		final_periodo = request.POST.get('final_periodo')
