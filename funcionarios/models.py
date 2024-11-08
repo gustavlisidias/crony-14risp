@@ -91,6 +91,7 @@ class Funcionario(models.Model):
 	data_nascimento = models.DateField(null=False, blank=False, verbose_name='Data Nascimento')
 	data_contratacao = models.DateField(null=False, blank=False, verbose_name='Data Contratação')
 	data_demissao = models.DateField(null=True, blank=True, verbose_name='Data Rescisão')
+	data_inicio_ferias = models.DateField(null=True, blank=True, verbose_name='Data Início Férias')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 	observacoes = CKEditor5Field('Observacoe', config_name='extends')
 	conta_banco = models.CharField(max_length=64, null=True, blank=True, unique=True, verbose_name='Conta Bancária')

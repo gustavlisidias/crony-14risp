@@ -217,7 +217,7 @@
 					</div>
 				</div>
 
-				<!-- Salário e Conta Bancária-->
+				<!-- Salário e Conta Bancária e Início Férias -->
 				<div class="row">
 					<div class="col">
 						<div class="form-floating mb-3">
@@ -229,6 +229,12 @@
 						<div class="form-floating mb-3">
 							<input type="text" class="form-control" id="funcionarioBanco" name="conta_banco" placeholder value="{{colaborador.conta_banco|default_if_none:""}}">
 							<label class="form-label" for="funcionarioBanco">Conta Bancária</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating mb-3">
+							<input type="date" class="form-control" id="funcionarioInicioFerias" name="data_inicio_ferias" placeholder>
+							<label class="form-label" for="funcionarioInicioFerias">Data Início Férias</label>
 						</div>
 					</div>
 				</div>

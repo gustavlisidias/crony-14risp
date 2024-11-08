@@ -1,6 +1,7 @@
 import logging
 import json
 import os
+import pytz
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -17,7 +18,7 @@ from configuracoes.models import Variavel, Contrato
 from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario
 from ponto.models import Ponto, SolicitacaoAbono, SolicitacaoPonto, Saldos
 from ponto.report import gerar_pdf_ponto
-from ponto.utils import filtrar_abonos, total_por_dia
+from ponto.utils import filtrar_abonos, total_saldo
 from notifications.signals import notify
 from settings.settings import BASE_DIR
 from web.report import gerar_relatorio_csv
@@ -234,7 +235,7 @@ def AprovarSolicitacaoView(request, solic, categoria):
 				messages.warning(request, 'Você não tem permissão para aprovar esta solicitação!')
 				return JsonResponse({'message': 'Você não tem permissão para aprovar esta solicitação!'}, status=200)
 
-			jornada_para_abonar = filtrar_abonos(solicitacao)
+			jornada_para_abonar = filtrar_abonos(solicitacao.inicio, solicitacao.final, solicitacao.funcionario)
 			for dia, pontos in jornada_para_abonar.items():
 
 				if not Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).exists():
@@ -250,7 +251,7 @@ def AprovarSolicitacaoView(request, solic, categoria):
 				else:
 					Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).update(motivo=solicitacao.motivo)
 
-				saldo = total_por_dia(pontos)
+				saldo = total_saldo(pontos)
 
 				if saldo != timedelta(0):
 					if solicitacao.tipo == SolicitacaoAbono.Tipo.FALTA:
@@ -401,7 +402,7 @@ def AprovarSolicitacoesView(request):
 					messages.warning(request, 'Você não tem permissão para aprovar esta solicitação!')
 					return JsonResponse({'message': 'Você não tem permissão para aprovar esta solicitação!'}, status=200)
 
-				jornada_para_abonar = filtrar_abonos(solicitacao)
+				jornada_para_abonar = filtrar_abonos(solicitacao.inicio, solicitacao.final, solicitacao.funcionario)
 				for dia, pontos in jornada_para_abonar.items():
 
 					if not Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).exists():
@@ -417,7 +418,7 @@ def AprovarSolicitacoesView(request):
 					else:
 						Ponto.objects.filter(funcionario=solicitacao.funcionario, data=dia).update(motivo=solicitacao.motivo)
 
-					saldo = total_por_dia(pontos)
+					saldo = total_saldo(pontos)
 
 					if saldo != timedelta(0):
 						if solicitacao.tipo == SolicitacaoAbono.Tipo.FALTA:
@@ -540,17 +541,17 @@ def RelatoriosPontoView(request):
 		messages.warning(request, 'Nenhum funcionário encontrado com este filtro!')
 		return redirect('pontos')
 	
-	if request.POST.get('tipo') == '0':
-		data_inicial = request.POST.get('relatorio_inicio') if not_none_not_empty(request.POST.get('relatorio_inicio')) else (now() - timedelta(days=30)).strftime('%Y-%m-%d')
-		data_final = request.POST.get('relatorio_final') if not_none_not_empty(request.POST.get('relatorio_final')) else now().strftime('%Y-%m-%d')
+	data_inicial = request.POST.get('relatorio_inicio') if not_none_not_empty(request.POST.get('relatorio_inicio')) else (now() - timedelta(days=30)).strftime('%Y-%m-%d')
+	data_final = request.POST.get('relatorio_final') if not_none_not_empty(request.POST.get('relatorio_final')) else now().strftime('%Y-%m-%d')
 	
+	if request.POST.get('tipo') == '0':	
 		response = gerar_pdf_ponto(request, funcionarios, data_inicial, data_final)
 		return response if response else redirect('pontos')
 			
-	if request.POST.get('tipo') == '1':
+	elif request.POST.get('tipo') == '1':
 		filename = 'relatorio_abonos'
 		colunas = ['Início', 'Final', 'Motivo', 'Status', 'Tipo', 'Funcionario', 'Aprovador']
-		solicitacoes = SolicitacaoAbono.objects.filter(funcionario__id__in=[i.id for i in funcionarios]).annotate(
+		solicitacoes = SolicitacaoAbono.objects.filter(funcionario__in=funcionarios, inicio__date__range=[data_inicial, data_final]).annotate(
 			tipo_display=F('tipo'), aprovador_nome=F('aprovador__nome_completo'), funcionario_nome=F('funcionario__nome_completo')
 		).values('inicio', 'final', 'tipo_display', 'motivo', 'status', 'aprovador_nome', 'funcionario_nome')
 		
@@ -561,11 +562,29 @@ def RelatoriosPontoView(request):
 
 		return gerar_relatorio_csv(colunas, dataset, filename)
 		
-	if request.POST.get('tipo') == '2':
+	elif request.POST.get('tipo') == '2':
 		filename = 'relatorio_ajustes'
 		colunas = ['Data', 'Hora', 'Motivo', 'Status', 'Funcionario', 'Aprovador']
-		dataset = list(SolicitacaoPonto.objects.filter(funcionario__id__in=[i.id for i in funcionarios]).values_list(
-			'data', 'hora', 'motivo', 'status', 'funcionario__nome_completo', 'aprovador__nome_completo'
-		))
+		dataset = list(SolicitacaoPonto.objects.filter(
+			funcionario__in=funcionarios, data__range=[data_inicial, data_final]
+		).values_list('data', 'hora', 'motivo', 'status', 'funcionario__nome_completo', 'aprovador__nome_completo').distinct())
 
 		return gerar_relatorio_csv(colunas, dataset, filename)
+	
+	elif request.POST.get('tipo') == '3':
+		filename = 'relatorio_alteracoes'
+		colunas = ['Funcionario', 'Data', 'Hora', 'Data Cadastro']
+
+		pontos_filtrados = list(Ponto.objects.filter(
+			funcionario__in=funcionarios, data_cadastro__date__range=[data_inicial, data_final]
+		).values_list('funcionario__nome_completo', 'data', 'hora', 'data_cadastro'))
+
+		dataset = []
+		for i in pontos_filtrados:
+			data = (i[0], i[1], i[2], i[3].astimezone(pytz.timezone('America/Sao_Paulo')))
+			dataset.append(data)
+
+		return gerar_relatorio_csv(colunas, dataset, filename)
+
+	else:
+		return redirect('pontos')

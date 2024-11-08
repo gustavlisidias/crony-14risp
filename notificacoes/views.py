@@ -94,7 +94,8 @@ def AdicionarNotificacaoView(request):
 				descricao=descricao,
 				tipo=TipoAtividade.objects.get(slug='comunicado'),
 				inicio=request.POST.get('inicio'),
-				final=request.POST.get('final')
+				final=request.POST.get('final'),
+				autor=Funcionario.objects.get(usuario=request.user)
 			)
 
 			atividade.funcionarios.set(funcinarios)

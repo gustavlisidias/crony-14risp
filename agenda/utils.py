@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 
 from agenda.models import Ferias
-from web.utils import add_years, parse_employee
+from web.utils import add_years, parse_employee, not_none_not_empty
 
 
 def ferias_funcionarios(funcionarios):
@@ -24,13 +24,16 @@ def ferias_funcionarios(funcionarios):
 
 			# Exemplo: contratação em 01/03/2023, primeiro período de 01/09/2023 até 29/02/2023
 
-			inicio_periodo = funcionario.data_contratacao + relativedelta(months=6)
+			if not_none_not_empty(funcionario.data_inicio_ferias):
+				inicio_periodo = funcionario.data_inicio_ferias + relativedelta(months=6)
+			else:
+				inicio_periodo = funcionario.data_contratacao + relativedelta(months=6)
 
 			while inicio_periodo <= date.today():
 				periodo = (inicio_periodo - relativedelta(months=6)).year
 				final_periodo = inicio_periodo + timedelta(days=179)
 
-				saldo = timedelta(days=30)
+				saldo = timedelta(days=15)
 				status = False
 				ferias = Ferias.objects.filter(funcionario=funcionario, ano_referencia=periodo)
 
@@ -61,7 +64,12 @@ def ferias_funcionarios(funcionarios):
 
 			# Exemplo: contratação em 20/12/1994, primeiro período de 20/12/1995 até 19/11/1996
 
-			for ano in range(funcionario.data_contratacao.year, datetime.now().year + 1):
+			if not_none_not_empty(funcionario.data_inicio_ferias):
+				ano_inicio = funcionario.data_inicio_ferias.year
+			else:
+				ano_inicio = funcionario.data_contratacao.year
+
+			for ano in range(ano_inicio, datetime.now().year + 1):
 				inicio_periodo = add_years(funcionario.data_contratacao.replace(year=ano), 1)
 				final_periodo = add_years(funcionario.data_contratacao.replace(year=ano), 2) - timedelta(days=31)
 

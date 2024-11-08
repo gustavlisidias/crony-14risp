@@ -10,9 +10,9 @@ from ponto.models import SolicitacaoAbono, SolicitacaoPonto, Ponto, Saldos, Feri
 from web.utils import parse_date, parse_employee
 
 
-def filtrar_abonos(solicitacao):
-	data_inico = timezone.localtime(solicitacao.inicio)
-	data_final = timezone.localtime(solicitacao.final)
+def filtrar_abonos(inicio, final, funcionario):
+	data_inico = timezone.localtime(inicio)
+	data_final = timezone.localtime(final)
 
 	montar_pontos = {}
 	jornadas_filtradas = {}
@@ -20,9 +20,9 @@ def filtrar_abonos(solicitacao):
 
 	if data_inico.date() == data_final.date():
 		wd_incio = 1 if data_inico.date().weekday() + 2 == 8 else data_inico.date().weekday() + 2
-		jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None, dia=wd_incio).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
+		jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None, dia=wd_incio).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
 	else:
-		jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
+		jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
 
 	for i in range(nro_dias + 1):
 		dia_atual = data_inico.date() + timedelta(days=i)
@@ -152,6 +152,7 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 				
 				if motivo is None:
 					motivo = dados_ponto['motivo'] if dados_ponto['motivo'] else ''
+
 					# Verifica se o motivo está vazio e o dia é sábado ou domingo
 					if not motivo and data.date().weekday() in [5, 6]:
 						motivo = ''
@@ -165,8 +166,9 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 				'total': timedelta(seconds=0),
 				'saldo': saldos.get(funcionario.id, {}).get(data.date(), timedelta(seconds=0)),
 				'score': scores.get(funcionario.id, 0),
-				'banco': timedelta(seconds=0),
-				'regra': ''
+				'he50': timedelta(0),
+				'he100': timedelta(0),
+				'noturno': timedelta(0)
 			})
 	
 	FIM_FUNCAO_1 = time.time()
@@ -196,7 +198,7 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 					jornada = info['dias'].get(weekday, [])
 					break
 
-			total_esperado = total_por_dia(jornada)
+			total_esperado = total_saldo(jornada)
 			qtd_jornada = len(jornada)
 			
 			# Se não possui pontos naquele dia, e não é final de semana, é considerado falta
@@ -216,7 +218,7 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 					dado['motivo'] = 'Falta não compensada'
 			
 			else:
-				dado['total'] += total_por_dia(pontos)
+				dado['total'] += total_saldo(pontos)
 				dado['saldo'] += dado['total'] - total_esperado
 
 				# Se trabalhei menos que o esperado, mesmo com a tolerancia, o score é penalizado
@@ -227,9 +229,9 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 				if dado['saldo'] < timedelta(0) and dado['saldo'] >= tolerancia *-1:
 					dado['saldo'] = timedelta(0)
 
-				# Calculo do Banco de Horas
+				# Calculo dos Adicionais
 				feriado = feriados.get(dia.date())
-				dado['banco'], dado['regra'] = calculo_banco_horas(dado['saldo'], feriado, dado['pontos'], dado['funcionario'], weekday)
+				dado['he50'], dado['he100'], dado['noturno'] = calculo_adicionais(dado['saldo'], feriado, dado['pontos'], dado['funcionario'], weekday)
 
 				# Calculo do score diário
 				# Regra: se meu ponto está entre a (jornada - tolerancia) e (jornada + tolerancia)
@@ -263,21 +265,14 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 			media = sum(notas[2]) / len(notas[2])
 			notas[0] = media
 			notas[1] = media * 100 / 5
+
+	##################################################################################################
 	
 	# Condição para quando fechamento		
 	if fechamento:
 		mes = datetime.today().month - 1
 
 		for funcionario in funcionarios:
-			# ajustes = SolicitacaoPonto.objects.filter(funcionario=funcionario, status=True, data_cadastro__month=mes)
-			# abonos = SolicitacaoAbono.objects.filter(funcionario=funcionario, status=True, data_cadastro__month=mes)
-
-			# total_ajustes = ajustes.count() * 0.01
-			# total_declaracoes = abonos.filter(tipo=SolicitacaoAbono.Tipo.DECLARACAO).count() * 0.04
-			# total_atestados = abonos.exclude(tipo__in=[SolicitacaoAbono.Tipo.DECLARACAO, SolicitacaoAbono.Tipo.FALTA]).count() * 0.08
-			# total_faltas = abonos.filter(tipo=SolicitacaoAbono.Tipo.FALTA).count() * 1.25
-			# total_desconto = total_ajustes + total_atestados + total_declaracoes + total_faltas
-
 			ajustes = [i for i in solicitacoes if i['categoria'] == 'ajuste' and i['funcionario'] == funcionario.id and i['mes'] == mes and i['status'] is True]
 			abonos = [i for i in solicitacoes if i['categoria'] == 'abono' and i['funcionario'] == funcionario.id and i['mes'] == mes and i['status'] is True]
 
@@ -313,15 +308,14 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 	return dias_por_funcionario, score_por_funcionario
 
 
-def total_por_dia(queryset):
+def total_saldo(queryset):
 	try:
 		if isinstance(queryset, list):
 			horarios = queryset
 		else:
 			horarios = queryset.values_list('hora', flat=True)
 
-	except Exception as e:
-		print(e)
+	except Exception:
 		return None
 	
 	total = timedelta(0)
@@ -339,60 +333,64 @@ def total_por_dia(queryset):
 	return total
 
 
-def calculo_banco_horas(saldo, feriado, pontos, funcionario, weekday):
-	banco = timedelta(0)
-	regra = ''
-
-	# Verifica se há saldo positivo
-	if saldo > timedelta(0):
-		ultimo_ponto = pontos[-1]
-		
-		# Verifica se é feriado ou fim de semana
-		if (feriado and funcionario in feriado) or (weekday in [1, 7]):
-			banco = saldo * 2
-			regra = f"{round(saldo.total_seconds() / 3600, 2)}h +100%"
-		
-		# Verifica se o último ponto é após as 22h (trabalho noturno)
-		elif ultimo_ponto > create_time(22, 0):
-			noturno = datetime.combine(datetime.today(), ultimo_ponto) - datetime.combine(datetime.today(), create_time(22, 0))
-			total_noturno = noturno + noturno * 1.1
-			saldo_restante = saldo - noturno
-			
-			if saldo_restante > timedelta(minutes=120):
-				saldo_apos_2horas = saldo_restante - timedelta(minutes=120)
-				saldo_com_bonus = saldo_apos_2horas + saldo_apos_2horas * 0.8
-
-				banco = total_noturno + timedelta(minutes=192) + saldo_com_bonus
-				regra = (
-					f"2.0h +60%, "
-					f"{round(saldo_apos_2horas.total_seconds() / 3600, 2)}h +80%, "
-					f"{round(noturno.total_seconds() / 3600, 2)}h +110%"
-				)
-
-			else:
-				banco = total_noturno + saldo_restante + saldo_restante * 0.6
-				regra = (
-					f"{round(saldo_restante.total_seconds() / 3600, 2)}h +60%, "
-					f"{round(noturno.total_seconds() / 3600, 2)}h +110%"
-				)
-		
-		# Verifica se o saldo é maior que 2 horas
-		elif saldo > timedelta(minutes=120):
-			saldo_apos_2horas = saldo - timedelta(minutes=120)
-
-			banco = timedelta(minutes=192) + saldo_apos_2horas + saldo_apos_2horas * 0.8
-			regra = (
-				f"2.0h +60%, "
-				f"{round(saldo_apos_2horas.total_seconds() / 3600, 2)}h +80%"
-			)
-		
-		# Caso saldo menor que 2 horas
+def total_saldo_noturno(queryset):
+	try:
+		if isinstance(queryset, list):
+			horarios = queryset
 		else:
-			banco = saldo + saldo * 0.6
-			regra = f"{round(saldo.total_seconds() / 3600, 2)}h +60%"
-	
-	# Caso saldo negativo ou zero
-	else:
-		banco = saldo
+			horarios = queryset.values_list('hora', flat=True)
 
-	return banco, regra
+	except Exception:
+		return None
+	
+	inicio_noturno = create_time(22, 0)
+	fim_noturno = create_time(5, 0)
+	total_noturno = timedelta()
+
+	for i in range(0, len(horarios) - 1, 2):
+		entrada = horarios[i]
+		saida = horarios[i + 1]
+		
+		entrada_dt = datetime.combine(datetime.today(), entrada)
+		saida_dt = datetime.combine(datetime.today(), saida)
+		
+		if saida < entrada:
+			saida_dt += timedelta(days=1)
+		
+		if entrada < inicio_noturno and saida > inicio_noturno:
+			noturno_inicio = datetime.combine(datetime.today(), inicio_noturno)
+			total_noturno += min(saida_dt, noturno_inicio + timedelta(hours=7)) - noturno_inicio
+		
+		elif entrada >= inicio_noturno or saida <= fim_noturno:
+			total_noturno += saida_dt - entrada_dt
+
+	return total_noturno
+
+
+def calculo_adicionais(saldo, feriado, pontos, funcionario, weekday):
+	'''
+	Adicional de 100%: feriados, sábado, domingo, após 2h de saldo
+	Adicional de 50%: até 2h de saldo
+	Adicional de 20%: nortuno (22h até as 5h)
+	'''
+	ultimo_ponto = pontos[-1]
+
+	saldo_100 = timedelta(0)
+	saldo_50 = timedelta(0)
+	saldo_20 = timedelta(0)
+
+	if ultimo_ponto >= create_time(22, 0):
+		saldo_20 += total_saldo_noturno(pontos)
+
+	if saldo > timedelta(0):
+		if (feriado and funcionario in feriado) or (weekday in [1, 7]):
+			saldo_100 += saldo
+
+		elif saldo > timedelta(minutes=120):
+			saldo_100 += saldo - timedelta(minutes=120)
+			saldo_50 += timedelta(minutes=120)
+
+		else:
+			saldo_50 += saldo
+
+	return saldo_50, saldo_100, saldo_20

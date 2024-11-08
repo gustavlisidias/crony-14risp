@@ -20,7 +20,6 @@ admin.site.register(Setor)
 admin.site.register(Cargo)
 admin.site.register(JornadaFuncionario)
 admin.site.register(TipoDocumento)
-admin.site.register(Perfil)
 admin.site.register(Score)
 admin.site.register(Feedback)
 admin.site.register(SolicitacaoFeedback)
@@ -44,9 +43,16 @@ class FuncionarioAdmin(admin.ModelAdmin):
 	)
 
 
+@admin.register(Perfil)
+class PerfiloAdmin(admin.ModelAdmin):
+	list_display = ('funcionario', 'foto', 'data_edicao') # colunas da tabela
+	search_fields = ('funcionario__nome_completo',) # campos de pesquisa aberta
+	ordering = ('funcionario__nome_completo',) # ordenção da tabela
+
+
 @admin.register(Documento)
 class DocumentoAdmin(admin.ModelAdmin):
 	list_display = ('caminho', 'tipo', 'funcionario', 'data_documento') # colunas da tabela
-	search_fields = ('caminho', 'funcionario', 'data_documento') # campos de pesquisa aberta
-	ordering = ('-data_documento', 'funcionario', 'tipo') # ordenção da tabela
+	search_fields = ('caminho', 'funcionario__nome_completo', 'data_documento') # campos de pesquisa aberta
+	ordering = ('-data_documento', 'funcionario__nome_completo', 'tipo') # ordenção da tabela
 	list_filter = ('tipo', 'data_documento') # filtros

@@ -81,9 +81,11 @@
 													<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar funcionário">
 														<i class="fa-thin fa-pen-to-square fa-lg text-body me-2"></i>
 													</a>
-													<a type="button" data-bs-toggle="modal" data-bs-target="#modalObservacoesFuncionario" title="Adicionar anotações">
-														<i class="fa-thin fa-file-pen fa-lg text-body"></i>
-													</a>
+													{% if request.user.get_access == "admin" %}
+														<a type="button" data-bs-toggle="modal" data-bs-target="#modalObservacoesFuncionario" title="Adicionar anotações">
+															<i class="fa-thin fa-file-pen fa-lg text-body"></i>
+														</a>
+													{% endif %}
 												</div>
 											</div>
 										</div>

@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.timezone import make_aware
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from pathlib import Path
 
 from agenda.models import (
@@ -19,8 +19,9 @@ from agenda.models import (
 )
 from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
-from funcionarios.models import Documento, TipoDocumento, JornadaFuncionario
-from ponto.models import Ponto
+from funcionarios.models import Documento, TipoDocumento
+from ponto.models import Ponto, Saldos
+from ponto.utils import filtrar_abonos, total_saldo
 from web.utils import not_none_not_empty, add_coins
 
 
@@ -110,12 +111,14 @@ def EditarEventoView(request):
 
 					# Preciso consultar o estado atual de saldos por período do funcionário
 					# No periodo cadastrado preciso que haja saldo suficiente
-					resultado = [i for i in dados_ferias if i['vencimento'] <= solicitacao.final_periodo and i['inicio'] >= solicitacao.inicio_periodo and i['saldo'] >= delta][0]
+					resultado = [i for i in dados_ferias if i['vencimento'] <= solicitacao.final_periodo and i['inicio'] >= solicitacao.inicio_periodo and i['saldo'] >= delta]
+					if not resultado:
+						resultado = [i for i in dados_ferias if i['saldo'] >= delta]
 
 					if resultado:
 						Ferias(
 							funcionario=solicitacao.funcionario,
-							ano_referencia=resultado['periodo'],
+							ano_referencia=resultado[0]['periodo'],
 							inicio_periodo=solicitacao.inicio_periodo,
 							final_periodo=solicitacao.final_periodo,
 							inicio_ferias=atividade.inicio,
@@ -133,21 +136,38 @@ def EditarEventoView(request):
 						data__lte=solicitacao.final_ferias,
 					).delete()
 					
-					jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
-					data_inicial = solicitacao.inicio_ferias
+					# jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
+					# data_inicial = solicitacao.inicio_ferias
 
-					while data_inicial <= solicitacao.final_ferias:
-						weekday = 1 if data_inicial.weekday() + 2 == 8 else data_inicial.weekday() + 2
+					# while data_inicial <= solicitacao.final_ferias:
+					# 	weekday = 1 if data_inicial.weekday() + 2 == 8 else data_inicial.weekday() + 2
 
-						for jornada in jornadas.filter(dia=weekday):
-							Ponto(
-								funcionario=solicitacao.funcionario,
-								data=data_inicial,
-								hora=jornada.hora,
-								alterado=True,
-							).save()
+					# 	for jornada in jornadas.filter(dia=weekday):
+					# 		Ponto(
+					# 			funcionario=solicitacao.funcionario,
+					# 			data=data_inicial,
+					# 			hora=jornada.hora,
+					# 			alterado=True,
+					# 		).save()
 
-						data_inicial += timedelta(days=1)
+					# 	data_inicial += timedelta(days=1)
+
+					jornada_para_abonar = filtrar_abonos(atividade.inicio, atividade.final, solicitacao.funcionario)
+					for dia, pontos in jornada_para_abonar.items():
+						Ponto(
+							funcionario=solicitacao.funcionario,
+							data=dia,
+							hora=time(0, 0),
+							motivo='Férias',
+							alterado=True,
+							encerrado=True
+						).save()
+						
+						Saldos(
+							funcionario=solicitacao.funcionario,
+							saldo=total_saldo(pontos),
+							data=dia
+						).save()
 
 				message = 'Evento finalizado com sucesso!' if finalizado else 'Evento alterado com sucesso!'
 				messages.success(request, message)

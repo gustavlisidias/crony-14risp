@@ -38,12 +38,15 @@
 						<th scope="col">Gestor</th>
 						<th scope="col">Ativo</th>
 						<th scope="col">Data Contratação</th>
-						<th class="text-center" scope="col">Ações</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% for funcionario in funcionarios %}
-						<tr>
+						{% if request.user.get_access == "admin" or request.user == funcionario.gerente.usuario or request.user == funcionario.usuario %}
+							<tr role="button" onclick="window.location.href = `{% url 'editar-funcionario' funcionario.id %}`" title="Visualizar {{funcionario.nome_completo}}">
+						{% else %}
+							<tr role="button" onclick="visualizarFuncionario({nome: '{{funcionario}}', cargo: '{{funcionario.cargo.cargo}}', setor: '{{funcionario.setor.setor}}', foto: '{{funcionario.id|photo}}', contato: '{{funcionario.contato}}', resposavel: '{{funcionario.gerente}}', cor: '{{funcionario.get_perfil.time.cor}}'})" title="Visualizar {{funcionario.nome_completo}}">
+						{% endif %}
 							<th scope="row">{{funcionario.matricula}}</th>
 							<td>{{funcionario}}</td>
 							<td>{{funcionario.cargo.cargo}}</td>
@@ -63,20 +66,6 @@
 							{%endif %}
 
 							<td>{{funcionario.data_contratacao|date:"d/m/Y"}}</td>
-
-							{% if request.user.get_access == "admin" or request.user == funcionario.gerente.usuario or request.user == funcionario.usuario %}
-								<td class="text-center">
-									<a href="{% url 'editar-funcionario' funcionario.id %}" title="Editar usuário">
-										<i class="fa-thin fa-user-pen fa-lg text-body"></i>
-									<a>
-								</td>
-							{% else %}
-								<td class="text-center">
-									<a role="button" title="Ver usuário" onclick="visualizarFuncionario({nome: '{{funcionario}}', cargo: '{{funcionario.cargo.cargo}}', setor: '{{funcionario.setor.setor}}', foto: '{{funcionario.id|photo}}', contato: '{{funcionario.contato}}', resposavel: '{{funcionario.gerente}}'})">
-										<i class="fa-thin fa-user-tag fa-lg text-body"></i>
-									<a>
-								</td>
-							{% endif %}
 						</tr>
 					{% endfor %}
 				</tbody>

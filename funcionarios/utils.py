@@ -92,6 +92,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 	data_nascimento = request.POST.get('data_nascimento') # required
 	data_contratacao = request.POST.get('data_contratacao') # required
 	data_demissao = request.POST.get('data_demissao') if not_none_not_empty(request.POST.get('data_demissao')) else None
+	data_inicio_ferias = request.POST.get('data_inicio_ferias') if not_none_not_empty(request.POST.get('data_inicio_ferias')) else None
 	conta_banco = request.POST.get('conta_banco') if not_none_not_empty(request.POST.get('conta_banco')) else None
 
 	# Dados adicionais
@@ -163,6 +164,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 					data_nascimento=data_nascimento,
 					data_contratacao=data_contratacao,
 					data_demissao=data_demissao,
+					data_inicio_ferias=data_inicio_ferias,
 					conta_banco=conta_banco
 				)
 
@@ -274,6 +276,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 				funcionario.data_nascimento=data_nascimento
 				funcionario.data_contratacao=data_contratacao
 				funcionario.data_demissao=data_demissao
+				funcionario.data_inicio_ferias=data_inicio_ferias
 				funcionario.conta_banco=conta_banco
 				funcionario.save()
 
