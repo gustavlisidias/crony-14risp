@@ -21,8 +21,11 @@
 					<button class="nav-link active" id="periodo-tab" data-bs-toggle="tab" data-bs-target="#periodo-pane" type="button" role="tab">Minhas Férias</button>
 				</li>
 				{% if request.user.get_access == "admin" %}
-					<li class="nav-item flex-fill" role="presentation">
+					<li class="nav-item" role="presentation">
 						<button class="nav-link" id="solicitacoes-tab" data-bs-toggle="tab" data-bs-target="#solicitacoes-pane" type="button" role="tab">Solicitações</button>
+					</li>
+					<li class="nav-item flex-fill" role="presentation">
+						<button class="nav-link" id="resumo-tab" data-bs-toggle="tab" data-bs-target="#resumo-pane" type="button" role="tab">Visão Geral</button>
 					</li>
 					<li class="nav-item" role="presentation">
 						<form method="POST" action="" id="formRelatorioFerias" onsubmit="gerarRelatorio()">
@@ -43,10 +46,10 @@
 							<div class="card bg-body py-4 px-5 m-5">
 								<div class="row mb-4">
 									<div class="col">
-										<h4 style="white-space: pre-line">
+										<p style="white-space: pre-line">
 											Período
 											{{ferias.periodo}} - {{ferias.periodo}}
-										</h4>
+										</p>
 									</div>
 									<div class="col d-flex justify-content-end">
 										<h4 style="white-space: pre-line">
@@ -57,16 +60,16 @@
 								</div>
 								<div class="row">
 									<div class="col-3 d-flex justify-content-start">
-										<small style="white-space: pre-line">
+										<h5 style="white-space: pre-line">
 											Direito a férias a partir de
 											{{ferias.inicio|date:"d/m/Y"}}
-										</small>
+										</h5>
 									</div>
 									<div class="col-3 d-flex justify-content-start">
-										<small style="white-space: pre-line">
+										<h5 style="white-space: pre-line">
 											Data limite para início
 											{{ferias.vencimento|date:"d/m/Y"}}
-										</small>
+										</h5>
 									</div>
 									<div class="col d-flex justify-content-end">
 										<button type="button" class="btn btn-secondary text-light rounded-pill" 
@@ -83,30 +86,66 @@
 				{% if request.user.get_access == "admin" %}
 					<div class="tab-pane fade" id="solicitacoes-pane" role="tabpanel" aria-labelledby="solicitacoes-tab" tabindex="0">
 						<div class="table-responsive">
-							<table class="table table-hover align-middle table-ferias">
+							<table class="table table-hover align-middle table-solicitacoes">
 								<thead>
 									<tr>
 										<th scope="col">#</th>
+										<th scope="col">Colaborador</th>
 										<th scope="col">Observação</th>
 										<th scope="col">Entrada</th>
 										<th scope="col">Volta</th>
-										<th scope="col" class="text-center">Ações</th>
+										<th scope="col">Status</th>
 									</tr>
 								</thead>
 								<tbody>
 									{% for solicitacao in solicitacoes %}
 										<tr data-id="{{solicitacao.id}}" role="button">
 											<th scope="row">{{forloop.counter}}</th>
+											<td>{{solicitacao.funcionario}}</td>
 											<td>{{solicitacao.observacao}}</td>
-											<td>{{solicitacao.inicio|date:"d/m/Y"}}</td>
-											<td>{{solicitacao.final|date:"d/m/Y"}}</td>
-											<td class="text-center">
-												<div class="d-flex justify-content-around">
-													<a role="button" title="Aprovar solicitação" onclick="event.stopPropagation();" hx-post="{% url 'aprovar-solicitacao-ferias' solicitacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()"><i class="fa-thin fa-check text-success"></i></a>
-													<a role="button" title="Excluir solicitação" onclick="event.stopPropagation();" hx-post="{% url 'excluir-solicitacao-ferias' solicitacao.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()"><i class="fa-light fa-xmark text-danger"></i></a>
-												</div>
-											</td>
+											<td>{{solicitacao.inicio_ferias|date:"d/m/Y"}}</td>
+											<td>{{solicitacao.final_ferias|date:"d/m/Y"}}</td>
+											{% if not status %}
+												<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+											{% else %}
+												<td><i class="fa-duotone fa-circle-check text-success"></i></td>
+											{% endif %}
 										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<div class="tab-pane fade" id="resumo-pane" role="tabpanel" aria-labelledby="resumo-tab" tabindex="0">
+						<div class="table-responsive">
+							<table class="table table-hover align-middle table-ferias">
+								<thead>
+									<tr>
+										<th scope="col">#</th>
+										<th scope="col">Matrícula</th>
+										<th scope="col">Colaborador</th>
+										<th scope="col">Período</th>
+										<th scope="col">Início</th>
+										<th scope="col">Vencimento</th>
+										<th scope="col">Direito</th>
+										<th scope="col">Saldo</th>
+									</tr>
+								</thead>
+								<tbody>
+									{% for funcionario, periodos in ferias.items %}
+										{% for dado in periodos %}
+											<tr>
+												<th scope="row">{{forloop.parentloop.counter}}.{{forloop.counter}}</th>
+												<td>{{funcionario.matricula}}</td>
+												<td>{{funcionario}}</td>
+												<td>{{dado.periodo}}</td>
+												<td>{{dado.inicio|date:"d/m/Y"}}</td>
+												<td>{{dado.vencimento|date:"d/m/Y"}}</td>
+												<td>{{dado.direito|absolute_days}} dias</td>
+												<td>{{dado.saldo|absolute_days}} dias</td>
+											</tr>
+										{% endfor%}
 									{% endfor %}
 								</tbody>
 							</table>
@@ -133,15 +172,20 @@
 			scrollY: 500,
 		});
 
-		const table1 = $(".table-ferias").DataTable(config);
+		const table1 = $(".table-solicitacoes").DataTable(config);
+		const table2 = $(".table-ferias").DataTable(config);
 
 		$("#solicitacoes-tab").on("click", function() {
 			setTimeout(() => {table1.draw(false)}, "200");
 		});
 
+		$("#resumo-tab").on("click", function() {
+			setTimeout(() => {table2.draw(false)}, "200");
+		});
+
 		//####################################################################################
 
-		const tableRows = document.querySelector(".table-ferias").rows;
+		const tableRows = document.querySelector(".table-solicitacoes").rows;
 		Array.from(tableRows).forEach(row => {
 			row.addEventListener("click", function() {
 				document.getElementById("overlay").style.display = "block";
@@ -173,6 +217,9 @@
 								<p>Sem documentos enviados!</p>
 							`);
 						};
+
+						modal.find("#btnReprovarSolicitacao").attr("hx-post", `{% url 'excluir-solicitacao-ferias' 0 %}`.replace("0", solicitacaoId));
+						modal.find("#btnAprovarSolicitacao").attr("hx-post", `{% url 'aprovar-solicitacao-ferias' 0 %}`.replace("0", solicitacaoId));
 
 						modal.modal("show");
 					},

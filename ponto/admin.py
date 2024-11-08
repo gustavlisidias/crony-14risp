@@ -12,5 +12,5 @@ admin.site.register(Feriados)
 class PontoAdmin(admin.ModelAdmin):
 	list_display = ('funcionario', 'data', 'hora', 'motivo', 'alterado', 'encerrado', 'data_fechamento') # colunas da tabela
 	search_fields = ('funcionario__nome_completo', 'data', 'hora', 'motivo') # campos de pesquisa aberta
-	ordering = ('-data', 'hora', 'funcionario') # ordenção da tabela
+	ordering = ('-data', 'hora', 'funcionario__nome_completo') # ordenção da tabela
 	list_filter = ('alterado', 'encerrado', 'data') # filtros

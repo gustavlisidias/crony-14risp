@@ -112,13 +112,11 @@ def RegistrosPontoView(request):
 		graph['notas'] = list(scores.values())[0]
 		graph['total'] = timedelta(seconds=0)
 		graph['saldo'] = timedelta(seconds=0)
-		graph['banco'] = timedelta(seconds=0)
 
 		for _, i in pontos.items():
 			for j in i:
 				graph['total'] += j['total']
 				graph['saldo'] += j['saldo']
-				graph['banco'] += j['banco']
 	
 	context = {
 		'funcionarios': funcionarios,
@@ -167,14 +165,13 @@ def RegistrosPontoFuncinarioView(request, func):
 	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), funcionarios.filter(pk=colaborador.pk))
 
 	nro_colunas = 0
-	dados = {'notas': None, 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'banco': timedelta(seconds=0)}
+	dados = {'notas': None, 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0)}
 	if pontos:
 		dados['notas'] = list(scores.values())[0]
 		for _, i in pontos.items():
 			for j in i:
 				dados['total'] += j['total']
 				dados['saldo'] += j['saldo']
-				dados['banco'] += j['banco']
 
 				if len(j['pontos']) > nro_colunas:
 					nro_colunas = len(j['pontos'])

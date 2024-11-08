@@ -44,7 +44,7 @@ class FuncionarioAdmin(admin.ModelAdmin):
 
 
 @admin.register(Perfil)
-class PerfiloAdmin(admin.ModelAdmin):
+class PerfilAdmin(admin.ModelAdmin):
 	list_display = ('funcionario', 'foto', 'data_edicao') # colunas da tabela
 	search_fields = ('funcionario__nome_completo',) # campos de pesquisa aberta
 	ordering = ('funcionario__nome_completo',) # ordenção da tabela

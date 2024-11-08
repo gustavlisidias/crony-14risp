@@ -48,6 +48,11 @@
 						Horários
 					</button>
 				</li>
+				<li class="nav-item" role="presentation">
+					<button class="nav-link" id="tab-ferias" data-bs-toggle="tab" data-bs-target="#pane-ferias" type="button" role="tab">
+						Férias
+					</button>
+				</li>
 			</ul>
 
 			<div class="tab-content" id="tab-usuario">
@@ -293,12 +298,6 @@
 										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.total|timedelta }}</small>
 									</div>
 
-									<span class="text-muted fs-7">Saldo de Horas</span>
-									<div class="progress position-relative">
-										<div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.saldo|timedelta }}</small>
-									</div>
-
 									<span class="text-muted fs-7">Score de Pontualidade</span>
 									<div class="progress position-relative">
 										<div class="progress-bar bg-secondary" role="progressbar" style="width: {{graph.scores.1|floatformat:"3u"}}%" aria-valuenow="{{graph.scores.1|floatformat:"3u"}}" aria-valuemin="0" aria-valuemax="100"></div>
@@ -311,7 +310,7 @@
 												<i class="fa-thin fa-clock fa-2xl text-light"></i>
 												<div class="text-center">
 													<span class="text-light fs-7 fw-bold">
-														Saldo Bando de Horas <br> {{graph.banco|timedelta}}
+														Saldo Bando de Horas <br> {{graph.saldo|timedelta}}
 													</span>
 												</div>
 											</div>
@@ -509,6 +508,42 @@
 					</form>
 				</div>
 
+				<!-- Resumo Férias -->
+				<div class="tab-pane fade" id="pane-ferias" role="tabpanel" tabindex="0">
+					<div class="table-responsive mt-3">
+						<table class="table table-hover align-middle table-ferias">
+							<thead>
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col">Matrícula</th>
+									<th scope="col">Colaborador</th>
+									<th scope="col">Período</th>
+									<th scope="col">Início</th>
+									<th scope="col">Vencimento</th>
+									<th scope="col">Direito</th>
+									<th scope="col">Saldo</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for funcionario, periodos in ferias.items %}
+									{% for dado in periodos %}
+										<tr>
+											<th scope="row">{{forloop.parentloop.counter}}.{{forloop.counter}}</th>
+											<td>{{funcionario.matricula}}</td>
+											<td>{{funcionario}}</td>
+											<td>{{dado.periodo}}</td>
+											<td>{{dado.inicio|date:"d/m/Y"}}</td>
+											<td>{{dado.vencimento|date:"d/m/Y"}}</td>
+											<td>{{dado.direito|absolute_days}} dias</td>
+											<td>{{dado.saldo|absolute_days}} dias</td>
+										</tr>
+									{% endfor%}
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
 			</div>
 		</div>
 	</div>
@@ -686,7 +721,16 @@
 			scrollY: 300,
 		});
 
-		const table = $(".table-documentos").DataTable(config);
+		const table1 = $(".table-documentos").DataTable(config);
+		const table2 = $(".table-ferias").DataTable(config);
+
+		$("#tab-perfil").on("click", function() {
+			setTimeout(() => {table1.draw(false)}, "200");
+		});
+
+		$("#tab-ferias").on("click", function() {
+			setTimeout(() => {table2.draw(false)}, "200");
+		});
 	});
 </script>
 

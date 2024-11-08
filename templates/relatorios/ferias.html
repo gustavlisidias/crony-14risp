@@ -78,30 +78,24 @@
 					<tr>
 						<th class="bg-body">Matrícula</th>
 						<th class="bg-body">Nome</th>
-						<th class="bg-body">Admissão</th>
-						<th class="bg-body">Início</th>
-						<th class="bg-body">Data Limite</th>
-						<th class="bg-body">Saldo</th>
+						<th scope="col">Período</th>
+						<th scope="col">Início</th>
+						<th scope="col">Vencimento</th>
+						<th scope="col">Direito</th>
+						<th scope="col">Saldo</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% for funcionario, periodos in ferias.items %}
-						{% for periodo in periodos %}
+						{% for dado in periodos %}
 							<tr>
-								{% for colaborador in funcionarios %}
-								{% if colaborador.nome_completo == funcionario %}
-									<td>{{colaborador.matricula}}</td>
-									<td>{{colaborador.nome_completo}}</td>
-									<td>{{colaborador.data_contratacao|date:"d/m/Y"}}</td>
-								{% endif %}
-								{% endfor %}
-								<td>{{periodo.inicio|date:"d/m/Y"}}</td>
-								<td>{{periodo.vencimento|date:"d/m/Y"}}</td>
-								{% if not periodo.status %}
-									<td>{{periodo.saldo|absolute_days}} dias</td>
-								{% else %}
-									<td>0 dias</td>
-								{% endif %}
+								<td>{{funcionario.matricula}}</td>
+								<td>{{funcionario.nome_completo}}</td>
+								<td>{{dado.periodo}}</td>
+								<td>{{dado.inicio|date:"d/m/Y"}}</td>
+								<td>{{dado.vencimento|date:"d/m/Y"}}</td>
+								<td>{{dado.direito|absolute_days}} dias</td>
+								<td>{{dado.saldo|absolute_days}} dias</td>
 							</tr>
 						{% endfor %}
 					{% endfor %}

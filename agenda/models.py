@@ -50,9 +50,15 @@ class Ferias(models.Model):
 	final_periodo = models.DateField(verbose_name='Final Período')
 	inicio_ferias = models.DateField(verbose_name='Início Férias')
 	final_ferias = models.DateField(verbose_name='Final Férias')
+	saldo = models.IntegerField(verbose_name='Saldo do Período')
 	abono = models.IntegerField(default=0, verbose_name='Total Abono')
 	decimo = models.BooleanField(default=False, verbose_name='13º Salário')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
+
+	def save(self, *args, **kwargs):
+		if not self.saldo:
+			self.saldo = 15 if self.funcionario.get_contrato.slug == 'estagio' else 30
+		super().save(*args, **kwargs)
 
 	def __str__(self):
 		return str(self.funcionario)

@@ -322,7 +322,6 @@
 					<p class="fw-bold">Score de Pontualidade: {{graph.notas.0|floatformat:2}}</p>
 					<p class="fw-bold">Total Trabalhado: {{graph.total|timedelta}}</p>
 					<p class="fw-bold">Saldo de Horas: {{graph.saldo|timedelta}}</p>
-					<p class="fw-bold">Banco de Horas: {{graph.banco|timedelta}}</p>
 				</div>
 
 				<div class="d-flex justify-content-center mb-2">
@@ -874,7 +873,7 @@
 					{% for dado in dados %}
 						{
 							data: `{{ data|date:"d/m/Y" }}`,
-							banco: parseFloat("{{ dado.banco|floatdelta|floatformat:2 }}".replace(",", "."))
+							banco: parseFloat("{{ dado.saldo|floatdelta|floatformat:2 }}".replace(",", "."))
 						},
 					{% endfor %}
 				{% endfor %}
@@ -885,7 +884,7 @@
 			});
 
 			const labels = dadosFiltrados.map(item => item.data);
-			const banco = dadosFiltrados.map(item => item.banco);
+			const banco = dadosFiltrados.map(item => item.saldo);
 			const ctx = document.getElementById("saldoGrafico").getContext("2d");
 
 			createChart(ctx, "line", labels, banco, "Total em horas", "Banco de Horas");

@@ -45,10 +45,10 @@
 				</a>
 			</li>
 
-			{% url 'ferias' as url %}
+			{% url 'notificacoes' as url %}
 			<li class="nav-item {% if request.path == url %} active {% endif %}">
 				<a href="{{url}}" class="nav-link px-0 align-middle">
-					<i class="fa-thin fa-umbrella-beach fa-xl"></i><span class="ms-1 d-none">Férias</span>
+					<i class="fa-thin fa-bullhorn fa-xl"></i><span class="ms-1 d-none">Comunicados</span>
 				</a>
 			</li>
 
@@ -75,10 +75,10 @@
 				</a>
 			</li>
 
-			{% url 'notificacoes' as url %}
+			{% url 'ferias' as url %}
 			<li class="nav-item {% if request.path == url %} active {% endif %}">
 				<a href="{{url}}" class="nav-link px-0 align-middle">
-					<i class="fa-thin fa-bullhorn fa-xl"></i><span class="ms-1 d-none">Comunicados</span>
+					<i class="fa-thin fa-umbrella-beach fa-xl"></i><span class="ms-1 d-none">Férias</span>
 				</a>
 			</li>
 

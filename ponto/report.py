@@ -39,7 +39,6 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 			saldos = {
 				'total': timedelta(seconds=0),
 				'saldo': timedelta(seconds=0),
-				'banco': timedelta(seconds=0),
 				'credito': timedelta(seconds=0),
 				'debito': timedelta(seconds=0)
 			}
@@ -48,7 +47,6 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 				for dado in dados:
 					saldos['total'] += dado['total']
 					saldos['saldo'] += dado['saldo']
-					saldos['banco'] += dado['banco']
 
 					if dado['saldo'] < timedelta(0):
 						saldos['debito'] += dado['saldo']

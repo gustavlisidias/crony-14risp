@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, date
 from slugify import slugify
 
 from agenda.models import Atividade, Avaliacao
+from agenda.utils import ferias_funcionarios
 from cities_light.models import Region as Estado
 from cities_light.models import SubRegion as Cidade
 from configuracoes.models import Contrato, Jornada, Variavel
@@ -115,6 +116,7 @@ def EditarFuncionarioView(request, func):
 	estados = Estado.objects.all().order_by('name')
 	cidades = Cidade.objects.all().order_by('name')
 
+	ferias = ferias_funcionarios(funcionarios.filter(pk=colaborador.pk))
 	atividades = Atividade.objects.filter(funcionarios=colaborador, data_finalizacao=None).order_by('inicio')
 	tipos = TipoDocumento.objects.all()
 
@@ -170,14 +172,13 @@ def EditarFuncionarioView(request, func):
 	else:
 		pontos, scores = None, None
 	
-	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'banco': timedelta(seconds=0), 'scores': None}
+	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'scores': None}
 	if pontos:
 		graph['scores'] = list(scores.values())[0]
 		for _, dados in pontos.items():
 			for dado in dados:
 				graph['total'] += dado['total']
 				graph['saldo'] += dado['saldo']
-				graph['banco'] += dado['banco']
 
 	if request.method == 'POST':
 		if request.user.get_access == 'common':
@@ -319,6 +320,7 @@ def EditarFuncionarioView(request, func):
 		'avaliacao': avaliacao,
 		'contratos': contratos,
 		'contrato': colaborador.get_contrato if jornadas else None,
+		'ferias': ferias,
 
 		'historico_jornadas': historico_jornadas,
 		'jornada': jornada,

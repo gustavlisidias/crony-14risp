@@ -163,20 +163,19 @@ def FeriasView(request):
 	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
 	funcionario = funcionarios.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-	ferias = ferias_funcionarios(funcionarios.filter(pk=funcionario.pk))
+	ferias = ferias_funcionarios(funcionarios.exclude(matricula='000000'))
 
 	# Filtro de solicitações por role
 	if funcionario.usuario.get_access == 'common':
-		solicitacoes = SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False)
+		solicitacoes = SolicitacaoFerias.objects.filter(funcionario=funcionario)
 	elif funcionario.usuario.get_access == 'manager':
-		solicitacoes = SolicitacaoFerias.objects.filter(Q(funcionario=funcionario) | Q(aprovador=funcionario), status=False)
+		solicitacoes = SolicitacaoFerias.objects.filter(Q(funcionario=funcionario) | Q(aprovador=funcionario)).distinct()
 	else:
-		solicitacoes = SolicitacaoFerias.objects.filter(status=False)
-		ferias = ferias_funcionarios(funcionarios)
-
+		solicitacoes = SolicitacaoFerias.objects.all()
+	
 	if request.method == 'POST':
 		inicio_ferias = request.POST.get('inicio')
-		final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(request.POST.get('total_ferias'))) if not_none_not_empty(request.POST.get('inicio')) else None
+		final_ferias = datetime.strptime(inicio_ferias, '%Y-%m-%d') + timedelta(days=int(request.POST.get('total_ferias'))) if not_none_not_empty(inicio_ferias) else None
 
 		inicio_periodo = request.POST.get('inicio_periodo')
 		final_periodo = request.POST.get('final_periodo')
@@ -272,8 +271,9 @@ def FeriasView(request):
 		'funcionarios': funcionarios,
 		'funcionario': funcionario,
 		'notificacoes': notificacoes,
-		'minhas_ferias': ferias.get(funcionario.nome_completo, []),
-		'solicitacoes': solicitacoes,
+		'ferias': ferias,
+		'minhas_ferias': ferias.get(funcionario, []),
+		'solicitacoes': solicitacoes.order_by('-status'),
 	}
 	return render(request, 'pages/ferias.html', context)
 
