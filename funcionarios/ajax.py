@@ -4,7 +4,7 @@ import re
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 
@@ -77,12 +77,18 @@ def RealoadDocumentosView(request):
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
 	
+	funcionario = Funcionario.objects.get(usuario=request.user)
 	filtro_data_inicial = request.GET.get('data_inicial') if not_none_not_empty(request.GET.get('data_inicial')) else '2018-01-01'  # (timezone.localdate() - timedelta(days=10)).strftime('%Y-%m-%d')
 	filtro_data_final = request.GET.get('data_final') if not_none_not_empty(request.GET.get('data_final')) else timezone.localdate().strftime('%Y-%m-%d')
 	filtro_nome = request.GET.get('nome')
 	filtro_tipo = request.GET.get('tipo')
 
-	tipos = TipoDocumento.objects.all()
+	if funcionario.is_financeiro:
+		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.FINA))
+	elif request.user.get_access == 'admin':
+		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.ADMIN))
+	else:
+		tipos = TipoDocumento.objects.filter(visibilidade=TipoDocumento.Visoes.GERAL)
 
 	documentos = Documento.objects.filter(funcionario=None, data_documento__range=[filtro_data_inicial, filtro_data_final], tipo__in=tipos).order_by('-data_documento')
 

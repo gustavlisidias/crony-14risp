@@ -29,63 +29,58 @@
 				</div>
 			{% endif %}
 		</div>
-
 		<div class="card-body">
+			<table class="table table-hover align-middle table-pesquisas">
+				<thead>
+					<tr>
+						<th scope="col">#</th>
+						<th scope="col">Título</th>
+						<th scope="col">Descrição</th>
+						<th scope="col">Data Encerramento</th>
+						<th scope="col">Anônima</th>
+						<th scope="col">Respondido</th>
+						<th scope="col" class="text-center">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for pesquisa in pesquisas %}
+						<tr role="button" onclick="verPesquisa({{pesquisa.id}})">
+							<th scope="row">{{forloop.counter}}</th>
+							<td>{{pesquisa.titulo}}</td>
+							<td>{{pesquisa.descricao|default_if_none:""|safe|truncatechars_html:50}}</td>
+							<td>{{pesquisa.data_encerramento|date:"d/m/Y"}}</td>
 
-			<div class="table-responsive mt-3">
-				<table class="table table-hover align-middle table-pesquisas">
-					<thead>
-						<tr>
-							<th scope="col">#</th>
-							<th scope="col">Título</th>
-							<th scope="col">Descrição</th>
-							<th scope="col">Data Encerramento</th>
-							<th scope="col">Anônima</th>
-							<th scope="col">Respondido</th>
-							<th scope="col">Ações</th>
-						</tr>
-					</thead>
-					<tbody>
-						{% for pesquisa in pesquisas %}
-							<tr role="button" onclick="verPesquisa({{pesquisa.id}})">
-								<th scope="row">{{forloop.counter}}</th>
-								<td>{{pesquisa.titulo}}</td>
-								<td>{{pesquisa.descricao|default_if_none:""|safe|truncatechars_html:50}}</td>
-								<td>{{pesquisa.data_encerramento|date:"d/m/Y"}}</td>
+							{% if not pesquisa.anonimo %}
+								<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+							{% else %}
+								<td><i class="fa-duotone fa-circle-check text-success"></i></td>
+							{% endif %}
 
-								{% if not pesquisa.anonimo %}
-									<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
-								{% else %}
-									<td><i class="fa-duotone fa-circle-check text-success"></i></td>
-								{% endif %}
+							{% if not pesquisa.respondido %}
+								<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
+							{% else %}
+								<td><i class="fa-duotone fa-circle-check text-success"></i></td>
+							{% endif %}
 
-								{% if not pesquisa.respondido %}
-									<td><i class="fa-duotone fa-circle-xmark text-danger"></i></td>
-								{% else %}
-									<td><i class="fa-duotone fa-circle-check text-success"></i></td>
-								{% endif %}
-
-								<th class="text-center">
-									<div class="d-flex justify-content-around">
-										<a role="button" title="Responder" {% if not pesquisa.respondido %} onclick="event.stopPropagation(); responderPesquisa({{pesquisa.id}})" {% else %} onclick="event.stopPropagation(); alert('Pesquisa já respondida!')" {% endif %}>
-											<i class="fa-thin fa-pen-field text-body"></i>
+							<th class="text-center">
+								<div class="d-flex justify-content-around">
+									<a role="button" title="Responder" {% if not pesquisa.respondido %} onclick="event.stopPropagation(); responderPesquisa({{pesquisa.id}})" {% else %} onclick="event.stopPropagation(); alert('Pesquisa já respondida!')" {% endif %}>
+										<i class="fa-solid fa-reply fa-lg text-body"></i>
+									</a>
+									{% if request.user.get_access == "admin" %}
+										<a role="button" title="Respostas" href="{% url 'visualizar-respostas' pesquisa.id %}">
+											<i class="fa-thin fa-input-text fa-lg text-body"></i>
 										</a>
-										{% if request.user.get_access == "admin" %}
-											<a role="button" title="Respostas" href="{% url 'visualizar-respostas' pesquisa.id %}">
-												<i class="fa-thin fa-message-captions text-body"></i>
-											</a>
-											<a role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-pesquisa' pesquisa.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
-												<i class="fa-thin fa-x text-danger"></i>
-											</a>
-										{% endif %}
-									</div>
-								</th>
-							</tr>
-						{% endfor %}
-					</tbody>
-				</table>
-			</div>
-
+										<a role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-pesquisa' pesquisa.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+											<i class="fa-thin fa-x text-danger"></i>
+										</a>
+									{% endif %}
+								</div>
+							</th>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
 		</div>
 	</div>
 
@@ -142,7 +137,7 @@
 				const action = `{% url 'editar-pesquisa' 0 %}`.replace("0", pesquisa.id);
 
 				modal.find("form").attr("action", action);
-				modal.find("#modalVisualizarPesquisaLabel").html(`Pesquisa ${pesquisa.titulo}`);
+				modal.find("#modalVisualizarPesquisaLabel").html(`Pesquisa - ${pesquisa.titulo}`);
 				modal.find("#pesquisaEditarEncerramento").val(pesquisa.encerramento);
 				modal.find("#pesquisaEditarDescricao").html(pesquisa.descricao);
 

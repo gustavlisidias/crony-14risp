@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 from agenda.models import TipoAtividade
@@ -52,7 +53,7 @@ def RegistrationView(request):
 
 
 # Page
-def LoginView(request):	
+def LoginView(request):
 	if request.user.is_authenticated:
 		return redirect('inicio')
 	
@@ -64,13 +65,20 @@ def LoginView(request):
 		if user is not None:
 			login(request, user)
 
-			if request.GET.__contains__('next'):
-				return redirect(request.GET.__getitem__('next'))
-			else:
+			next_url = request.GET.get('next', None)
+
+			if next_url is None:
 				return redirect('inicio')
+			elif not url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+				return redirect('inicio')
+			else:
+				return redirect(next_url)
 			
 		else:
-			messages.error(request, 'Nome de usuário ou senha incorretos. Por favor, tente novamente.')
+			if Usuario.objects.filter(username=username).exists():
+				messages.error(request, 'Senha incorreta. Por favor, tente novamente.')
+			else:
+				messages.error(request, 'Usuário não encontrado.')
 			return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 	return render(request, 'autenticacao/entrar.html')

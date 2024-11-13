@@ -184,6 +184,7 @@ def AvaliacaoDetalhesView(request, avaid):
 		'perguntas': perguntas,
 		'respostas': respostas,
 		'respondido': respondido,
+		'comentarios': True in [not_none_not_empty(i.observacao) for i in respostas],
 		'dados': dados
 	}
 	return render(request, 'pages/avaliacao-detalhes.html', context)

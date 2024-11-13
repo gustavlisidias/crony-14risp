@@ -12,14 +12,14 @@
 <div class="fluid-container p-4 m-0">
   	<div class="card w-100">
 		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
-		<div>Avaliações</div>
-		<div class="btn-group">
-			{% if request.user.get_access != 'common' %}
-				<button class="btn btn-secondary text-light" type="button" title="Nova avaliação" data-bs-toggle="modal" data-bs-target="#modalAdicionarAvaliacao">
-					Adicionar
-				</button>
-			{% endif %}
-		</div>
+			<div>Avaliações</div>
+			<div class="btn-group">
+				{% if request.user.get_access != 'common' %}
+					<button class="btn btn-secondary text-light" type="button" title="Nova avaliação" data-bs-toggle="modal" data-bs-target="#modalAdicionarAvaliacao">
+						Adicionar
+					</button>
+				{% endif %}
+			</div>
 		</div>
 		<div class="card-body">
 			<table class="table table-hover align-middle table-avaliacoes">
@@ -30,7 +30,7 @@
 						<th scope="col">Período</th>
 						<th scope="col">Avaliado</th>
 						<th scope="col">Data Encerramento</th>
-						<th scope="col">Status</th>
+						<th scope="col" class="text-center">Status</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -43,12 +43,12 @@
 							<td>{{avaliacao.data_encerramento|date:"d/m/Y"}}</td>
 
 							{% if funcionario.status %}
-								<td>
+								<td class="text-center">
 									<span class="d-none">Encerrado</span>
 									<i class="fa-duotone fa-circle-xmark text-danger"></i>
 								</td>
 							{% else %}
-								<td>
+								<td class="text-center">
 									<span class="d-none">Aberto</span>
 									<i class="fa-duotone fa-circle-check text-success"></i>
 								</td>
@@ -106,7 +106,7 @@
 			`;
 	
 			perguntasContainer.insertAdjacentHTML("beforeend", perguntaHtml);
-			inicarCKEditor();
+			iniciarCKEditor();
 		});
 	});
 
@@ -122,6 +122,7 @@
 	document.addEventListener("DOMContentLoaded", function () {
 		const btnProximo1 = document.getElementById("btnProximo1");
 		const btnProximo2 = document.getElementById("btnProximo2");
+		const btnConcluir = document.getElementById("btnConcluir");
 	
 		btnProximo1.addEventListener("click", function (event) {
 			const inputs = document.getElementById("modalAdicionarAvaliacao").querySelectorAll("input");
@@ -145,19 +146,41 @@
 		btnProximo2.addEventListener("click", function (event) {
 			const inputs = document.getElementById("modalAdicionarAvaliacao2").querySelectorAll("input");
 			let allFieldsFilled = true;
+			let pesoSomado = 1;
 
 			inputs.forEach(function (input) {
 				if (!input.value.trim() && !input.classList.contains("ck-hidden")) {
 					allFieldsFilled = false;
-				}
+				};
+
+				pesoSomado -= parseFloat(input.value);
 			});
 
 			if (!allFieldsFilled) {
 				alert("Por favor, preencha todos os campos obrigatórios.");
+			} else if (pesoSomado != 0) {
+				alert("A soma dos pesos deve ser igual à 1.");
 			} else {
 				btnProximo2.setAttribute("data-bs-target", "#modalAdicionarAvaliacao3");
 				btnProximo2.setAttribute("data-bs-toggle", "modal");
 				btnProximo2.click();
+			};
+		});
+
+		btnConcluir.addEventListener("click", function (event) {
+			const inputs = document.getElementById("modalAdicionarAvaliacao3").querySelectorAll("input");
+			let pesoSomado = 1;
+			const epsilon = 0.0001;
+			
+			inputs.forEach(function (input) {
+				const valor = parseFloat(input.value);
+				pesoSomado -= valor;
+			});
+
+			if (Math.abs(pesoSomado) > epsilon) {
+				alert("A soma dos pesos deve ser igual à 1.");
+			} else {
+				document.getElementById("formAdicionarCurso").submit();
 			};
 		});
 	});

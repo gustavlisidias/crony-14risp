@@ -30,10 +30,12 @@
 						<button class="btn btn-secondary text-light" type="button" title="Editar avaliação" data-bs-toggle="modal" data-bs-target="#modalEditarAvaliacao">
 							Editar
 						</button>
-						{% if respostas %}
+						{% if comentarios %}
 							<button class="btn btn-secondary text-light" type="button" title="Comentários avaliação" data-bs-toggle="modal" data-bs-target="#modalVerComentarios">
 								Comentários
 							</button>
+						{% endif %}
+						{% if respostas %}
 							<button class="btn btn-secondary text-light" type="submit" name="exportar" value="true" title="Exportar avaliação">
 								Exportar
 							</button>

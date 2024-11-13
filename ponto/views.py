@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils.timezone import make_aware
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from cities_light.models import Region as Estado
 from cities_light.models import SubRegion as Cidade
@@ -34,9 +34,8 @@ def RegistrosPontoView(request):
 
 	# Filtros
 	filtros = {'inicio': None, 'final': None, 'funcionarios': None}
-
 	if request.user.get_access == 'admin':
-		funcionarios = funcionarios.exclude(id__in=[1, 315, 316, 317, 302, 301, 303])
+		funcionarios = funcionarios.filter(visivel=True)
 		filtros['funcionarios'] = funcionarios.filter(pk__in=[int(i) for i in request.GET.getlist('funcionarios')]) if request.GET.get('funcionarios') else funcionarios
 		delta = timedelta(days=0)
 	elif request.user.get_access == 'manager':
@@ -100,8 +99,9 @@ def RegistrosPontoView(request):
 	]
 
 	# Scores
-	moedas = Moeda.objects.filter(fechado=True).values('funcionario__id', 'pontuacao', 'anomes')
-	pontuacoes = Score.objects.filter(fechado=True).exclude(funcionario__id__in=[1, 315, 316, 317, 302, 301, 303]).order_by('-data_cadastro__date', '-pontuacao')
+	anomes = int(f'{date.today().year}{date.today().month:02}')
+	moedas = Moeda.objects.filter(fechado=True, anomes__lt=anomes, funcionario__visivel=True).values('funcionario__id', 'pontuacao', 'anomes')
+	pontuacoes = Score.objects.filter(fechado=True, anomes__lt=anomes, funcionario__visivel=True).order_by('-data_cadastro__date', '-pontuacao')
 	for score in pontuacoes:
 		score.moedas = sum([q['pontuacao'] for q in moedas if q['funcionario__id'] == score.funcionario.id and q['anomes'] == score.anomes])
 

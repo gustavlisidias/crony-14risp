@@ -5,8 +5,6 @@ from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from datetime import timedelta
-
 from configuracoes.models import Contrato
 from cursos.models import Curso, Etapa, CursoFuncionario, ProgressoEtapa
 from cursos.utils import progressao_cursos_funcionarios
@@ -28,7 +26,7 @@ def CursoView(request):
 	if request.user.get_access == 'manager':
 		funcionarios = funcionarios.filter(Q(gerente=funcionario) | Q(pk=funcionario.pk)).distinct()
 
-	filtro_inicio = request.GET.get('data_inicial') if request.GET.get('data_inicial') else (timezone.localtime() - timedelta(days=29)).strftime('%Y-%m-%d')
+	filtro_inicio = request.GET.get('data_inicial') if request.GET.get('data_inicial') else '2024-01-01'
 	filtro_final = request.GET.get('data_final') if request.GET.get('data_final') else timezone.localtime().strftime('%Y-%m-%d')
 	filtro_funcionarios = request.GET.getlist('funcionarios') if request.GET.get('funcionarios') else [i.id for i in funcionarios]
 	filtros = {'inicio': filtro_inicio, 'final': filtro_final, 'funcionarios': filtro_funcionarios}
@@ -83,7 +81,7 @@ def CursoView(request):
 		'notificacoes': notificacoes,
 		'filtros': filtros,
 		'cursos': cursos,
-		'cursos_por_funcionario': cursos_por_funcionario,
+		'cursos_por_funcionario': cursos_por_funcionario if max(len(v) for _, v in cursos_por_funcionario.items()) > 0 else None,
 		'contratos': contratos,
 		'etapas': etapas_criadas
 	}
@@ -134,4 +132,34 @@ def AtribuirCursoView(request, course):
 	else:
 		messages.error(request, 'Insira todas as informações obrigatórias!')
 	
+	return redirect('cursos')
+
+
+# Modal
+@login_required(login_url='entrar')
+def EditarCursoView(request, course):
+	try:
+		if not_none_not_empty(request.POST.get('titulo')):
+			with transaction.atomic():
+				curso = Curso.objects.get(pk=course)
+
+				curso.titulo = request.POST.get('titulo')
+				curso.descricao = request.POST.get('descricao')
+
+				if not_none_not_empty(request.POST.get('contrato')):
+					curso.contrato.set(request.POST.getlist('contrato'))
+
+				if not_none_not_empty(request.POST.get('time')):
+					curso.time.set(request.POST.getlist('time'))
+				
+				if not_none_not_empty(request.POST.get('etapa')):
+					for etapa in Etapa.objects.filter(pk__in=[int(i) for i in request.POST.getlist('etapa')]):
+						etapa.curso.set([curso.id])
+				
+				curso.save()
+				messages.success(request, 'Curso alterado com sucesso!')
+	
+	except Exception as e:
+		messages.success(request, f'Curso não foi alterado! {e}')
+
 	return redirect('cursos')

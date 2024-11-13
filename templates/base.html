@@ -85,16 +85,49 @@
 		<script src="{% static 'main/main.js' %}?{% now 'U' %}"></script>
 		{% if request.user.is_authenticated %}
 			<script defer>
+				function updateSelectCidades(estado) {
+					$.ajax({
+						type: "GET",
+						url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
+						success: function (data) {
+							let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
+
+							for (let i = 0; i < data.length; i++) {
+								options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
+							};
+
+							$(`[name="cidade"]`).each(function () {
+								$(this).html(options);
+							});
+						},
+						error: function (error) {
+							alert(error.responseJSON ? error.responseJSON.mensagem : error);
+						}
+					});
+				};
+
 				document.getElementById("overlay").style.display = "block";
+
 				document.querySelectorAll(".menu a").forEach(item => {
 					item.addEventListener("click", function() {
 						document.getElementById("overlay").style.display = "block";
 					});
 				});
-				document.addEventListener("DOMContentLoaded", function() {
+
+				const hideOverlay = () => {
 					setTimeout(() => {
 						document.getElementById("overlay").style.display = "none"; 
-					}, "1000");
+					}, 700);
+				};
+
+				window.addEventListener("pageshow", event => {
+					if (event.persisted) {
+						hideOverlay();
+					}
+				});
+
+				document.addEventListener("DOMContentLoaded", function() {
+					hideOverlay();
 
 					document.getElementById("btnSwitchTheme").addEventListener("click", () => {
 						if (document.documentElement.getAttribute("data-bs-theme") == "dark") {

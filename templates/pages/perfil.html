@@ -30,11 +30,11 @@
 							<div class="d-flex justify-content-center">
 								<div class="btn-group" role="group" aria-label="Basic outlined example">
 									<button type="button" class="btn btn-primary text-light" title="Adicionar foto" style="width: 50px;">
-										<label role="button" class="form-label text-light m-1" for="perfilFoto"><i class="fa-duotone fa-image"></i></label>
+										<label role="button" class="form-label text-light m-1" for="perfilFoto"><i class="fa-duotone fa-image fa-xl"></i></label>
 										<input type="file" class="form-control d-none" id="perfilFoto" name="foto" onchange="displaySelectedImage(event, 'selectedAvatar')">
 									</button>
 									<button class="btn btn-primary text-light" title="Remover foto" type="submit" name="remover" value="remover" style="width: 50px;">
-										<i class="fa-duotone fa-trash"></i>
+										<i class="fa-duotone fa-trash fa-lg"></i>
 									</button>
 								</div>
 							</div>
@@ -189,8 +189,8 @@
 							</div>
 
 							<div class="mt-5 text-center">
-								<button class="btn btn-primary text-light" type="submit">Salvar alterações</button>
-								<button class="btn btn-primary text-light" type="button" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha">Alterar senha</button>
+								<button class="btn btn-secondary text-light" type="submit">Salvar Perfil</button>
+								<button class="btn btn-secondary text-light" type="button" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha">Alterar Senha</button>
 							</div>
 						</div>
 					</div>
@@ -250,27 +250,6 @@
 
 			reader.readAsDataURL(fileInput.files[0]);
 		}
-	};
-
-	function updateSelectCidades(estado) {
-		$.ajax({
-			type: "GET",
-			url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
-			success: function (data) {
-				let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
-
-				for (let i = 0; i < data.length; i++) {
-					options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
-				};
-
-				$(`[name="cidade"]`).each(function () {
-					$(this).html(options);
-				});
-			},
-			error: function (error) {
-				alert(error.responseJSON ? error.responseJSON.mensagem : error);
-			}
-		});
 	};
 </script>
 

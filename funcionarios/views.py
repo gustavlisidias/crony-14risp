@@ -118,7 +118,13 @@ def EditarFuncionarioView(request, func):
 
 	ferias = ferias_funcionarios(funcionarios.filter(pk=colaborador.pk))
 	atividades = Atividade.objects.filter(funcionarios=colaborador, data_finalizacao=None).order_by('inicio')
-	tipos = TipoDocumento.objects.all()
+
+	if funcionario.is_financeiro or colaborador.matricula == funcionario.matricula:
+		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.FINA))
+	elif request.user.get_access == 'admin':
+		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.ADMIN))
+	else:
+		tipos = TipoDocumento.objects.filter(visibilidade=TipoDocumento.Visoes.GERAL)
 
 	documentos = Documento.objects.filter(funcionario=colaborador, data_documento__gte=filtro_data_inicial, data_documento__lte=filtro_data_final, tipo__in=tipos).order_by('-data_documento')
 	humor = list(Humor.objects.filter(funcionario=colaborador).values('humor').annotate(contagem=Count('humor')))
@@ -172,13 +178,18 @@ def EditarFuncionarioView(request, func):
 	else:
 		pontos, scores = None, None
 	
-	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'scores': None}
+	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'debito': timedelta(seconds=0), 'credito': timedelta(seconds=0)}
 	if pontos:
 		graph['scores'] = list(scores.values())[0]
 		for _, dados in pontos.items():
 			for dado in dados:
 				graph['total'] += dado['total']
 				graph['saldo'] += dado['saldo']
+
+				if dado['saldo'] < timedelta(0):
+					graph['debito'] += dado['saldo']
+				else:
+					graph['credito'] += dado['saldo']
 
 	if request.method == 'POST':
 		if request.user.get_access == 'common':
@@ -434,7 +445,13 @@ def DocumentosView(request):
 	funcionario = funcionarios.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
 
-	tipos = TipoDocumento.objects.all()
+	if funcionario.is_financeiro:
+		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.FINA))
+	elif request.user.get_access == 'admin':
+		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.ADMIN))
+	else:
+		tipos = TipoDocumento.objects.filter(visibilidade=TipoDocumento.Visoes.GERAL)
+
 	documentos = Documento.objects.filter(funcionario=None, data_documento__range=[filtro_data_inicial, filtro_data_final], tipo__in=tipos).order_by('-data_documento')
 	
 	if not_none_not_empty(filtro_nome):

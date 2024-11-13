@@ -1,9 +1,9 @@
-<div class="modal fade" id="modalAdicionarCurso" tabindex="-1" aria-labelledby="modalAdicionarCursoLabel" aria-hidden="true">
+<div class="modal fade" id="modalEditarCurso" tabindex="-1" aria-labelledby="modalEditarCursoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <form method="POST" class="modal-content" id="formAdicionarCurso">
+        <form method="POST" class="modal-content" id="formEditarCurso">
             {% csrf_token %}
             <div class="modal-header bg-body">
-                <h2 class="modal-title fs-5" id="modalAdicionarCursoLabel">Novo Curso</h2>
+                <h2 class="modal-title fs-5" id="modalEditarCursoLabel">Editar Curso</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -37,7 +37,7 @@
 				<div id="etapasContainer">
                     <!-- Etapas novas serão adicionadas aqui -->
                 </div>
-				<button type="button" class="btn btn-primary text-light" onclick="botaoAdicionarEtapaModal('modalAdicionarCurso')">Adicionar Etapa</button>
+				<button type="button" class="btn btn-primary text-light" onclick="botaoAdicionarEtapaModal('modalEditarCurso')">Adicionar Etapa</button>
 
             </div>
             <div class="modal-footer">

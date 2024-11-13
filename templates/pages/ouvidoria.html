@@ -33,28 +33,30 @@
 				</div>
 			</div>
 
-			<table class="table table-ouvidoria">
-				<thead>
-					<tr>
-						<th scope="col">#</th>
-						<th scope="col">Categoria</th>
-						<th scope="col">Assunto</th>
-						<th scope="col">Data</th>
-						<th scope="col">Status</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for ticket in tickets %}
-						<tr role="button" {% if request.user == ticket.funcionario.usuario or request.user == ticket.responsavel.usuario %}onclick="editarOuvidoria({'id': '{{ticket.id}}', 'title': '{{ticket.assunto}}', 'categoria': '{{ticket.get_categoria_display}}', 'status': '{{ticket.get_status_display}}'})" {% endif %}>
-							<th scope="row">{{forloop.counter}}</th>
-							<td>{{ticket.get_categoria_display}}</td>
-							<td>{{ticket.assunto}}</td>
-							<td>{{ticket.data_cadastro}}</td>
-							<td>{{ticket.get_status_display}}</td>
+			<div class="table-responsive pt-1">
+				<table class="table table-ouvidoria">
+					<thead>
+						<tr>
+							<th scope="col">#</th>
+							<th scope="col">Categoria</th>
+							<th scope="col">Assunto</th>
+							<th scope="col">Data</th>
+							<th scope="col">Status</th>
 						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{% for ticket in tickets %}
+							<tr role="button" {% if request.user == ticket.funcionario.usuario or request.user == ticket.responsavel.usuario %}onclick="editarOuvidoria({'id': '{{ticket.id}}', 'title': '{{ticket.assunto}}', 'categoria': '{{ticket.get_categoria_display}}', 'status': '{{ticket.get_status_display}}'})" {% endif %}>
+								<th scope="row">{{forloop.counter}}</th>
+								<td>{{ticket.get_categoria_display}}</td>
+								<td>{{ticket.assunto}}</td>
+								<td>{{ticket.data_cadastro}}</td>
+								<td>{{ticket.get_status_display}}</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
 
 		</div>
 	</div>

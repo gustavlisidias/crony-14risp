@@ -17,7 +17,7 @@
 				{{pesquisa.titulo}}
 			</div>
 
-			{% if request.user.get_access == "admin" %}
+			{% if request.user.get_access != "common" %}
 				<div class="btn-group">
 					<form method="GET" class="btn btn-secondary p-0 m-0" id="formExportarPesquisa">
 						<button class="btn btn-secondary text-light" name="exportar" value="true" type="submit" title="Exportar">
@@ -29,7 +29,7 @@
 		</div>
 
 		<div class="card-body">
-			<div class="card bg-body p-2 mb-3">
+			<div class="card bg-body p-3 mb-3">
 				{{pesquisa.descricao|safe}}
 				{% if vencido %}
 					<small>Encerrou em {{pesquisa.data_encerramento}}</small>
@@ -39,7 +39,7 @@
 				{% if pesquisa.anonimo %}
 					<small>Pesquisa anônima</small>
 				{% else %}
-					<small>Pesquisa aberta</small>
+					<small>Pesquisa não anônima</small>
 				{% endif %}
 			</div>
 

@@ -13,6 +13,7 @@ class Ponto(models.Model):
 	motivo = models.TextField(null=True, blank=True, verbose_name='Motivo')
 	encerrado = models.BooleanField(default=False, verbose_name='Encerrado')
 	data_fechamento = models.DateField(blank=True, null=True, verbose_name='Encerrado')
+	data_cadastro = models.DateTimeField(auto_now_add=True, null=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
 		return f'{self.funcionario} em {self.data} as {self.hora}'

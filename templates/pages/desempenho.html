@@ -57,7 +57,7 @@
 			</div>
 
 			<!-- Avaliações -->
-			<div class="list-group mt-3">
+			<div class="list-group">
 				{% for avaliacao in avaliacoes %}
 					<div class="list-group-item list-group-item-action list-avaliacoes" role="button" {% if avaliacao.status == 0 %} onclick="avaliarAtividade({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}'})" {% else %} onclick="visualizarAvaliacao({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}', desempenho: {{avaliacao.desempenho_id}}, potencial: {{avaliacao.potencial_id}}, observacao: '{{avaliacao.observacao|replace:"\u0027, \u0022"}}', funcionarios: {{avaliacao.funcionarios|safe}}})" {% endif %}>
 						<div class="d-flex w-100 justify-content-between">

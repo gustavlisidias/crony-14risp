@@ -15,12 +15,12 @@ from configuracoes.models import Usuario
 
 
 def not_none_not_empty(*args):
-    for arg in args:
-        if isinstance(arg, list) and not arg:
-            return False
-        if arg in (None, ""):
-            return False
-    return True
+	for arg in args:
+		if isinstance(arg, list) and not arg:
+			return False
+		if arg in (None, ""):
+			return False
+	return True
 
 
 def add_years(d, years):
@@ -28,7 +28,7 @@ def add_years(d, years):
 		return d.replace(year=d.year + years)
 	except ValueError:
 		return d + (date(d.year + years, 1, 1) - date(d.year, 1, 1))
-      
+
 
 def add_coins(funcionario, value):
 	model = apps.get_model('web', 'Moeda')
@@ -66,11 +66,11 @@ def add_coins(funcionario, value):
 	
 
 def create_log(
-    object_model: Type[models.Model],
-    object_id: int,
-    user: Usuario,
-    message: str,
-    action: Literal[1, 2, 3]
+	object_model: Type[models.Model],
+	object_id: int,
+	user: Usuario,
+	message: str,
+	action: Literal[1, 2, 3]
 ) -> LogEntry:
 	
 	ACTION_MAP = {
@@ -128,4 +128,11 @@ def parse_employee(objeto):
 		else:
 			return Funcionario.objects.filter(pk=objeto.pk)
 	except Exception:
+		return None
+
+
+def get_object_or_none(model, **kwargs):
+	try:
+		return model.objects.get(**kwargs)
+	except ObjectDoesNotExist:
 		return None

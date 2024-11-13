@@ -96,7 +96,7 @@
 			<div class="tab-content" id="tab-pontos-content">
 				<!-- Meu Ponto -->
 				<div class="tab-pane fade show active" id="meuponto-pane" role="tabpanel" aria-labelledby="meuponto-tab" tabindex="0">		
-					<div class="table-responsive">
+					<div class="table-responsive pt-1">
 						<table class="table table-hover align-middle table-pontos">
 							<thead>
 								<tr>
@@ -144,7 +144,7 @@
 
 				<!-- Solicitações de Ajsutes e Abonos -->
 				<div class="tab-pane fade" id="solicitacoes-pane" role="tabpanel" aria-labelledby="solicitacoes-tab" tabindex="0">
-					<div class="table-responsive">
+					<div class="table-responsive pt-1">
 						<table class="table table-hover align-middle table-solicitacoes">
 							<thead>
 								<tr>
@@ -187,29 +187,26 @@
 				{% if request.user.get_access == "admin" %}
 					<!-- Cartão Colaborador -->
 					<div class="tab-pane fade" id="colaboradores-pane" role="tabpanel" aria-labelledby="colaboradores-tab" tabindex="0">
-						<div class="table-responsive">
+						<div class="table-responsive pt-1">
 							<table class="table table-hover align-middle table-colaboradores">
 								<thead>
 									<tr>
 										<th scope="col">Nome Completo</th>
 										<th scope="col">Cargo</th>
 										<th scope="col">Setor</th>
-										<th class="text-center" scope="col">Ações</th>
+										<th scope="col">Data Contratação</th>
 									</tr>
 								</thead>
 								<tbody>
 									{% for funcionario in funcionarios %}
-										</tr>
+										<tr role="button" onclick="window.location.replace(`{% url 'detalhes-ponto' funcionario.id %}`);">
 											<th scope="row" class="d-flex align-items-center">
-												<img class="lazyload rounded-circle" data-src="{{funcionario.id|photo:'url'}}" style="width: 30px; height: 30px; display: block; border-style: none; border: 3px solid {{funcionario.get_perfil.time.cor}};">
+												<img class="lazyload rounded-circle" data-src="{{funcionario.id|photo:'url'}}" style="width: 30px; height: 30px; display: block;">
 												<p class="ms-3 mb-0">{{funcionario}}</p>
 											</th>
 											<td>{{funcionario.cargo}}</td>
 											<td>{{funcionario.setor}}</td>
-											<td class="text-center">
-												<a href="{% url 'detalhes-ponto' funcionario.id %}" title="Visualizar pontos">
-												<i class="fa-duotone fa-calendar-clock fa-lg text-body"></i>
-											</a></td>
+											<td>{{funcionario.data_contratacao|date:"d/m/Y"}}</td>
 										</tr>
 									{% endfor %}
 								</tbody>
@@ -219,27 +216,21 @@
 					
 					<!-- Fechamentos -->
 					<div class="tab-pane fade" id="fechamentos-pane" role="tabpanel" aria-labelledby="fechamentos-tab" tabindex="0">
-						<div class="table-responsive">
+						<div class="table-responsive pt-1">
 							<table class="table table-hover align-middle table-fechamentos">
 								<thead>
 									<tr>
 										<th scope="col">#</th>
 										<th scope="col">Periodo</th>
 										<th scope="col">Data Fechamento</th>
-										<th class="text-center" scope="col">Ações</th>
 									</tr>
 								</thead>
 								<tbody>
 									{% for fechamento in fechamentos %}
-										<tr>
+										<tr role="button" onclick="mostrarFechamento({{fechamento|safe}})">
 											<th scope="row">{{forloop.counter}}</th>
 											<td>{{fechamento.de}} - {{fechamento.ate}}</td>
 											<td>{{fechamento.data_fechamento|default_if_none:""|date:"d/m/Y"}}</td>
-											<td class="text-center">
-												<a role="button" title="Visualizar fechamento" onclick="mostrarFechamento({{fechamento|safe}})">
-													<i class="fa-solid fa-bars fa-lg text-body"></i>
-												</a>
-											</td>
 										</tr>
 									{% endfor %}
 								</tbody>
@@ -249,7 +240,7 @@
 
 					<!-- Scores -->
 					<div class="tab-pane fade" id="scores-pane" role="tabpanel" aria-labelledby="scores-tab" tabindex="0">
-						<div class="table-responsive">
+						<div class="table-responsive pt-1">
 							<table class="table table-hover align-middle table-scores">
 								<thead>
 									<tr>
@@ -591,27 +582,6 @@
 		};
 	};
 
-	function updateSelectCidades(estado) {
-		$.ajax({
-			type: "GET",
-			url: `{% url "procurar-cidades" 0 %}`.replace("0", estado),
-			success: function (data) {
-				let options = `<option value="" selected hidden>Selecione uma Cidade</option>`;
-
-				for (let i = 0; i < data.length; i++) {
-					options += `<option value="` + data[i].id + `">` + data[i].name + `</option>`;
-				};
-
-				$(`[name="cidade"]`).each(function () {
-					$(this).html(options);
-				});
-			},
-			error: function (error) {
-				alert(error.responseJSON ? error.responseJSON.mensagem : error);
-			}
-		});
-	};
-
 	function mostrarFechamento(fechamento) {
 		const modal = $("#modalDetalhesFechamento");
 
@@ -834,7 +804,14 @@
 				if (!(inputsHora.length % 2 === 0)) {
 					event.preventDefault();
 					alert("O número de entradas e saídas devem ser iguais.");
-				}
+				};
+				
+				inputsHora.forEach(item => {
+					if (!item.value) {
+						event.preventDefault();
+						alert("O número de entradas e saídas devem ser iguais.");
+					};
+				});
 			});
 		};
 	});
@@ -884,7 +861,7 @@
 			});
 
 			const labels = dadosFiltrados.map(item => item.data);
-			const banco = dadosFiltrados.map(item => item.saldo);
+			const banco = dadosFiltrados.map(item => item.banco);
 			const ctx = document.getElementById("saldoGrafico").getContext("2d");
 
 			createChart(ctx, "line", labels, banco, "Total em horas", "Banco de Horas");

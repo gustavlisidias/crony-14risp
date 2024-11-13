@@ -201,9 +201,14 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 			total_esperado = total_saldo(jornada)
 			qtd_jornada = len(jornada)
 			
+			# Se é ponto antes da data de contratação, é ignorado
 			# Se não possui pontos naquele dia, e não é final de semana, é considerado falta
 			# Caso contrário é calculado o total diário
-			if weekday in [1, 7]:
+			if dia.date() < dado['funcionario'].data_contratacao:
+				dado['saldo'] = timedelta(0)
+				dado['score'] = 5
+
+			elif not dado['pontos'] and weekday in [1, 7]:
 				dado['saldo'] = timedelta(0)
 				dado['score'] = 5
 

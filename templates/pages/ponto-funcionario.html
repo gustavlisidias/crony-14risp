@@ -6,6 +6,8 @@
 
 {% block content %}
 
+{% include "modals/pontos/editar-ponto.html" %}
+
 <div class="fluid-container p-4 m-0">
 	<div class="card w-100 mb-4">
 		<div class="card-header bg-primary text-light border-bottom border-light">
@@ -63,7 +65,7 @@
 				</div>
 			</div>
 
-			<div class="table-responsive">
+			<div class="table-responsive pt-1">
 				<table class="table table-hover align-middle table-pontos-funcionario display nowrap" width="100%">
 					<thead>
 						<tr>
@@ -83,7 +85,11 @@
 					<tbody>
 						{% for data, dados in pontos.items reversed %}
 							{% for dado in dados %}
-								<tr>
+								{% if request.user.get_access != "common" %}
+									<tr role="button" onclick="editarPonto('{{data|date:"Y-m-d"}}', {{dado.pontos|safe}})">
+								{% else %}
+									<tr>
+								{% endif %}
 									<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
 
 									{% for nro in nro_colunas %}
@@ -120,6 +126,109 @@
 		});
 
 		const table1 = $(".table-pontos-funcionario").DataTable(config);
+	});
+</script>
+
+<script>
+	function editarPonto(data, pontos) {
+		const modal = $("#modalEditarPonto");
+		const action = `{% url "editar-ponto" "*" 0 %}`.replace("0", {{colaborador.id}}).replace("*", data);
+
+		modal.find(".modal-title").html(`Editar Registro - ${formatarData(data)}`);
+		modal.find(".modal-body").children().remove();
+
+		if (pontos.length > 0) {
+			pontos.forEach((ponto, index) => {
+				// Ponto é um objeto javascript do tipo Date formato em "hh:mm"
+				const indexEntrada = Math.floor((index + 2) / 2);
+				const entrada = index % 2 == 0 ? `${indexEntrada}ª Entrada` : `${indexEntrada}ª Saída`;
+				const input = `
+					<div class="d-flex flex-nowrap rowPonto align-items-center">
+						<div class="flex-fill order-1 pe-3">
+							<div>
+								<label class="form-label">${entrada}</label>
+								<input type="time" class="form-control mb-3 w-100" name="hora" value="${ponto}">
+							</div>
+						</div>
+						<div class="order-2 pe-3">
+							<i role="button" title="Adicionar ponto" class="fa-light fa-plus text-body pt-2" onclick="adicionarPonto(this)"></i>
+						</div>
+						<div class="order-3">
+							<i role="button" title="Remover ponto" class="fa-thin fa-trash-clock text-danger pt-2" onclick="excluirPonto(this)"></i>
+						</div>
+					</div>`;
+	
+				modal.find(".modal-body").append(input);
+			});
+		} else {
+			const input = `
+				<div class="d-flex flex-nowrap rowPonto align-items-center">
+					<div class="flex-fill order-1 pe-3">
+						<div>
+							<label class="form-label">1ª Entrada</label>
+							<input type="time" class="form-control mb-3 w-100" name="hora" value="00:00">
+						</div>
+					</div>
+					<div class="order-2 pe-3">
+						<i role="button" title="Adicionar ponto" class="fa-light fa-plus text-body pt-2" onclick="adicionarPonto(this)"></i>
+					</div>
+					<div class="order-3">
+						<i role="button" title="Remover ponto" class="fa-thin fa-trash-clock text-danger pt-2" onclick="excluirPonto(this)"></i>
+					</div>
+				</div>`;
+
+			modal.find(".modal-body").append(input);
+		};		
+
+		modal.find(".modal-content").attr("action", action);
+		modal.modal("show");
+	};
+
+	function adicionarPonto(icon) {
+		const rowPonto = $(icon).closest(".rowPonto");
+		const novoRowPonto = rowPonto.clone();
+	  
+		novoRowPonto.find(`input[name="hora"]`).val("");
+		rowPonto.after(novoRowPonto);
+	  
+		atualizarDescricoesPontos();
+	};
+	
+	function excluirPonto(icon) {
+		const rowPonto = $(icon).closest(".rowPonto");
+		rowPonto.remove();
+		
+		atualizarDescricoesPontos();
+	};
+
+	function atualizarDescricoesPontos() {
+		const rowsPonto = $(".rowPonto");
+		rowsPonto.each((index, row) => {
+		  const entradaSaida = index % 2 === 0 ? `${Math.floor((index + 2) / 2)}ª Entrada` : `${Math.floor((index + 2) / 2)}ª Saída`;
+		  $(row).find(".form-label").text(entradaSaida);
+		});
+	};
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", function () {
+		const btnEnviarSolicitacao = document.getElementById("btnEnviarSolicitacao");
+		if (btnEnviarSolicitacao) {
+			btnEnviarSolicitacao.addEventListener("click", function (event) {
+				const inputsHora = document.querySelectorAll("#modalEditarPonto .rowPonto input[name='hora']");
+				if (!(inputsHora.length % 2 === 0)) {
+					event.preventDefault();
+					alert("O número de entradas e saídas devem ser iguais.");
+				};
+
+				inputsHora.forEach(item => {
+					if (!item.value) {
+						event.preventDefault();
+						alert("O número de entradas e saídas devem ser iguais.");
+					};
+				});
+			});
+		};
 	});
 </script>
 {% endblock %}

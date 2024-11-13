@@ -23,35 +23,37 @@
 	<div class="row">
 		<div class="col-12 col-md-9">
 			<!-- Mood -->
-			{% comment %} <div class="card card-mood p-3 mb-3">
-				<h3 class="text-center">Como você está se sentindo hoje?</h3>
-				<form method="POST" id="formEnviarHumor">
-					{% csrf_token %}
-					<div class="d-flex justify-content-center mb-3">
-						<label class="radio-inline" title="Muito triste">
-							<input type="radio" name="mood" required value="1" {% if humor %} disabled {% endif %}>
-							<img src="{% static 'images/mood/mood-1.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
-						</label>
-						<label class="radio-inline" title="Triste">
-							<input type="radio" name="mood" value="2" {% if humor %} disabled {% endif %}>
-							<img src="{% static 'images/mood/mood-2.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
-						</label>
-						<label class="radio-inline" title="Neutro">
-							<input type="radio" name="mood" value="3" {% if humor %} disabled {% endif %}>
-							<img src="{% static 'images/mood/mood-3.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
-						</label>
-						<label class="radio-inline" title="Feliz">
-							<input type="radio" name="mood" value="4" {% if humor %} disabled {% endif %}>
-							<img src="{% static 'images/mood/mood-4.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
-						</label>
-						<label class="radio-inline" title="Muito feliz">
-							<input type="radio" name="mood" value="5" {% if humor %} disabled {% endif %}>
-							<img src="{% static 'images/mood/mood-5.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
-						</label>
-					</div>
-				</form>
-				<small class="text-center fs-7">Fique à vontade para falar o que sente. Essa informação é privada e será lida somente por alguém que quer te ver feliz!</small>
-			</div> {% endcomment %}
+			{% comment %}
+				<div class="card card-mood p-3 mb-3">
+					<h3 class="text-center">Como você está se sentindo hoje?</h3>
+					<form method="POST" id="formEnviarHumor">
+						{% csrf_token %}
+						<div class="d-flex justify-content-center mb-3">
+							<label class="radio-inline" title="Muito triste">
+								<input type="radio" name="mood" required value="1" {% if humor %} disabled {% endif %}>
+								<img src="{% static 'images/mood/mood-1.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+							</label>
+							<label class="radio-inline" title="Triste">
+								<input type="radio" name="mood" value="2" {% if humor %} disabled {% endif %}>
+								<img src="{% static 'images/mood/mood-2.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+							</label>
+							<label class="radio-inline" title="Neutro">
+								<input type="radio" name="mood" value="3" {% if humor %} disabled {% endif %}>
+								<img src="{% static 'images/mood/mood-3.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+							</label>
+							<label class="radio-inline" title="Feliz">
+								<input type="radio" name="mood" value="4" {% if humor %} disabled {% endif %}>
+								<img src="{% static 'images/mood/mood-4.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+							</label>
+							<label class="radio-inline" title="Muito feliz">
+								<input type="radio" name="mood" value="5" {% if humor %} disabled {% endif %}>
+								<img src="{% static 'images/mood/mood-5.png' %}" {% if humor %} style="filter: opacity(0.50);" {% endif %}>
+							</label>
+						</div>
+					</form>
+					<small class="text-center fs-7">Fique à vontade para falar o que sente. Essa informação é privada e será lida somente por alguém que quer te ver feliz!</small>
+				</div>
+			{% endcomment %}
 
 			{% if pendencias.perfil %}
 				<div class="card-body bg-secondary text-light d-flex align-items-center justify-content-center p-2 mb-3 rounded">
@@ -190,12 +192,14 @@
 
 		<div class="col-12 col-md-3">
 			<!-- Moedas -->
-			{% comment %} <div class="card card-moedas mb-3">
-				<div class="card-body d-flex justify-content-around">
-					<div><h2 class="m-0 p-0">{{moedas|floatformat:0}}</h2><small>NOVA COINS</small></div>
-					<div><img src="{% static 'images/coin.png' %}" width=60 height=60></div>
+			{% comment %}
+				<div class="card card-moedas mb-3">
+					<div class="card-body d-flex justify-content-around">
+						<div><h2 class="m-0 p-0">{{moedas|floatformat:0}}</h2><small>NOVA COINS</small></div>
+						<div><img src="{% static 'images/coin.png' %}" width=60 height=60></div>
+					</div>
 				</div>
-			</div> {% endcomment %}
+			{% endcomment %}
 			<!-- Minhas atividades -->
 			<div class="card card-minhas-atividades mb-3">
 				<div class="card-header bg-primary text-light border-bottom border-light">
@@ -217,25 +221,27 @@
 				</div>
 			</div>
 			<!-- Registrar ponto -->
-			{% comment %} <div class="card card-registrar-ponto mb-3">
-				<div class="card-header bg-primary text-light border-bottom border-light">
-					Registrar Ponto
+			{% comment %}
+				<div class="card card-registrar-ponto mb-3">
+					<div class="card-header bg-primary text-light border-bottom border-light">
+						Registrar Ponto
+					</div>
+					<div class="card-body">
+						<a role="button" id="btnRegistrarPonto" hx-post="{% url 'registrar-ponto' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+							<img src="{% static 'images/digital.svg' %}" height="140px" width="100%">
+						</a>
+					</div>
+					<div class="card-footer text-body-secondary d-flex flex-nowrap align-items-center">
+						{% if ponto %}
+							<div class="order-1 pe-2 fs-7 fw-medium" id="textUltimoRegistro">
+								Último registro {{ponto|date:"D"}}, {{ponto|date:"d/m"}} às {{ponto|time:"H:i"}}
+							</div>
+						{% else %}
+							<div class="order-1 pe-2 fs-7 fw-medium">Nenhum ponto registrado</div>
+						{% endif %}
+					</div>
 				</div>
-				<div class="card-body">
-					<a role="button" id="btnRegistrarPonto" hx-post="{% url 'registrar-ponto' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
-						<img src="{% static 'images/digital.svg' %}" height="140px" width="100%">
-					</a>
-				</div>
-				<div class="card-footer text-body-secondary d-flex flex-nowrap align-items-center">
-					{% if ponto %}
-						<div class="order-1 pe-2 fs-7 fw-medium" id="textUltimoRegistro">
-							Último registro {{ponto|date:"D"}}, {{ponto|date:"d/m"}} às {{ponto|time:"H:i"}}
-						</div>
-					{% else %}
-						<div class="order-1 pe-2 fs-7 fw-medium">Nenhum ponto registrado</div>
-					{% endif %}
-				</div>
-			</div> {% endcomment %}
+			{% endcomment %}
 
 			<!-- Celebrações -->
 			<swiper-container style="--swiper-navigation-color: #fff; --swiper-pagination-color: #fff" class="mySwiper" speed="600" parallax="true" pagination="true" pagination-clickable="true" navigation="false" centered-slides="true" autoplay-delay="5000" autoplay-disable-on-interaction="true">
@@ -307,6 +313,17 @@
                 document.getElementById("formEnviarHumor").submit();
             });
         });
+
+		// Registrar Ponto
+		document.querySelectorAll("#btnRegistrarPonto").forEach(item => {
+			item.addEventListener("click", function() {
+				document.getElementById("overlay").style.display = "block";
+			});
+
+			item.addEventListener("htmx:afterRequest", function(event) {
+				window.location.reload();
+			});
+		});
 
         // Curtir posts
         document.querySelectorAll("#btnCurtirPost").forEach(item => {

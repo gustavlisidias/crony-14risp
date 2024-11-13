@@ -47,8 +47,8 @@
 					</div>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
-					<button type="button" class="btn btn-primary text-light" id="btnProximo1">Próximo</button>
+					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-secondary text-light" id="btnProximo1">Próximo</button>
 				</div>
 			</div>
 		</div>
@@ -63,16 +63,17 @@
 				</div>
 				<div class="modal-body">
 					<label class="form-label">Pesos por Tipo de Avaliador</label>
-					<div class="row mb-3">
+					<div class="row">
 						{% for nivel in niveis %}
 							<div class="col">
-								<div class="form-floating mb-3">
+								<div class="form-floating">
 									<input type="number" class="form-control" id="avaliacao{{nivel.value|title}}" name="{{nivel.value|lower}}" value="0" min="0" max="1" step="0.1" placeholder>
 									<label class="form-label" for="avaliacao{{nivel.value|title}}">{{nivel.value|title}}</label>
 								</div>
 							</div>
 						{% endfor %}
 					</div>
+					<div class="form-text mb-3">A soma dos pesos deve ser igual à 1</div>
 					<div class="form-floating mb-3">
 						<select class="form-select" id="avaliacaoFuncionarios" name="funcionarios" multiple style="height: 100%;">
 							{% for funcionario in funcionarios %}
@@ -80,12 +81,12 @@
 							{% endfor %}
 						</select>
 						<label for="avaliacaoFuncionarios">Avaliadores</label>
-					</div>
+					</div>					
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
-					<button type="button" class="btn btn-primary text-light" data-bs-target="#modalAdicionarAvaliacao" data-bs-toggle="modal">Voltar</button>
-					<button type="button" class="btn btn-primary text-light" id="btnProximo2">Próximo</button>
+					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-secondary text-light" data-bs-target="#modalAdicionarAvaliacao" data-bs-toggle="modal">Voltar</button>
+					<button type="button" class="btn btn-secondary text-light" id="btnProximo2">Próximo</button>
 				</div>
 			</div>
 		</div>
@@ -100,16 +101,17 @@
 				</div>
 				<div class="modal-body">
 					<label class="form-label">Pesos por Critério</label>
-					<div class="row mb-3">
+					<div class="row">
 						{% for criterio in criterios %}
 							<div class="col">
-								<div class="form-floating mb-3">
+								<div class="form-floating">
 									<input type="number" class="form-control" id="avaliacao{{criterio.nome|title}}" name="{{criterio.nome|lower}}" value="0" min="0" max="1" step="0.1" placeholder>
 									<label class="form-label" for="avaliacao{{criterio.nome|title}}">{{criterio.nome|title}}</label>
 								</div>
 							</div>
 						{% endfor %}
 					</div>
+					<div class="form-text mb-3">A soma dos pesos deve ser igual à 1</div>
 					{% if perguntas %}
 						<div class="form-floating mb-3">
 							<select class="form-select" id="avaliacaoPerguntas" name="perguntas" multiple style="height: 100%;">
@@ -125,9 +127,9 @@
 					<button type="button" class="btn btn-secondary text-light" id="adicionarPergunta">Adicionar Pergunta</button>
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
-					<button type="button" class="btn btn-primary text-light" data-bs-target="#modalAdicionarAvaliacao2" data-bs-toggle="modal">Voltar</button>
-					<button type="submit" class="btn btn-secondary text-light">Concluir</button>
+					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-secondary text-light" data-bs-target="#modalAdicionarAvaliacao2" data-bs-toggle="modal">Voltar</button>
+					<button type="button" class="btn btn-secondary text-light" id="btnConcluir">Concluir</button>
 				</div>
 			</div>
 		</div>

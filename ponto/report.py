@@ -1,7 +1,7 @@
 import zipfile
 
 from io import BytesIO
-from datetime import timedelta, date, datetime
+from datetime import timedelta, date
 
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -12,13 +12,15 @@ from notifications.signals import notify
 from ponto.models import Ponto
 from ponto.renderers import RenderToPDF
 from ponto.utils import pontos_por_dia
-from web.utils import not_none_not_empty, parse_employee
+from web.utils import not_none_not_empty, parse_date, parse_employee
 
 
 DADOS_EMPRESA = {'nome': Variavel.objects.get(chave='NOME_EMPRESA').valor, 'cnpj': Variavel.objects.get(chave='CNPJ').valor, 'inscricao': Variavel.objects.get(chave='INSC_ESTADUAL').valor}
 
 
 def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
+	data_inicial = parse_date(data_inicial)
+	data_final = parse_date(data_final)
 	funcionarios = parse_employee(funcionarios)
 	zip_buffer = BytesIO()
 
@@ -61,10 +63,7 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 				'pontos': pontos,
 				'saldos': saldos,
 				'funcionario': funcionario,
-				'periodo': {
-					'inicio': datetime.strftime(data_inicial, '%Y-%m-%d'),
-					'final': datetime.strftime(data_final, '%Y-%m-%d')
-				},
+				'periodo': {'inicio': data_inicial, 'final': data_final},
 				'nro_colunas': range(nro_colunas),
 				'autor': get_object_or_404(Funcionario, usuario=request.user),
 				'jornada': jornada,

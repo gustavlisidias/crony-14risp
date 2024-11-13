@@ -68,15 +68,18 @@ def weekday(value):
 
 @register.filter
 def timedelta(value):
-    total_seconds = value.total_seconds()
+	try:
+		total_seconds = value.total_seconds()
 
-    total_hours = abs(total_seconds) // 3600
-    minutos = (abs(total_seconds) // 60) % 60
+		total_hours = abs(total_seconds) // 3600
+		minutos = (abs(total_seconds) // 60) % 60
 
-    sign = '-' if total_seconds < 0 else ''
-    formatted_time = f"{sign}{int(total_hours):02}h {int(minutos):02}m"
+		sign = '-' if total_seconds < 0 else ''
+		formatted_time = f"{sign}{int(total_hours):02}h {int(minutos):02}m"
 
-    return formatted_time
+		return formatted_time
+	except Exception:
+		return '00h 00m *'
 
 
 @register.filter

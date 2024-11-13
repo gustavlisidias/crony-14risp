@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils import timezone
 
-from cursos.models import ProgressoEtapa
+from cursos.models import ProgressoEtapa, Curso, Etapa
 from funcionarios.models import Funcionario
 from web.utils import add_coins
 
@@ -29,3 +29,32 @@ def ConcluirEtapaView(request, etapa):
 
 	except Exception as e:
 		return JsonResponse({'message': f'Etapa não foi concluída! {e}'}, status=400)
+
+
+@login_required(login_url='entrar')
+def ConsultarCursoView(request, course):
+	if request.method != 'GET':
+		return JsonResponse({'message': 'Método não permitido!'}, status=404)
+	try:
+		curso = Curso.objects.get(pk=course)
+		etapas = [{
+			'id': i.id,
+			'titulo': i.titulo,
+			'texto': i.texto
+			} for i in Etapa.objects.filter(curso=curso).order_by('titulo')
+		]
+
+		response = {
+			'curso': {
+				'id': curso.id,
+				'titulo': curso.titulo,
+				'descricao': curso.descricao,
+				'contratos': [j.id for j in curso.contrato.all()],
+				'times': [j.id for j in curso.time.all()]
+			}, 
+			'etapas': etapas
+		}
+		return JsonResponse(response, status=200)
+
+	except Exception as e:
+		return JsonResponse({'message': f'Curso não foi alterado! {e}'}, status=400)

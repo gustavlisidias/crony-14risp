@@ -73,7 +73,8 @@ class ProgressoEtapa(models.Model):
 		verbose_name_plural = 'Progresso de Etapas'
 
 
-# Sempre que um novo registro de CursoFuncionario for salvo, todas as etapas desse curso serão automaticamente criadas em ProgressoEtapa
+# Sempre que um novo registro de CursoFuncionario for salvo, todas as etapas desse curso serão 
+# automaticamente criadas em ProgressoEtapa
 # Para o funcionário associado
 @receiver(post_save, sender=CursoFuncionario)
 def criar_etapas_para_curso(sender, instance, created, **kwargs):
@@ -87,7 +88,8 @@ def criar_etapas_para_curso(sender, instance, created, **kwargs):
 				ProgressoEtapa.objects.create(funcionario=funcionario, etapa=etapa)
 
 
-# Quando uma nova etapa for adicionada a um curso, o sistema automaticamente criará os registros correspondentes em ProgressoEtapa
+# Quando uma nova etapa for adicionada a um curso, o sistema automaticamente criará os 
+# registros correspondentes em ProgressoEtapa
 # Para cada funcionário associado a esse curso
 @receiver(m2m_changed, sender=Etapa.curso.through)
 def adicionar_progresso_etapa(sender, instance, action, reverse, model, pk_set, **kwargs):

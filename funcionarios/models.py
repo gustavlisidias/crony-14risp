@@ -62,19 +62,19 @@ class Funcionario(models.Model):
 		VIUVO = 'V', 'Viúvo (a)'
 		UNIAO = 'U', 'União Estável'
 
-	usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, verbose_name='Usuário')
+	usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, verbose_name='Usuário')
 	matricula = models.CharField(max_length=32, null=False, blank=False, unique=True, verbose_name='Matrícula')
 	nome_completo = models.CharField(max_length=256, null=False, blank=False, verbose_name='Nome Completo')
 	nome_social = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome Social')
 	nome_mae = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome da Mãe')
 	nome_pai = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome do Pai')
-	email = models.CharField(max_length=64, null=True, blank=True, unique=True, verbose_name='Email')
+	email = models.CharField(max_length=64, null=True, blank=True, verbose_name='Email')
 	email_sec = models.CharField(max_length=64, null=True, blank=True, verbose_name='Email Secundário')
 	contato = models.CharField(max_length=16, null=True, blank=True, verbose_name='Contato')
 	contato_sec = models.CharField(max_length=16, null=True, blank=True, verbose_name='Contato Secundário')
 	resp_contato_sec = models.CharField(max_length=64, null=True, blank=True, verbose_name='Responsável Contato Secundário')
-	cpf = models.CharField(max_length=16, null=False, blank=False, unique=True, verbose_name='CPF')
-	rg = models.CharField(max_length=16, null=True, blank=True, unique=True, verbose_name='RG')
+	cpf = models.CharField(max_length=16, null=False, blank=False, verbose_name='CPF')
+	rg = models.CharField(max_length=16, null=True, blank=True, verbose_name='RG')
 	sexo = models.CharField(max_length=1, choices=Sexo.choices, default=Sexo.MASCULINO, verbose_name='Sexo')
 	estado_civil = models.CharField(max_length=1, choices=Estados.choices, null=True, blank=True, verbose_name='Estado Civil')
 	estado = models.ForeignKey(Estado, on_delete=models.CASCADE, verbose_name='Estado')
@@ -93,8 +93,9 @@ class Funcionario(models.Model):
 	data_demissao = models.DateField(null=True, blank=True, verbose_name='Data Rescisão')
 	data_inicio_ferias = models.DateField(null=True, blank=True, verbose_name='Data Início Férias')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
-	observacoes = CKEditor5Field('Observacoe', config_name='extends')
-	conta_banco = models.CharField(max_length=64, null=True, blank=True, unique=True, verbose_name='Conta Bancária')
+	observacoes = CKEditor5Field('Observacoes', config_name='extends')
+	conta_banco = models.CharField(max_length=120, null=True, blank=True, verbose_name='Conta Bancária')
+	visivel = models.BooleanField(default=True, verbose_name='Visível')
 
 	def save(self, *args, **kwargs):
 		if self.nome_completo:
@@ -227,10 +228,17 @@ class Score(models.Model):
 
 
 class TipoDocumento(models.Model):
+	class Visoes(models.TextChoices):
+		GERAL = 'GERAL', 'Visibilidade Geral'
+		FINA = 'FINA', 'Apenas Financeiro'
+		ADMIN = 'ADMIN', 'Apenas acesso Admin'
+		OCULTO = 'OCULTO', 'Oculto'
+
 	tipo = models.CharField(max_length=120, null=False, blank=False, verbose_name='Tipo de Documento')
 	slug = models.SlugField(default='', editable=False, null=True, blank=True, max_length=120)
 	codigo = models.CharField(max_length=12, unique=True, null=True, blank=True, verbose_name='Código')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
+	visibilidade = models.CharField(choices=Visoes.choices, default=Visoes.GERAL, max_length=6)
 
 	def save(self, *args, **kwargs):
 		self.slug = slugify(self.tipo, allow_unicode=False)
@@ -295,7 +303,7 @@ class Feedback(models.Model):
 
 	remetente = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='feedback_remetente', verbose_name='Remetente')
 	destinatario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, null=True, blank=True, related_name='feedback_destinatario', verbose_name='Destinatário')
-	modelo = models.CharField(choices=Modelos.choices, max_length=100)
+	modelo = models.CharField(choices=Modelos.choices, max_length=3)
 	mensagem = CKEditor5Field('Mensagem', config_name='extends')
 	comprometimento = models.IntegerField(choices=Pontuacao.choices, verbose_name='Comprometimento')
 	conhecimento = models.IntegerField(choices=Pontuacao.choices, verbose_name='Conhecimento')

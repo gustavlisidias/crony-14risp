@@ -26,6 +26,7 @@ admin.site.register(SolicitacaoFeedback)
 admin.site.register(RespostaFeedback)
 admin.site.register(HistoricoFuncionario)
 
+
 @admin.register(Funcionario)
 class FuncionarioAdmin(admin.ModelAdmin):
 	list_display = ('matricula', 'nome_completo', 'email', 'contato', 'cpf', 'rg', 'data_nascimento') # colunas da tabela

@@ -37,15 +37,18 @@
 						</div>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-danger text-light" data-bs-dismiss="modal">Cancelar</button>
+						<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+
 						{% if not forloop.first %}
-							<button type="button" class="btn btn-primary text-light" data-bs-toggle="modal" data-bs-target="#modalResponderAvaliacao{{forloop.counter|add:-1}}">Voltar</button>
+							<button type="button" class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalResponderAvaliacao{{forloop.counter|add:-1}}">Voltar</button>
 						{% endif %}
+
 						{% if forloop.last %}
 							<button type="submit" class="btn btn-secondary text-light">Concluir</button>
 						{% else %}
-							<button type="button" class="btn btn-primary text-light" data-bs-toggle="modal" data-bs-target="#modalResponderAvaliacao{{forloop.counter|add:1}}">Próximo</button>
+							<button type="button" class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalResponderAvaliacao{{forloop.counter|add:1}}">Próximo</button>
 						{% endif %}
+
 					</div>
 				</div>
 			</div>

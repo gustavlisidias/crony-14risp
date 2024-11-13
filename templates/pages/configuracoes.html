@@ -70,7 +70,7 @@
 								<input type="text" class="form-control" id="geralCaminhoFuncionarios" name="caminho_funcionarios" {% for variavel in variaveis %}{% if variavel.chave == "PATH_DOCS_EMP" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
 								<small id="geralCaminhoFuncionariosHelp" class="form-text text-muted">O caminho em seu servidor onde se encontra os documentos de funcionários</small>
 							</div>
-							<button type="submit" class="btn btn-primary text-light float-end ms-2">Salvar</button>
+							<button type="submit" class="btn btn-secondary text-light float-end ms-2">Salvar</button>
 						</form>
 					</div>
 
@@ -89,7 +89,7 @@
 								<input class="form-check-input" type="checkbox" value="True" id="pontoRegistrar" name="registrar_externo" {% for variavel in variaveis %}{% if variavel.chave == "REGISTRO_EXTERNO" and variavel.valor == "True" %}checked{% endif %}{% endfor %}>
 								<label class="form-check-label" for="pontoRegistrar">Permitir registros externos</label>
 							</div>
-							<button type="submit" class="btn btn-primary text-white float-end ms-2">Salvar</button>
+							<button type="submit" class="btn btn-secondary text-white float-end ms-2">Salvar</button>
 						</form>
 					</div>
 
@@ -134,8 +134,8 @@
 									</table>
 								</div>
 							{% endfor %}
-							<button type="submit" class="btn btn-primary text-light float-end ms-2" name="jornadas" value="true">Salvar</button>
-							<button type="button" class="btn btn-secondary text-light float-end ms-2" data-bs-toggle="modal" data-bs-target="#modalAdicionarJornada">Adicionar</button>
+							<button type="submit" class="btn btn-secondary text-light float-end ms-2" name="jornadas" value="true">Salvar</button>
+							<button type="button" class="btn btn-tertiary text-light float-end ms-2" data-bs-toggle="modal" data-bs-target="#modalAdicionarJornada">Nova Jornada</button>
 						</form>
 					</div>
 
@@ -150,7 +150,7 @@
 								<div class="col-4">
 									<h6>SETORES</h6>
 									<input type="text" class="form-control mb-2" id="novoSetor">
-									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarSetor">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarSetor">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-setores">
@@ -171,7 +171,7 @@
 								<div class="col-4">
 									<h6>CARGOS</h6>
 									<input type="text" class="form-control mb-2" id="novoCargo">
-									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarCargo">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarCargo">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-cargos">
@@ -195,7 +195,7 @@
 										<input type="color" value="#000000" class="form-control form-control-color mb-2 me-2 w-25 px-2 py-1" id="novoCorAtividade">
 										<input type="text" class="form-control mb-2" id="novoTipoAtividade">
 									</div>
-									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarAtividade">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarAtividade">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-atividades">
@@ -223,7 +223,7 @@
 										<input type="text" class="form-control mb-2 me-2 w-25" id="novoCodigoDocumento" placeholder="000">
 										<input type="text" class="form-control mb-2" id="novoDocumento">
 									</div>
-									<button type="button" class="btn btn-secondary text-light" id="btnAdicionarDocumento">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarDocumento">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-documentos">
@@ -239,7 +239,7 @@
 								</div>
 							</div>
 
-							<button type="submit" class="btn btn-primary text-light float-end ms-2">Salvar</button>
+							<button type="submit" class="btn btn-secondary text-light float-end ms-2">Salvar</button>
 						</form>            
 					</div>
 				</div>

@@ -96,6 +96,10 @@
 							{% endif %}
 						{% endfor %}
 						<th class="bg-body">Saldo</th>
+						<th class="bg-body">H.E. 1 50%</th>
+						<th class="bg-body">H.E. 2 100%</th>
+						<th class="bg-body">Noturno</th>
+						<th class="bg-body">Motivo</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -108,6 +112,15 @@
 								{% endfor %}
 								<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
 									{{dado.saldo|timedelta}}
+								</td>
+								<td class="{% if "-" in dado.he50|timedelta %} text-danger {% elif dado.he50|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+									{{dado.he50|timedelta}}
+								</td>
+								<td class="{% if "-" in dado.he100|timedelta %} text-danger {% elif dado.he100|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+									{{dado.he100|timedelta}}
+								</td>
+								<td class="{% if "-" in dado.noturno|timedelta %} text-danger {% elif dado.noturno|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+									{{dado.noturno|timedelta}}
 								</td>
 								<td>{{dado.motivo|default_if_none:""}}</td>
 							</tr>
