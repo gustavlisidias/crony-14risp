@@ -346,3 +346,18 @@ class RespostaFeedback(models.Model):
 	class Meta:
 		verbose_name = 'Resposta de Feedback'
 		verbose_name_plural = 'Respostas de Feedback'
+
+
+class Estabilidade(models.Model):
+	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
+	inicio = models.DateField(verbose_name='Início Período')
+	final = models.DateField(verbose_name='Final Período')
+	observacao = models.TextField(null=True, blank=True, verbose_name='Observações')
+	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
+
+	def __str__(self):
+		return f'Estabilidade de {self.funcionario} do período de {self.inicio} até {self.final}'
+	
+	class Meta:
+		verbose_name = 'Estabilidade Funcionário'
+		verbose_name_plural = 'Estabilidade Funcionários'

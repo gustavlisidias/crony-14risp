@@ -7,6 +7,8 @@ from funcionarios.ajax import (
 	RealoadDocumentosView,
 	ExportarFuncionariosView,
 	StreamDocumentoView,
+	ExcluirEstabilidadeView,
+	ConsultarFuncionarioView
 )
 from funcionarios.views import (
 	AdicionarFuncionarioView,
@@ -29,6 +31,8 @@ urlpatterns = [
 	path('funcionarios/editar/<int:func>', EditarFuncionarioView, name='editar-funcionario'),
 	path('funcionarios/exportar', ExportarFuncionariosView, name='exportar-funcionarios'),
 	path('funcionarios/editar/<int:func>/excluir/historico-jornada/<int:agrupador>', ExcluirHistoricoJornadaView, name='excluir-historico-jornada'),
+	path('funcionarios/excluir/estabilidade/<int:stab>', ExcluirEstabilidadeView, name='excluir-estabilidade'),
+	path('funcionarios/consultar/codigo/<str:code>', ConsultarFuncionarioView, name='consultar-funcionario'),
 
 	path('perfil', PerfilFuncionarioView, name='perfil'),
 	path('perfil/alterar-senha', AlterarSenhaView, name='alterar-senha'),

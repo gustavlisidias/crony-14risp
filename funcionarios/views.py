@@ -35,7 +35,8 @@ from funcionarios.models import (
 	TipoDocumento,
 	Feedback,
 	SolicitacaoFeedback,
-	RespostaFeedback
+	RespostaFeedback,
+	Estabilidade
 )
 from funcionarios.utils import obter_arvore, cadastro_funcionario, atualizar_perfil_funcionario
 from ponto.models import Ponto
@@ -115,7 +116,7 @@ def EditarFuncionarioView(request, func):
 	cargos = Cargo.objects.all().order_by('cargo')
 	estados = Estado.objects.all().order_by('name')
 	cidades = Cidade.objects.all().order_by('name')
-
+	estabilidades = Estabilidade.objects.filter(funcionario=colaborador).order_by('-inicio')
 	ferias = ferias_funcionarios(funcionarios.filter(pk=colaborador.pk))
 	atividades = Atividade.objects.filter(funcionarios=colaborador, data_finalizacao=None).order_by('inicio')
 
@@ -132,6 +133,9 @@ def EditarFuncionarioView(request, func):
 	contratos = Contrato.objects.all()
 	jornadas = JornadaFuncionario.objects.filter(funcionario=colaborador).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
 	
+	estabi = estabilidades.filter(inicio__lte=timezone.localdate(), final__gte=timezone.localdate())
+	estavel = {'status': estabi.exists(), 'vencimento': estabi.last().final if estabi else None}
+
 	avaliacoes = Avaliacao.objects.filter(atividade__funcionarios__in=[colaborador])
 	if avaliacoes:
 		avaliacao = {
@@ -199,15 +203,6 @@ def EditarFuncionarioView(request, func):
 		# Atualização de dados pessoais do funcionário
 		if not_none_not_empty(request.POST.get('nome_completo')):
 			cadastro_funcionario(request, colaborador, True)
-
-		# Atualização das informações/observações do funcionário
-		elif not_none_not_empty(request.POST.get('observacao')):
-			try:
-				colaborador.observacoes = request.POST.get('observacao')
-				colaborador.save()
-				messages.success(request, 'Informações adicionadas com sucesso!')
-			except Exception as e:
-				messages.error(request, f'Informações não foram adicionadas com sucesso: {e}')
 
 		# Atualização de horários da jornada de trabalho do funcionário
 		elif not_none_not_empty(request.POST.get('contrato')):
@@ -288,6 +283,19 @@ def EditarFuncionarioView(request, func):
 			}
 			return RenderToPDF(request, 'relatorios/historico.html', context, filename).weasyprint()
 
+		# Cadastrar nova estabilidade do funcionário
+		elif not_none_not_empty(request.POST.get('estabilidade_inicio')):
+			try:
+				Estabilidade(
+					funcionario=colaborador,
+					inicio=request.POST.get('estabilidade_inicio'),
+					final=request.POST.get('estabilidade_final'),
+					observacao=request.POST.get('estabilidade_observacao')
+				).save()
+				messages.success(request, 'Estabilidade salva com sucesso!')
+			except Exception as e:
+				messages.error(request, f'Estabilidade não foi salva! {e}')
+		
 		# Atualização e edição do histórico de jornadas
 		elif not_none_not_empty(request.POST.get('inicio_vigencia')):
 			if len([i for i in request.POST.getlist('final_vigencia') if i is not None and i != '']) != 1:
@@ -306,6 +314,15 @@ def EditarFuncionarioView(request, func):
 
 			messages.success(request, 'Histórico de jornadas alterado!')
 
+		# Atualização das informações/observações do funcionário
+		elif not_none_not_empty(request.POST.get('observacao')):
+			try:
+				colaborador.observacoes = request.POST.get('observacao')
+				colaborador.save()
+				messages.success(request, 'Informações adicionadas com sucesso!')
+			except Exception as e:
+				messages.error(request, f'Informações não foram adicionadas com sucesso: {e}')
+		
 		else:
 			messages.warning(request, 'Nenhum dado foi modificado!')
 
@@ -332,11 +349,13 @@ def EditarFuncionarioView(request, func):
 		'contratos': contratos,
 		'contrato': colaborador.get_contrato if jornadas else None,
 		'ferias': ferias,
+		'estabilidades': estabilidades,
 
 		'historico_jornadas': historico_jornadas,
 		'jornada': jornada,
 		'pontos': pontos,
 		'graph': graph,
+		'estavel': estavel,
 
 		'filtros': {'inicio': filtro_data_inicial, 'final': filtro_data_final, 'nome': filtro_nome, 'tipo': filtro_tipo },
 	}

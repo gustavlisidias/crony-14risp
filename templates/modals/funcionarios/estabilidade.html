@@ -1,0 +1,67 @@
+<div class="modal fade" id="modalEstabilidade" data-bs-focus="false" aria-labelledby="modalEstabilidadeLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<form method="POST" class="modal-content" id="formEstabilidade">
+			{% csrf_token %}
+			<div class="modal-header bg-body">
+				<h2 class="modal-title fs-5" id="modalEstabilidadeLabel">Histórico de Estabilidade - {{colaborador}}</h2>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<h5 class="mb-3">Nova Estabilidade</h5>
+				<div class="row mb-3">
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="estabilidadeInicio" name="estabilidade_inicio" placeholder required>
+							<label class="form-label" for="estabilidadeInicio">Data de Início *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="estabilidadeFinal" name="estabilidade_final" placeholder required>
+							<label class="form-label" for="estabilidadeFinal">Data de Encerramento *</label>
+						</div>
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<textarea class="form-control" id="estabilidadeObservacao" name="estabilidade_observacao" placeholder></textarea>
+					<label for="estabilidadeObservacao">Observações</label>
+				</div>
+
+				<hr>
+
+				<h5 class="my-3">Histórico</h5>
+				<div class="table-responsive pt-1">
+					<table class="table table-hover table-estabilidade">
+						<thead>
+							<tr>
+								<th scope="col">#</th>
+								<th scope="col">Início</th>
+								<th scope="col">Encerramento</th>
+								<th scope="col">Observação</th>
+								<th scope="col"></th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for item in estabilidades %}
+								<tr>
+									<th scope="row">{{forloop.counter}}</th>
+									<td>{{item.inicio|date:"d/m/Y"}}</td>
+									<td>{{item.final|date:"d/m/Y"}}</td>
+									<td>{{item.observacao}}</td>
+									<td class="text-center" title="Excluir" role="button" hx-post="{% url 'excluir-estabilidade' item.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+										<i class="fa-light fa-xmark text-danger"></i>
+									</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+			</div>
+		</form>
+	</div>
+</div>

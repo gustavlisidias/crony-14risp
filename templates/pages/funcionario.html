@@ -9,6 +9,7 @@
 {% include "includes/messages.html" %}
 {% include "modals/funcionarios/editar-funcionario.html" %}
 {% include "modals/funcionarios/observacoes-funcionario.html" %}
+{% include "modals/funcionarios/estabilidade.html" %}
 
 <div class="fluid-container p-4 m-0">
 	<div class="card w-100">
@@ -70,6 +71,9 @@
 									<p class="text-light mb-1">{{colaborador.cargo}}</p>
 									<p class="text-light mb-4">{{colaborador.setor}}</p>
 									<p class="text-light mb-4 fs-7">Contratado em {{colaborador.data_contratacao}}</p>
+									{% if estavel.status %}
+										<p class="fw-bold" style="color: #932c2c !important">EM ESTABILIDADE ATÉ {{estavel.vencimento|date:"d/m/Y"}}</p>
+									{% endif %}
 								</div>
 							</div>
 						</div>
@@ -83,14 +87,17 @@
 												<h5 class="">Informações Pessoais</h5>
 												<div>
 													<a type="button" data-bs-toggle="modal" data-bs-target="#modalAtividades" title="Ver atividades">
-														<i class="fa-thin fa-calendar-lines fa-lg text-body me-2"></i>
+														<i class="fa-thin fa-calendar-lines fa-xl text-primary me-2"></i>
 													</a>
 													<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar funcionário">
-														<i class="fa-thin fa-pen-to-square fa-lg text-body me-2"></i>
+														<i class="fa-thin fa-pen-to-square fa-xl text-primary me-2"></i>
 													</a>
-													{% if request.user.get_access == "admin" %}
+													{% if request.user.get_access != "common" %}
 														<a type="button" data-bs-toggle="modal" data-bs-target="#modalObservacoesFuncionario" title="Adicionar anotações">
-															<i class="fa-thin fa-file-pen fa-lg text-body"></i>
+															<i class="fa-thin fa-address-card fa-xl text-primary me-2"></i>
+														</a>
+														<a type="button" data-bs-toggle="modal" id="btnModalEstabilidade" data-bs-target="#modalEstabilidade" title="Estabilidade">
+															<i class="fa-thin fa-scale-balanced fa-xl text-primary"></i>
 														</a>
 													{% endif %}
 												</div>

@@ -12,7 +12,8 @@ from funcionarios.models import (
 	Feedback,
 	SolicitacaoFeedback,
 	RespostaFeedback,
-	HistoricoFuncionario
+	HistoricoFuncionario,
+	Estabilidade
 )
 
 
@@ -25,6 +26,7 @@ admin.site.register(Feedback)
 admin.site.register(SolicitacaoFeedback)
 admin.site.register(RespostaFeedback)
 admin.site.register(HistoricoFuncionario)
+admin.site.register(Estabilidade)
 
 
 @admin.register(Funcionario)

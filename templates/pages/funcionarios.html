@@ -139,5 +139,24 @@
 	
 		return false;
 	};
+
+	function consultarFuncionario() {
+		const cpf = document.getElementById("funcionarioCPF").value;
+
+		$.ajax({
+			type: "GET",	
+			url: `{% url "consultar-funcionario" 0 %}`.replace("0", cpf),
+			success: function (response) {
+				if (confirm(`CPF já utilizado anteriormente em ${response.nome}. Deseja continuar?`) == true) {
+					document.getElementById("formAdicionarFuncionario").submit();
+				} else {
+					alert("Novo funcionário não foi cadastrado!");
+				};
+			},
+			error: function (error) {
+				console.log(error.responseJSON ? error.responseJSON.mensagem : error);
+			}
+		});
+	};
 </script>
 {% endblock %}

@@ -79,7 +79,13 @@
 					<div class="col">
 						<div class="card bg-body-secondary text-body text-center">
 							<div class="card-body">
-								APROVADO<br>{% if dados.aprovado %}<i class="fa-duotone fa-solid fa-circle-check fa-xl text-success"></i> {% else %} <i class="fa-duotone fa-solid fa-circle-xmark fa-xl text-danger"></i> {% endif %}
+								APROVADO
+								<br>
+								{% if dados.aprovado %}
+									<i class="fa-duotone fa-solid fa-circle-check fa-xl text-success"></i>
+								{% else %}
+									<i class="fa-duotone fa-solid fa-circle-xmark fa-xl text-danger"></i>
+								{% endif %}
 							</div>
 						</div>
 					</div>

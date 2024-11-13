@@ -13,7 +13,7 @@ from pathlib import Path
 
 from agenda.models import DocumentosFerias
 from configuracoes.models import Variavel
-from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario
+from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario, Estabilidade
 from funcionarios.utils import converter_documento
 from ponto.models import SolicitacaoAbono
 from web.report import gerar_relatorio_csv
@@ -195,3 +195,34 @@ def StreamDocumentoView(request, document, model, norm):
 		response = HttpResponse(documento.documento, content_type='application/pdf')
 	
 	return response
+
+
+@login_required(login_url='entrar')
+def ExcluirEstabilidadeView(request, stab):
+	if not request.method == 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+	
+	if request.user.get_access == 'common':
+		messages.error(request, 'Você não tem permissão para excluir a estabilidade!')
+		return JsonResponse({'message': 'not allowed'}, status=400)
+	
+	Estabilidade.objects.get(pk=stab).delete()
+	messages.success(request, 'Estabilidade removida com sucesso')
+	return JsonResponse({'message': 'success'}, status=200)
+
+
+@login_required(login_url='entrar')
+def ConsultarFuncionarioView(request, code):
+	if request.method != 'GET':
+		messages.warning(request, 'Método não permitido!')
+		return JsonResponse({'message': 'forbidden'}, status=404)
+	
+	code2 = re.sub('\W+','', code)
+	query = Funcionario.objects.filter(Q(cpf=code) | Q(cpf=code2))
+	if query:
+		response = {'status': True, 'nome': query.last().nome_completo}
+	else:
+		response = {'status': False, 'nome': None}
+
+	return JsonResponse(response, status=200)
