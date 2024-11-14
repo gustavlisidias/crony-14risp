@@ -34,9 +34,11 @@ def CursoView(request):
 	cursos = Curso.objects.all()
 	etapas = ProgressoEtapa.objects.filter(funcionario__id__in=filtro_funcionarios)
 	etapas_criadas = Etapa.objects.all().order_by('titulo')
-	cursos_por_funcionario = progressao_cursos_funcionarios(etapas, filtro_inicio, filtro_final)
-
 	contratos = Contrato.objects.all()
+
+	cursos_por_funcionario = progressao_cursos_funcionarios(etapas, filtro_inicio, filtro_final)
+	if not cursos_por_funcionario or max(len(v) for _, v in cursos_por_funcionario.items()) <= 0:
+		cursos_por_funcionario = None
 
 	if request.method == 'POST':
 		try:
@@ -81,7 +83,7 @@ def CursoView(request):
 		'notificacoes': notificacoes,
 		'filtros': filtros,
 		'cursos': cursos,
-		'cursos_por_funcionario': cursos_por_funcionario if max(len(v) for _, v in cursos_por_funcionario.items()) > 0 else None,
+		'cursos_por_funcionario': cursos_por_funcionario,
 		'contratos': contratos,
 		'etapas': etapas_criadas
 	}

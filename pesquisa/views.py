@@ -9,7 +9,7 @@ from datetime import datetime
 
 from funcionarios.models import Funcionario
 from notifications.models import Notification
-from pesquisa.models import Pesquisa, Pergunta, Resposta
+from pesquisa.models import Pesquisa, Pergunta, Resposta, TextoPerguntas
 from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty, add_coins
 
@@ -20,6 +20,8 @@ def PesquisaView(request):
 	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
 	funcionario = funcionarios.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+
+	tipos = [{'key': i[0], 'value': i[1]} for i in Pergunta.Tipo.choices]
 
 	if request.user.get_access == "admin":
 		pesquisas = Pesquisa.objects.all().order_by('-data_cadastro')
@@ -33,27 +35,32 @@ def PesquisaView(request):
 
 	if request.method == 'POST':
 		try:
-			titulo = request.POST.get('titulo')
-			descricao = request.POST.get('descricao')
-			data_encerramento = request.POST.get('data_encerramento')
-			anonimo = True if request.POST.get('anonimo') else False
-			perguntas = request.POST.getlist('pergunta')
-
 			with transaction.atomic():
 				pesquisa = Pesquisa.objects.create(
-					titulo=titulo,
-					descricao=descricao,
-					data_encerramento=data_encerramento,
-					anonimo=anonimo
+					titulo=request.POST.get('titulo'),
+					descricao=request.POST.get('descricao'),
+					anonimo=True if request.POST.get('anonimo') else False,
+					data_encerramento=request.POST.get('data_encerramento')
 				)
 
+				perguntas = request.POST.getlist('perguntas')
 				for i, pergunta in enumerate(perguntas):
-					obrigatorio = not_none_not_empty(request.POST.get(f'obrigatorio[{i+1}]'))
-					Pergunta.objects.create(
+					obrigatorio = True if request.POST.get(f'pergunta_obrigatorio[{i+1}]') else False
+					pergunta = Pergunta.objects.create(
 						pesquisa=pesquisa,
-						texto=pergunta,
+						titulo=request.POST.get(f'pergunta_titulo[{i+1}]'),
+						tipo=request.POST.get(f'pergunta_tipo[{i+1}]'),
 						obrigatorio=obrigatorio
 					)
+
+					opcoes = request.POST.getlist(f'opcoes[{i+1}]')
+					for j, _ in enumerate(opcoes):
+						print(i+1, j+1)
+						TextoPerguntas.objects.create(
+							pergunta=pergunta,
+							texto=request.POST.get(f'pergunta_opcao[{i+1}][{j+1}]')
+						)
+
 			messages.success(request, 'Pesquisa criada com sucesso!')
 
 		except Exception as e:
@@ -66,6 +73,7 @@ def PesquisaView(request):
 		'funcionario': funcionario,
 		'notificacoes': notificacoes,
 
+		'tipos': tipos,
 		'pesquisas': pesquisas,
 	}
 	return render(request, 'pages/pesquisas.html', context)
@@ -88,7 +96,7 @@ def VisualizarRespostasView(request, pesqid):
 		resposta_textos = [resposta.texto for resposta in pesquisa.respostas if resposta.pergunta.id == pergunta.id]
 		count = [resposta_textos.count(texto) for texto in set(resposta_textos)]
 		dados.append({
-			'pergunta': pergunta.texto,
+			'pergunta': pergunta.titulo,
 			'respostas': list(set(resposta_textos)),
 			'count': count
 		})
@@ -98,7 +106,7 @@ def VisualizarRespostasView(request, pesqid):
 		colunas = ['Funcionário', 'Pergunta', 'Resposta']
 
 		dataset = list(pesquisa.respostas.values_list(
-			'funcionario__nome_completo', 'pergunta__texto', 'texto'
+			'funcionario__nome_completo', 'pergunta__titulo', 'texto'
 		))		
 
 		return gerar_relatorio_csv(colunas, dataset, filename)
@@ -109,7 +117,7 @@ def VisualizarRespostasView(request, pesqid):
 		'notificacoes': notificacoes,
 
 		'pesquisa': pesquisa,
-		'vencido': pesquisa.data_encerramento < hoje,
+		'vencido': pesquisa.data_encerramento < hoje.date(),
 		'dados': dados
 	}
 	return render(request, 'pages/respostas-pesquisa.html', context)
@@ -142,13 +150,16 @@ def EditarPesquisaView(request, pesqid):
 def ResponderPesquisaView(request, pesqid):
 	try:
 		funcionario = Funcionario.objects.get(usuario=request.user)
-		for index, pergid in enumerate(request.POST.getlist('pergunta')):
-			Resposta(
-				pergunta=Pergunta.objects.get(pk=pergid),
-				texto=request.POST.getlist('resposta')[index],
-				funcionario=funcionario
-			).save()
-
+		pesquisa = Pesquisa.objects.get(pk=pesqid)
+		
+		for pergunta in Pergunta.objects.filter(pesquisa=pesquisa):
+			for resposta in request.POST.getlist(f'resposta_{pergunta.id}'):
+				Resposta(
+					pergunta=pergunta,
+					texto=resposta,
+					funcionario=funcionario
+				).save()
+		
 		add_coins(funcionario, 150)
 		messages.success(request, 'Respostas enviadas com sucesso!')
 

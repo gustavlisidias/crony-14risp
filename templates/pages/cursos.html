@@ -8,6 +8,7 @@
 
 {% include "includes/messages.html" %}
 {% include "modals/cursos/adicionar-curso.html" %}
+{% include "modals/cursos/editar-curso.html" %}
 {% include "modals/cursos/atribuir-curso.html" %}
 
 <div class="fluid-container p-4 m-0">
@@ -64,7 +65,7 @@
 
 			<div class="nav nav-tabs" id="nav-tab" role="tablist">
 				<button class="nav-link active" id="nav-meus-cursos" data-bs-toggle="tab" data-bs-target="#tab-meus-cursos" type="button" role="tab" aria-controls="tab-meus-cursos" aria-selected="true">
-					Meus Cursos
+					Em Andamento
 				</button>
 				<button class="nav-link" id="nav-cursos" data-bs-toggle="tab" data-bs-target="#tab-cursos" type="button" role="tab" aria-controls="tab-cursos" aria-selected="false">
 					Cursos Disponíveis
@@ -88,15 +89,15 @@
 									<p class="mb-2">{{curso.descricao}}</p>
 									<!-- Gráfico de Progresso -->
 									<div class="d-flex justify-content-center mb-2">
-										<canvas id="progress{{funcionario.id}}{{forloop.counter}}"></canvas>
+										<canvas id="progress{{funcionario.id}}{{forloop.counter}}" height="165"></canvas>
 									</div>
 									<!-- Etapas -->
-									<div class="collapse" id="etapas{{funcionario.id}}{{forloop.counter}}">
+									<div class="collapse p-1" id="etapas{{funcionario.id}}{{forloop.counter}}">
 										<div class="card card-body">
-											<h5>Etapas</h5>
+											<h5>Progresso de Etapas</h5>
 											<div class="d-flex justify-content-around my-3">
 												{% for etapa in info.etapas %}
-													<div>
+													<div class="mb-1">
 														{% if etapa.status %}
 															<i class="fa-thin fa-check fa-xl text-success"></i>
 														{% else %}
@@ -107,16 +108,18 @@
 													</div>
 												{% endfor %}
 											</div>
-											<div class="d-grid gap-2">
-												<a href="{% url 'progresso-curso' curso.id funcionario.id %}" class="btn btn-primary text-light rounded-pill start-course">Começar</a>
-											</div>
+											{% if request.user == funcionario.usuario %}
+												<div class="d-grid gap-2">
+													<a href="{% url 'progresso-curso' curso.id funcionario.id %}" class="btn bg-success-subtle text-success-emphasis rounded-pill start-course">Começar</a>
+												</div>
+											{% endif %}
 										</div>
 									</div>
 								</div>
 							{% endfor %}
 						{% empty %}
 							<div class="card d-flex justify-content-center align-items-center p-2">
-								Nenhum curso adicionado!
+								<p class="text-center mb-0">Nenhum curso adicionado à colaboradores! <br> Tente alterar o filtro</p>
 							</div>
 						{% endfor %}
 					</div>
@@ -126,7 +129,7 @@
 						{% csrf_token %}
 						<div class="list-group mt-3">
 							{% for curso in cursos %}
-								<div role="button" class="list-group-item list-group-item-action">
+								<div role="button" class="list-group-item list-group-item-action" onclick="editarCurso({{curso.id}})">
 									<div class="d-flex w-100 justify-content-between">
 										<h5 class="mb-3">{{curso}}</h5>
 										<small class="text-body-secondary">{{curso.data_cadastro}}</small>
@@ -188,52 +191,9 @@
 				window.location.href = button.getAttribute("href");
 			});
 		});
-	});
-</script>
 
-<script>
-	document.addEventListener("DOMContentLoaded", function () {
 		createSelectChoices(document.querySelector(".select-users"), -1);
 	});
-</script>
-
-<script>
-	document.addEventListener("DOMContentLoaded", function () {
-		let etapaIndex = 0;
-	
-		document.getElementById("adicionarEtapa").addEventListener("click", function () {
-			etapaIndex++;
-			const etapasContainer = document.getElementById("etapasContainer");
-
-			const divisor = document.createElement("hr");
-			const indexDiv = document.createElement("p");
-
-			indexDiv.innerHTML = `Etapa #${etapaIndex}`;
-	
-			const etapaDiv = document.createElement("div");
-			etapaDiv.className = "form-floating mb-3";
-			etapaDiv.innerHTML = `
-				<input type="text" class="form-control" id="cursoEtapaTitulo${etapaIndex}" name="etapa_titulo" placeholder required>
-				<label for="cursoEtapaTitulo${etapaIndex}">Título *</label>
-			`;
-
-			const textoDiv = document.createElement("div");
-			textoDiv.className = "mb-3";
-			textoDiv.innerHTML = `
-				<label class="form-label" for="cursoEtapaTexto${etapaIndex}"></label>
-				<textarea class="ck-editor-5" id="cursoEtapaTexto${etapaIndex}" name="etapa_texto"></textarea>
-				<span class="word-count" id="cursoEtapaTexto${etapaIndex}_script-word-count"></span>
-			`;
-			
-			etapasContainer.appendChild(divisor);
-			etapasContainer.appendChild(indexDiv);
-			etapasContainer.appendChild(etapaDiv);
-			etapasContainer.appendChild(textoDiv);
-
-			iniciarCKEditor();
-
-		});
-	});	
 </script>
 
 <script>
@@ -245,5 +205,79 @@
         modal.find("form").attr("action", action);
         modal.modal("show");
     };
+
+	function editarCurso(courseId) {
+		$.ajax({
+			type: "GET",	
+			url: `{% url "consultar-curso" 0 %}`.replace("0", courseId),
+			success: function (response) {
+				const modal = $("#modalEditarCurso");
+				const action = `{% url "editar-curso" 0 %}`.replace("0", courseId);
+
+				response.curso.times.forEach(time => {
+					const option = modal.find(`#cursoTime option[value="${time}"]`);
+					if (option.length) {
+						option.prop("selected", true).trigger("change");
+					};
+				});
+
+				response.curso.contratos.forEach(contrato => {
+					const option = modal.find(`#cursoContrato option[value="${contrato}"]`);
+					if (option.length) {
+						option.prop("selected", true).trigger("change");						
+					};
+				});
+
+				response.etapas.forEach(etapa => {
+					const option = modal.find(`#cursoEtapas option[value="${etapa.id}"]`);
+					if (option.length) {
+						option.prop("selected", true).trigger("change");						
+					};
+				});				
+				
+				modal.find("form").attr("action", action);
+				modal.find("#cursoTitulo").val(response.curso.titulo);
+				modal.find("#cursoDescricao").val(response.curso.descricao);
+				modal.modal("show");
+			},
+			error: function (error) {
+				console.log(error.responseJSON ? error.responseJSON.mensagem : error);
+			}
+		});
+	};
+
+	function botaoAdicionarEtapaModal(modalId) {
+		const modal = $(`#${modalId}`)
+		const etapasContainer = modal.find("#etapasContainer");
+
+		const etapaIndex = etapasContainer.find("input[name='etapa_titulo']").length + 1;
+
+		const divisor = document.createElement("hr");
+		const indexDiv = document.createElement("p");
+
+		indexDiv.innerHTML = `Etapa #${etapaIndex}`;
+
+		const etapaDiv = document.createElement("div");
+		etapaDiv.className = "form-floating mb-3";
+		etapaDiv.innerHTML = `
+			<input type="text" class="form-control" id="cursoEtapaTitulo${etapaIndex}" name="etapa_titulo" placeholder required>
+			<label for="cursoEtapaTitulo${etapaIndex}">Título *</label>
+		`;
+
+		const textoDiv = document.createElement("div");
+		textoDiv.className = "mb-3";
+		textoDiv.innerHTML = `
+			<label class="form-label" for="cursoEtapaTexto${modalId}${etapaIndex}"></label>
+			<textarea class="ck-editor-5" id="cursoEtapaTexto${modalId}${etapaIndex}" name="etapa_texto"></textarea>
+			<span class="word-count" id="cursoEtapaTexto${modalId}${etapaIndex}_script-word-count"></span>
+		`;
+
+		etapasContainer.append(divisor);
+		etapasContainer.append(indexDiv);
+		etapasContainer.append(etapaDiv);
+		etapasContainer.append(textoDiv);
+
+		iniciarCKEditor();
+	}
 </script>
 {% endblock %}

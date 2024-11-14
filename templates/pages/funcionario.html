@@ -72,7 +72,9 @@
 									<p class="text-light mb-4">{{colaborador.setor}}</p>
 									<p class="text-light mb-4 fs-7">Contratado em {{colaborador.data_contratacao}}</p>
 									{% if estavel.status %}
-										<p class="fw-bold" style="color: #932c2c !important">EM ESTABILIDADE ATÉ {{estavel.vencimento|date:"d/m/Y"}}</p>
+										<p class="fw-bold" style="color: #932c2c !important; font-size: 17px; text-decoration: underline;">
+											EM ESTABILIDADE ATÉ {{estavel.vencimento|date:"d/m/Y"}}
+										</p>
 									{% endif %}
 								</div>
 							</div>

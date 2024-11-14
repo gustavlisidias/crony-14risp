@@ -9,7 +9,7 @@ from configuracoes.manager import GerenciadorUsuario
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
 	username = models.CharField(max_length=64, unique=True)
-	email = models.EmailField(max_length=128, unique=True, null=True, blank=True)
+	email = models.EmailField(max_length=128, unique=False, null=True, blank=True)
 	first_name = models.CharField(max_length=256)
 	last_name = models.CharField(max_length=256)
 	is_active = models.BooleanField(default=True)

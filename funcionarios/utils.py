@@ -216,8 +216,8 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 				
 			return messages.success(request, 'Funcionário(a) criado(a) com sucesso!')
 					
-		except IntegrityError:
-			return messages.error(request, 'Funcionário(a) não foi criado(a)! Verifique se algum dos campos "Matrícula", "Email", "CPF" ou "RG" já não existem no sistema.')
+		except IntegrityError as e:
+			return messages.error(request, f'Funcionário(a) não foi criado(a)! O campo Matrícula deve ser único. {e}')
 
 		except Exception as e:
 			return messages.error(request, f'Funcionário(a) não foi criado(a): {e}!')

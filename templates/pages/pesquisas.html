@@ -21,7 +21,7 @@
 		<div class="card-header bg-primary text-light d-flex align-items-center justify-content-between border-bottom border-light">
 			<div>Pesquisas & Revisões</div>
 
-			{% if request.user.get_access == "admin" %}
+			{% if request.user.get_access != "common" %}
 				<div class="btn-group">
 					<button class="btn btn-secondary text-light" type="button" title="Nova pesquisa" data-bs-toggle="modal" data-bs-target="#modalAdicionarPesquisa">
 						Adicionar
@@ -64,14 +64,14 @@
 
 							<th class="text-center">
 								<div class="d-flex justify-content-around">
-									<a role="button" title="Responder" {% if not pesquisa.respondido %} onclick="event.stopPropagation(); responderPesquisa({{pesquisa.id}})" {% else %} onclick="event.stopPropagation(); alert('Pesquisa já respondida!')" {% endif %}>
+									<a class="p-1" role="button" title="Responder" {% if not pesquisa.respondido %} onclick="event.stopPropagation(); responderPesquisa({{pesquisa.id}})" {% else %} onclick="event.stopPropagation(); alert('Pesquisa já respondida!')" {% endif %}>
 										<i class="fa-solid fa-reply fa-lg text-body"></i>
 									</a>
 									{% if request.user.get_access == "admin" %}
-										<a role="button" title="Respostas" href="{% url 'visualizar-respostas' pesquisa.id %}">
+										<a class="p-1" role="button" title="Respostas" href="{% url 'visualizar-respostas' pesquisa.id %}">
 											<i class="fa-thin fa-input-text fa-lg text-body"></i>
 										</a>
-										<a role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-pesquisa' pesquisa.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+										<a class="p-1" role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-pesquisa' pesquisa.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
 											<i class="fa-thin fa-x text-danger"></i>
 										</a>
 									{% endif %}
@@ -100,28 +100,93 @@
 	});
 
 	document.addEventListener("DOMContentLoaded", function () {
+		// const opcoesPergunta = {{tipos|safe}};
 		let perguntaIndex = 0;
-	
+
 		document.getElementById("adicionarPergunta").addEventListener("click", function () {
 			perguntaIndex++;
 			const perguntasContainer = document.getElementById("perguntasContainer");
 			
 			const perguntaDiv = document.createElement("div");
-			perguntaDiv.className = "mb-3";
+			perguntaDiv.className = "content-pergunta mb-3";
 			perguntaDiv.innerHTML = `
-				<label for="pesquisaPergunta${perguntaIndex}" class="form-label">Pergunta ${perguntaIndex}</label>
-				<textarea class="form-control" id="pesquisaPergunta${perguntaIndex}" name="pergunta" required></textarea>
-				<div class="form-check mt-2">
-					<input class="form-check-input me-2" type="checkbox" id="pesquisaObrigatorio${perguntaIndex}" name="obrigatorio[${perguntaIndex}]" style="width: 20px; height:20px;">
-					<label class="form-check-label" for="pesquisaObrigatorio${perguntaIndex}" style="margin-top: 3px;">
-						Obrigatória
-					</label>
+				<p>Pergunta ${perguntaIndex}</p>
+				<input type="hidden" name="perguntas" id="perguntaIndex">
+				<!-- TITULO DA PERGUNTA -->
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" id="perguntaTitulo${perguntaIndex}" name="pergunta_titulo[${perguntaIndex}]" placeholder>
+					<label for="perguntaTitulo${perguntaIndex}">Título da Pergunta</label>
+				</div>
+				<!-- TIPO DE PERGUNTA -->
+				<div class="form-floating mb-3">
+					<select class="form-select" id="perguntaTipo${perguntaIndex}" name="pergunta_tipo[${perguntaIndex}]" required onchange="selecionarOpcao(this, ${perguntaIndex})">
+						<option value="" selected hidden>Selecione uma opção</option>
+						{% for i in tipos %}
+							<option value="{{ i.key }}">{{ i.value }}</option>
+						{% endfor %}
+					</select>
+					<label for="perguntaTipo${perguntaIndex}">Tipo de Pergunta *</label>
+				</div>
+				<!-- OPCOES DE PERGUNTA DO TIPO SELECT -->
+				<div id="divPerguntaOpcoes${perguntaIndex}"></div>
+				<!-- PERGUNTA OBRIGATORIA E AÇÕES DAS OPCOES DO TIPO SELECT -->
+				<div id="divPerguntaAcoes${perguntaIndex}" class="d-flex">
+					<div class="form-check">
+						<input class="form-check-input me-2" type="checkbox" id="perguntaObrigatorio${perguntaIndex}" name="pergunta_obrigatorio[${perguntaIndex}]" style="width: 20px; height:20px;">
+						<label class="form-check-label" for="perguntaObrigatorio${perguntaIndex}" style="margin-top: 3px;">Obrigatória</label>
+					</div>
 				</div>
 			`;
 			
 			perguntasContainer.appendChild(perguntaDiv);
 		});
-	});	
+	});
+
+	function selecionarOpcao(opcao, index) {
+		const divOpcao = document.getElementById(`divPerguntaOpcoes${index}`);
+		const divAcoes = document.getElementById;
+		let indexOpcao = 1;
+
+		if (opcao.value !== 'TXT') {
+			divOpcao.innerHTML = `
+				<div class="form-floating mb-3">
+					<input type="hidden" name="opcoes[${index}]" id="perguntaOpcaoIndex">
+					<input type="text" class="form-control" id="perguntaOpcao${indexOpcao}" name="pergunta_opcao[${index}][${indexOpcao}]" placeholder>
+					<label for="perguntaOpcao${indexOpcao}">Opção ${indexOpcao}</label>
+				</div>
+			`;
+
+			$(`#divPerguntaAcoes${index}`).append(`
+				<div class="button-control ms-4">
+					<i class="fa-thin fa-circle-minus fa-xl me-2" role="button" title="Remover última opção" onclick="removerOpcao(${index})"></i>
+					<i class="fa-thin fa-circle-plus fa-xl" role="button" title="Adicionar nova opção" onclick="adicionarOpcao(${index})"></i>
+				</div>
+			`);
+		} else {
+			[...divOpcao.children].forEach(c => c.remove())
+			$(`#divPerguntaAcoes${index} .button-control`).remove();
+		};
+	};
+
+	function adicionarOpcao(index) {
+		let indexOpcao = document.getElementById(`divPerguntaOpcoes${index}`).children.length + 1;
+
+		$(`#divPerguntaOpcoes${index}`).append(`
+			<div class="form-floating mb-3">
+				<input type="hidden" name="opcoes[${index}]" id="perguntaOpcaoIndex">
+				<input type="text" class="form-control" id="perguntaOpcao${indexOpcao}" name="pergunta_opcao[${index}][${indexOpcao}]" placeholder>
+				<label for="perguntaOpcao${indexOpcao}">Opção ${indexOpcao}</label>
+			</div>
+		`);
+	};
+
+	function removerOpcao(index) {
+		let indexOpcao = document.getElementById(`divPerguntaOpcoes${index}`).children.length;
+
+		if (indexOpcao > 1){
+			$(`#divPerguntaOpcoes${index} .form-floating:last`).remove();
+		};		
+	};
 
 	function verPesquisa(pesquisaId) {
 		$.ajax({
@@ -171,74 +236,113 @@
 			success: function (data) {
 				const pesquisa = data.pesquisa;
 				const perguntas = data.perguntas;
-				const respostas = data.respostas;
-				const funcionarios = data.funcionarios;
-
 				const modal = $("#modalResponderPesquisa");
 				const action = `{% url 'responder-pesquisa' 0 %}`.replace("0", pesquisa.id);
-
+	
+				// Set form action and modal title
 				modal.find("form").attr("action", action);
 				modal.find("#modalResponderPesquisaLabel").html(`Responder a Pesquisa ${pesquisa.titulo}`);
-
-				const body = modal.find(".modal-body");
-				body.html("");
-
-				let steps = "";
-            	let contents = "";
-
+	
+				// Clear existing navigation and content
+				$("#smartwizard .nav").empty();
+				$("#smartwizard .tab-content").empty();
+	
+				// Create navigation items and tab content for each question
 				perguntas.forEach((pergunta, index) => {
-					let required = pergunta.obrigatorio ? "required" : "";
-					let signal = pergunta.obrigatorio ? "*" : "";
+					// Add navigation tab for each question
+					const navItem = document.createElement("li");
+					navItem.className = "nav-item";
+					navItem.innerHTML = `<a class="nav-link" href="#pergunta-${index + 1}"><div class="num">${index + 1}</div></a>`;
+					$("#smartwizard .nav").append(navItem);
+	
+					// Create step content
+					const stepContent = document.createElement("div");
+					stepContent.className = "tab-pane";
+					stepContent.id = `step-${index + 1}`;
+					
+					// Add label for the question
+					stepContent.innerHTML = `<p class="text-center fst-italic">${pergunta.titulo}</p>`;
+					const helper = document.createElement("small");
+	
+					// Check if the question type is 'SLC' for select options or 'TXT' for text input
+					if (pergunta.tipo === "SLC") {
+						const select = document.createElement("select");
+						select.className = "form-select";
+						select.name = `resposta_${pergunta.id}`;
+						select.required = pergunta.obrigatorio;
+	
+						// Add options to the select
+						pergunta.opcoes.forEach((opcao) => {
+							const option = document.createElement("option");
+							option.value = opcao;
+							option.textContent = opcao;
+							select.appendChild(option);
+						});
 
-					steps += `<li class="nav-item">
-									<a class="nav-link" href="#pergunta-${index}">
-										<div class="num">${index + 1}</div>
-										${pergunta.texto}
-									</a>
-								</li>`;
+						stepContent.appendChild(select);
 
-					contents += `<div class="tab-pane" role="tabpanel" id="pergunta-${index}">
-									<input type="hidden" value="${pergunta.id}" name="pergunta">
-									<div class="form-floating">
-										<textarea class="form-control" placeholder id="repostaPesquisa${pergunta.id}" name="resposta" ${required}></textarea>
-										<label for="repostaPesquisa${pergunta.id}">Resposta ${signal}</label>
-									</div>
-								</div>`;
+					} else if (pergunta.tipo === "SLM") {
+							const select = document.createElement("select");
+							select.className = "form-select";
+							select.name = `resposta_${pergunta.id}`;
+							select.multiple = true;
+							select.required = pergunta.obrigatorio;
+		
+							// Add options to the select
+							pergunta.opcoes.forEach((opcao) => {
+								const option = document.createElement("option");
+								option.value = opcao;
+								option.textContent = opcao;
+								select.appendChild(option);
+							});
+	
+							stepContent.appendChild(select);
+							helper.innerHTML = "Pergunta de múltipla seleção. Para marcar mais de 1 opção, selecione pressionando CTRL";
+
+					} else if (pergunta.tipo === "TXT") {
+						const input = document.createElement("input");
+						input.type = "text";
+						input.className = "form-control";
+						input.name = `resposta_${pergunta.id}`;
+						input.required = pergunta.obrigatorio;
+						stepContent.appendChild(input);
+					}
+					
+					const small = document.createElement("small");
+					small.innerHTML = `${pergunta.obrigatorio ? "Essa pergunta é obrigatória *": ""}`;
+					stepContent.appendChild(small);
+					stepContent.appendChild(document.createElement("br"));
+					stepContent.appendChild(helper);
+	
+					// Append step content to the tab content container
+					$("#smartwizard .tab-content").append(stepContent);
 				});
-
-				body.append(`
-					<div id="smartwizard">
-						<ul class="nav">${steps}</ul>
-						<div class="tab-content">${contents}</div>
-					</div>
-				`);
-
+	
+				// Initialize SmartWizard with settings
 				$("#smartwizard").smartWizard({
 					theme: "dots",
 					justified: true,
 					autoAdjustHeight: true,
-					transition: {
-						animation: "fade", // Animation effect on navigation, none|fade|slideHorizontal|slideVertical|slideSwing|css(Animation CSS class also need to specify)
-						speed: "400", // Animation speed. Not used if animation is "css"
-						easing: "", // Animation easing. Not supported without a jQuery easing plugin. Not used if animation is "css"
-						prefixCss: "", // Only used if animation is "css". Animation CSS prefix
-						fwdShowCss: "", // Only used if animation is "css". Step show Animation CSS on forward direction
-						fwdHideCss: "", // Only used if animation is "css". Step hide Animation CSS on forward direction
-						bckShowCss: "", // Only used if animation is "css". Step show Animation CSS on backward direction
-						bckHideCss: "", // Only used if animation is "css". Step hide Animation CSS on backward direction
+					lang: {
+						next: "Próximo",
+						previous: "Anterior",
 					},
 					toolbar: {
-						position: "top", // none|top|bottom|both
-						showNextButton: true, // show/hide a Next button
-						showPreviousButton: true, // show/hide a Previous button
-						extraHtml: "" // Extra html to show on toolbar
+						position: "bottom",
+						showNextButton: true,
+						showPreviousButton: true,
+						extraHtml: `
+							<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-info text-light">Enviar</button>
+						`
 					},
-					lang: {
-						next: "Proximo",
-						previous: "Anterior"
+					transition: {
+						animation: "fade",
+						speed: "400",
 					},
 				});
-
+	
+				// Show the modal
 				modal.modal("show");
 			},
 			error: function (error) {

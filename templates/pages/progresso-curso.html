@@ -67,16 +67,25 @@
 	document.addEventListener("DOMContentLoaded", function () {
 		$("#smartwizard").smartWizard({
 			theme: "dots",
+			justified: true,
+			autoAdjustHeight: true,
 			lang: {
-				next: "Proximo",
-				previous: "Anterior"
+				next: "Próximo",
+				previous: "Anterior",
 			},
 			toolbar: {
-				extraHtml: [$(`<button class="btn btn-info text-light ms-1" id="btnWizard" type="button"> Concluir </button>`)]
-			}
+				position: "bottom",
+				showNextButton: true,
+				showPreviousButton: true,
+				extraHtml: [$(`<button class="btn btn-info text-light ms-1" id="btnConcluirWizard" type="button"> Concluir </button>`)]
+			},
+			transition: {
+				animation: "fade",
+				speed: "400",
+			},
 		});
 
-		$("#btnWizard").on("click", function () {
+		$("#btnConcluirWizard").on("click", function () {
 			const etapaId = parseInt($("#smartwizard .active").attr("href").replace("#", "").split("-").slice(-1)[0]);
 
 			$.ajax({
