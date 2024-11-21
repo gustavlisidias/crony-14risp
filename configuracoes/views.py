@@ -95,11 +95,13 @@ def LogoutView(request):
 def ConfiguracoesView(request):
 	funcionario = Funcionario.objects.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+
 	variaveis = Variavel.objects.all()
 	setores = Setor.objects.all()
 	cargos = Cargo.objects.all()
 	tipos_documento = TipoDocumento.objects.all().order_by('-codigo')
 	tipos_atividade = TipoAtividade.objects.all().order_by('-data_cadastro')
+	tipos_contrato = [{'key': i[0], 'value': i[1]} for i in Contrato.Tipo.choices]
 
 	jornadas = {}
 	for item in Jornada.objects.all().order_by('contrato__id', 'dia', 'ordem'):
@@ -246,7 +248,8 @@ def ConfiguracoesView(request):
 		'setores': setores,
 		'cargos': cargos,
 		'tipos_documento': tipos_documento,
-		'tipos_atividade': tipos_atividade
+		'tipos_atividade': tipos_atividade,
+		'tipos_contrato': tipos_contrato
 	}
 
 	return render(request, 'pages/configuracoes.html', context)
@@ -260,7 +263,7 @@ def AdicionarJornadaView(request):
 		return redirect('configuracoes')
 	
 	try:
-		contrato = Contrato.objects.create(titulo=request.POST.get('titulo'), descricao=request.POST.get('descricao'))
+		contrato = Contrato.objects.create(titulo=request.POST.get('titulo'), descricao=request.POST.get('descricao'), tipo=request.POST.get('tipo'))
 		horas = re.findall(r'\d{2}:\d{2}', request.POST.get('descricao'))
 
 		if len(horas) % 2 != 0:

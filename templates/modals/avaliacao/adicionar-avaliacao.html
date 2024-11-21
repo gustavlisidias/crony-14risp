@@ -3,7 +3,7 @@
 	<div class="modal fade" id="modalAdicionarAvaliacao" tabindex="-1" aria-labelledby="modalAdicionarAvaliacaoLabel" aria-hidden="true">
 		<div class="modal-dialog modal-xl modal-dialog-scrollable">
 			<div class="modal-content">
-				<div class="modal-header bg-body">
+				<div class="modal-header">
 					<h2 class="modal-title fs-5" id="modalAdicionarAvaliacaoLabel">Nova Avaliação</h2>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
@@ -28,19 +28,19 @@
 					<div class="row mb-3">
 						<div class="col">
 							<div class="form-floating">
-								<input type="date" class="form-control" id="avaliacaoInicio" name="inicio" placeholder>
+								<input type="date" class="form-control" id="avaliacaoInicio" name="inicio" value="{% now "Y-m-d" %}" placeholder>
 								<label class="form-label" for="avaliacaoInicio">Periodo Inicial *</label>
 							</div>
 						</div>
 						<div class="col">
 							<div class="form-floating">
-								<input type="date" class="form-control" id="avaliacaoFinal" name="final" placeholder>
+								<input type="date" class="form-control" id="avaliacaoFinal" name="final" value="{% now "Y-m-d" %}" placeholder>
 								<label class="form-label" for="avaliacaoFinal">Periodo Final *</label>
 							</div>
 						</div>
 						<div class="col">
 							<div class="form-floating">
-								<input type="date" class="form-control" id="avaliacaoEncerramento" name="encerramento" placeholder>
+								<input type="date" class="form-control" id="avaliacaoEncerramento" name="encerramento" value="{% now "Y-m-d" %}" placeholder>
 								<label class="form-label" for="avaliacaoEncerramento">Data de Encerramento *</label>
 							</div>
 						</div>
@@ -67,21 +67,21 @@
 						{% for nivel in niveis %}
 							<div class="col">
 								<div class="form-floating">
-									<input type="number" class="form-control" id="avaliacao{{nivel.value|title}}" name="{{nivel.value|lower}}" value="0" min="0" max="1" step="0.1" placeholder>
-									<label class="form-label" for="avaliacao{{nivel.value|title}}">{{nivel.value|title}}</label>
+									<input type="number" class="form-control" id="avaliacao{{nivel.value|title}}" name="{{nivel.value|lower}}" value="0" min="0" max="1" step="0.1" placeholder required>
+									<label class="form-label" for="avaliacao{{nivel.value|title}}">{{nivel.value|title}} *</label>
 								</div>
 							</div>
 						{% endfor %}
 					</div>
 					<div class="form-text mb-3">A soma dos pesos deve ser igual à 1</div>
 					<div class="form-floating mb-3">
-						<select class="form-select" id="avaliacaoFuncionarios" name="funcionarios" multiple style="height: 100%;">
+						<select class="form-select" id="avaliacaoAvaliadores" name="avaliadores" multiple style="height: 12rem;">
 							{% for funcionario in funcionarios %}
-								<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+								<option value="{{ funcionario.id }}">{{ funcionario }} ({{funcionario.cargo}} - {{funcionario.setor}})</option>
 							{% endfor %}
 						</select>
-						<label for="avaliacaoFuncionarios">Avaliadores</label>
-					</div>					
+						<label for="avaliacaoAvaliadores">Avaliadores</label>
+					</div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
@@ -100,34 +100,40 @@
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
-					<label class="form-label">Pesos por Critério</label>
-					<div class="row">
-						{% for criterio in criterios %}
-							<div class="col">
-								<div class="form-floating">
-									<input type="number" class="form-control" id="avaliacao{{criterio.nome|title}}" name="{{criterio.nome|lower}}" value="0" min="0" max="1" step="0.1" placeholder>
-									<label class="form-label" for="avaliacao{{criterio.nome|title}}">{{criterio.nome|title}}</label>
-								</div>
-							</div>
-						{% endfor %}
-					</div>
-					<div class="form-text mb-3">A soma dos pesos deve ser igual à 1</div>
 					{% if perguntas %}
 						<div class="form-floating mb-3">
-							<select class="form-select" id="avaliacaoPerguntas" name="perguntas" multiple style="height: 100%;">
+							<select class="form-select" id="avaliacaoPerguntas" name="perguntas" multiple style="height: 12rem;">
 								{% for pergunta in perguntas %}
-									<option value="{{ pergunta.id }}">{{ pergunta }}</option>
+									<option value="{{ pergunta.id }}" data-peso="{{pergunta.peso}}">{{ pergunta }}</option>
 								{% endfor %}
 							</select>
 							<label for="avaliacaoPerguntas">Perguntas</label>
 						</div>
+					{% else %}
+						<input type="hidden" id="perguntaIndex0" name="nova-pergunta" value="0">
+						<div class="form-floating mb-3">
+							<input type="text" class="form-control" id="perguntaTitulo0" name="pergunta-titulo[0]" placeholder required>
+							<label for="perguntaTitulo0">Título Pergunta *</label>
+						</div>
+						<div class="mb-3">
+							<label class="form-label" for="perguntaDescricao0">Pergunta *</label>
+							<textarea class="ck-editor-5" id="perguntaDescricao0" name="pergunta-texto[0]"></textarea>
+							<span class="word-count" id="perguntaDescricao0_script-word-count"></span>
+						</div>
+						<div class="form-floating mb-3">
+							<input type="number" class="form-control" id="perguntaPeso0" name="pergunta-peso[0]" value="0" min="0" max="1" step="0.1" placeholder required>
+							<label for="perguntaPeso0">Peso Pergunta *</label>
+						</div>
 					{% endif %}
-
+					
+					<!-- Refazer a criação de perguntas -->
 					<div id="perguntasContainer"></div>
-					<button type="button" class="btn btn-secondary text-light" id="adicionarPergunta">Adicionar Pergunta</button>
+					
+
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn bg-primary-subtle text-primary-emphasis" id="btnAdicionarPergunta">Adicionar Pergunta</button>
 					<button type="button" class="btn btn-secondary text-light" data-bs-target="#modalAdicionarAvaliacao2" data-bs-toggle="modal">Voltar</button>
 					<button type="button" class="btn btn-secondary text-light" id="btnConcluir">Concluir</button>
 				</div>

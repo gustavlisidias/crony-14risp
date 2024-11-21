@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Min, Q
+from django.db.models import Min, Q, Max
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils.timezone import make_aware
@@ -164,6 +164,11 @@ def RegistrosPontoFuncinarioView(request, func):
 	filtros['inicio'] = request.GET.get('data_inicial') if request.GET.get('data_inicial') else data_primeiro_ponto.strftime('%Y-%m-%d')
 	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), funcionarios.filter(pk=colaborador.pk))
 
+	solicitacoes_ajuste = SolicitacaoPonto.objects.filter(funcionario=colaborador).values('data', 'motivo', 'status').annotate(inicio=Min('hora'), final=Max('hora')).values('data', 'motivo', 'status', 'inicio', 'final')
+	solicitacoes_abono = SolicitacaoAbono.objects.filter(funcionario=colaborador)
+	solicitacoes = [{'data': i['data'], 'motivo': i['motivo'], 'status': i['status'], 'categoria': 'Ajuste', 'inicio': datetime.combine(i['data'], i['inicio']), 'final': datetime.combine(i['data'], i['final'])} for i in solicitacoes_ajuste]
+	solicitacoes.extend([{'data': i.inicio.date, 'motivo': i.motivo, 'status': i.status, 'categoria': i.get_tipo, 'inicio': i.inicio, 'final': i.final } for i in solicitacoes_abono])
+
 	nro_colunas = 0
 	dados = {'notas': None, 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0)}
 	if pontos:
@@ -186,6 +191,7 @@ def RegistrosPontoFuncinarioView(request, func):
 		'pontos': pontos,
 		'dados': dados,
 		'nro_colunas': range(nro_colunas),
+		'solicitacoes': solicitacoes
 	}
 	return render(request, 'pages/ponto-funcionario.html', context)
 
@@ -200,6 +206,7 @@ def SolicitarAbonoView(request):
 	funcionario = Funcionario.objects.get(usuario=request.user)
 	admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
+	solicitacao = request.POST.get('solicitacao')
 	inicio = request.POST.get('inicio')
 	final = request.POST.get('final')
 	tipo = request.POST.get('tipo')
@@ -213,12 +220,29 @@ def SolicitarAbonoView(request):
 			messages.error(request, 'Os documentos devem ser do tipo JPG, PNG, GIF ou PDF!')
 			return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-	if not_none_not_empty(inicio, final, tipo, motivo):
+	if not_none_not_empty(solicitacao, tipo, motivo):
+		if solicitacao == 'tempo':
+			dia = datetime.strptime(request.POST.get('data'), '%Y-%m-%d').date()
+			weekday = 1 if dia.weekday() + 2 == 8 else dia.weekday() + 2
+
+			pontos_dia = Ponto.objects.filter(funcionario=funcionario, data=dia, alterado=False).order_by('hora')
+			jornada_dia = JornadaFuncionario.objects.filter(funcionario=funcionario, dia=weekday, final_vigencia=None).order_by('ordem')
+
+			if pontos_dia:
+				inicio = make_aware(datetime.combine(dia, pontos_dia.last().hora))
+			else:
+				inicio = make_aware(datetime.combine(dia, jornada_dia.first().hora))
+			
+			final = make_aware(datetime.combine(dia, jornada_dia.last().hora))
+		else:
+			inicio = make_aware(datetime.strptime(inicio, '%Y-%m-%dT%H:%M'))
+			final = make_aware(datetime.strptime(final, '%Y-%m-%dT%H:%M'))
+		
 		try:
 			solicitacao = SolicitacaoAbono.objects.create(
 				funcionario=funcionario,
-				inicio=make_aware(datetime.strptime(inicio, '%Y-%m-%dT%H:%M')),
-				final=make_aware(datetime.strptime(final, '%Y-%m-%dT%H:%M')),
+				inicio=inicio,
+				final=final,
 				tipo=tipo,
 				motivo=motivo,
 				documento=documento,

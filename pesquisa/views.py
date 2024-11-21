@@ -120,7 +120,7 @@ def VisualizarRespostasView(request, pesqid):
 		'vencido': pesquisa.data_encerramento < hoje.date(),
 		'dados': dados
 	}
-	return render(request, 'pages/respostas-pesquisa.html', context)
+	return render(request, 'pages/pesquisas-resposta.html', context)
 
 
 # Modal

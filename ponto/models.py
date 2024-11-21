@@ -64,6 +64,11 @@ class SolicitacaoAbono(models.Model):
 
 	def __str__(self):
 		return f'Solicitação de abono de {self.funcionario} em {self.inicio.date()}'
+	
+	@property
+	def get_tipo(self):
+		tipo = [i[1] for i in self.Tipo.choices if i[0] == self.tipo][0]
+		return tipo
 
 	class Meta:
 		verbose_name = 'Solicitações de Abono'

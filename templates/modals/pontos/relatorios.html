@@ -2,7 +2,7 @@
 	<div class="modal-dialog">
 		<form method="POST" action="{% url 'relatorio-ponto' %}" class="modal-content" id="formRelatorioPonto" onsubmit="gerarRelatorio(this)">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalRelatoriosPontoLabel">Relatório de Ponto</h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
@@ -17,7 +17,7 @@
 					<label for="relatorioTipo">Tipo</label>
 				</div>
 				<div class="form-floating mb-3">
-					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 100%;">
+					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 12rem;">
 						{% for contrato in contratos %}
 							<option value="{{contrato.id}}">{{contrato}}</option>
 						{% endfor %}
@@ -35,12 +35,12 @@
 					</div>
 				</div>
 				<div class="form-floating mb-3">
-					<select class="form-select" size="5" id="relatorioFuncionario" name="funcionarios" multiple style="height: 100%;">
+					<select class="form-select" size="5" id="relatorioFuncionario" name="funcionarios" multiple style="height: 12rem;">
 						{% for funcionario in funcionarios %}
 							<option value="{{funcionario.id}}" selected>{{funcionario}}</option>
 						{% endfor %}
 					</select>
-					<label for="relatorioFuncionario">Funcionarios</label>
+					<label for="relatorioFuncionario">Colaboradores</label>
 				</div>
 			</div>
 			<div class="modal-footer">

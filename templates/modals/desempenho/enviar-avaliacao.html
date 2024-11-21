@@ -2,40 +2,41 @@
 	<div class="modal-dialog modal-lg modal-dialog-scrollable">
 		<form method="POST" action="" class="modal-content" id="formEnviarAvaliacao">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalEnviarAvaliacaoLabel"></h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
+				<div class="card bg-body-tertiary card-descricao p-2 mb-3"></div>
 				<div class="row mb-3">
 					<div class="col">
 						<label class="form-label">Desempenho</label>
 						<div class="form-check">
 							<input class="form-check-input me-2" type="radio" name="desempenho" value="0" id="desempenhoAbaixo" style="height: 20px; width: 20px;">
-							<label class="form-check-label" for="desempenhoAbaixo">Abaixo do Esperado</label>
+							<label class="form-check-label" for="desempenhoAbaixo" style="margin-top: 2px;">Abaixo do Esperado</label>
 						</div>
 						<div class="form-check">
 							<input class="form-check-input me-2" type="radio" name="desempenho" value="1" id="desempenhoEsperado" style="height: 20px; width: 20px;" checked>
-							<label class="form-check-label" for="desempenhoEsperado">Esperado</label>
+							<label class="form-check-label" for="desempenhoEsperado" style="margin-top: 2px;">Esperado</label>
 						</div>
 						<div class="form-check">
 							<input class="form-check-input me-2" type="radio" name="desempenho" value="2" id="desempenhoAcima" style="height: 20px; width: 20px;">
-							<label class="form-check-label" for="desempenhoAcima">Acima do Esperado</label>
+							<label class="form-check-label" for="desempenhoAcima" style="margin-top: 2px;">Acima do Esperado</label>
 						</div>
 					</div>
 					<div class="col">
 						<label class="form-label">Potencial</label>
 						<div class="form-check">
 							<input class="form-check-input me-2" type="radio" name="potencial" value="0" id="potencialBaixo" style="height: 20px; width: 20px;">
-							<label class="form-check-label" for="potencialBaixo">Baixo</label>
+							<label class="form-check-label" for="potencialBaixo" style="margin-top: 2px;">Baixo</label>
 						</div>
 						<div class="form-check">
 							<input class="form-check-input me-2" type="radio" name="potencial" value="1" id="potencialMedio" style="height: 20px; width: 20px;" checked>
-							<label class="form-check-label" for="potencialMedio">Médio</label>
+							<label class="form-check-label" for="potencialMedio" style="margin-top: 2px;">Médio</label>
 						</div>
 						<div class="form-check">
 							<input class="form-check-input me-2" type="radio" name="potencial" value="2" id="potencialAlto" style="height: 20px; width: 20px;">
-							<label class="form-check-label" for="potencialAlto">Alto</label>
+							<label class="form-check-label" for="potencialAlto" style="margin-top: 2px;">Alto</label>
 						</div>
 					</div>
 				</div>

@@ -16,7 +16,7 @@ def get_saldo(funcionario, data):
 			return timedelta(days=30)
 		
 	except Exception:
-		if funcionario.get_contrato.slug.split('-')[0] == 'estagio':
+		if funcionario.get_contrato.tipo == 'est':
 			return timedelta(days=15)
 		else:
 			return timedelta(days=30)
@@ -35,7 +35,7 @@ def ferias_funcionarios(funcionarios):
 		if funcionario not in ferias_por_funcionario:
 			ferias_por_funcionario[funcionario] = []
 
-		if funcionario.get_contrato.slug.split('-')[0] == 'estagio':
+		if funcionario.get_contrato.tipo == 'est':
 			# Funcionario Estágio tem direito a 15 dias após 6 meses trabalhados
 			# Empresa tem mais 6 meses para liberar as ferias, porém não pode ultrapassar o limite de 1 ano consecutivos de trabalho do funcionario
 

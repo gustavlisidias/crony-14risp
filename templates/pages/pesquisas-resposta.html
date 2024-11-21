@@ -29,7 +29,7 @@
 		</div>
 
 		<div class="card-body">
-			<div class="card bg-body p-3 mb-3">
+			<div class="card bg-body-tertiary p-3 mb-3">
 				{{pesquisa.descricao|safe}}
 				{% if vencido %}
 					<small>Encerrou em {{pesquisa.data_encerramento}}</small>
@@ -58,7 +58,7 @@
 				<ol class="list-group list-group-numbered mb-3">
 					{% for resposta in pesquisa.respostas %}
 						{% if resposta.pergunta == pergunta %}
-							<li class="list-group-item d-flex justify-content-between align-items-start">
+							<li class="list-group-item d-flex justify-content-between align-items-start bg-body-tertiary">
 								<div class="ms-2 me-auto">
 									<div class="fw-medium">{{resposta.texto}}</div>
 									{% if not pesquisa.anonimo %}{{resposta.funcionario}}{% endif %}

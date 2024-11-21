@@ -9,6 +9,13 @@ from funcionarios.models import Funcionario
 
 
 class SolicitacaoFerias(models.Model):
+	class Status(models.IntegerChoices):
+		ANALISE = 4, 'Em Análise'
+		PENDENTE = 3, 'Pendente'
+		RECUSADO = 2, 'Recusado'
+		APROVADO = 1, 'Aprovado'
+		ABERTO = 0, 'Aberto'
+
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='ferias_funcionario', verbose_name='Funcionário')
 	aprovador = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='ferias_aprovador', verbose_name='Aprovador')
 	observacao = models.TextField(verbose_name='Observação')
@@ -18,12 +25,17 @@ class SolicitacaoFerias(models.Model):
 	final_ferias = models.DateField(verbose_name='Final Férias')
 	abono = models.IntegerField(default=0, verbose_name='Total Abono')
 	decimo = models.BooleanField(default=False, verbose_name='13º Salário')
-	status = models.BooleanField(default=False, verbose_name='Aprovado')
+	status = models.IntegerField(choices=Status.choices, default=Status.ABERTO, verbose_name='Status')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
 		return str(self.funcionario)
-
+	
+	@property
+	def get_status(self):
+		status = [i[1] for i in self.Status.choices if i[0] == self.status]
+		return status[0]
+	
 	class Meta:
 		verbose_name = 'Solicitações de Férias'
 		verbose_name_plural = 'Solicitação de Férias'
@@ -57,7 +69,14 @@ class Ferias(models.Model):
 
 	def save(self, *args, **kwargs):
 		if not self.saldo:
-			self.saldo = 15 if self.funcionario.get_contrato.slug == 'estagio' else 30
+			ferias_anterior = Ferias.objects.filter(funcionario=self.funcionario, ano_referencia=self.ano_referencia).order_by('id')
+			if ferias_anterior.exists():
+				saldo_anterior = (ferias_anterior.last().final_ferias - ferias_anterior.last().inicio_ferias).days
+			else:
+				saldo_anterior = 15 if self.funcionario.get_contrato.tipo == 'est' else 30
+				
+			self.saldo = saldo_anterior - (self.final_ferias - self.inicio_ferias).days
+
 		super().save(*args, **kwargs)
 
 	def __str__(self):

@@ -59,5 +59,5 @@ def importar_ferias(planilha):
 
 
 if __name__ == '__main__':
-	planilha = os.path.join(BASE_DIR, 'documentacao\\ferias_maria-jesus.xlsx')
+	planilha = os.path.join(BASE_DIR, 'documentacao\\ferias_14risp.xlsx')
 	importar_ferias(planilha)

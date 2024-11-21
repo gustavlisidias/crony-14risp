@@ -116,6 +116,7 @@ def EditarFuncionarioView(request, func):
 	cargos = Cargo.objects.all().order_by('cargo')
 	estados = Estado.objects.all().order_by('name')
 	cidades = Cidade.objects.all().order_by('name')
+
 	estabilidades = Estabilidade.objects.filter(funcionario=colaborador).order_by('-inicio')
 	ferias = ferias_funcionarios(funcionarios.filter(pk=colaborador.pk))
 	atividades = Atividade.objects.filter(funcionarios=colaborador, data_finalizacao=None).order_by('inicio')
@@ -135,7 +136,7 @@ def EditarFuncionarioView(request, func):
 	
 	estabi = estabilidades.filter(inicio__lte=timezone.localdate(), final__gte=timezone.localdate())
 	estavel = {'status': estabi.exists(), 'vencimento': estabi.last().final if estabi else None}
-
+	
 	avaliacoes = Avaliacao.objects.filter(atividade__funcionarios__in=[colaborador])
 	if avaliacoes:
 		avaliacao = {
@@ -228,7 +229,7 @@ def EditarFuncionarioView(request, func):
 						agrupador=agrupador
 					)
 				
-				if (not colaborador.get_contrato.slug.startswith('clt')) and contrato.slug.startswith('clt'):
+				if (not colaborador.get_contrato.tipo.startswith('ind')) and contrato.tipo.startswith('ind'):
 					add_coins(colaborador, 350)
 
 					ultima_matricula = nova_jornada.exclude(funcionario=colaborador).order_by('funcionario__matricula').aggregate(ultimo=Max('funcionario__matricula'))['ultimo']
@@ -282,7 +283,7 @@ def EditarFuncionarioView(request, func):
 				'dados_empresa': dados_empresa
 			}
 			return RenderToPDF(request, 'relatorios/historico.html', context, filename).weasyprint()
-
+		
 		# Cadastrar nova estabilidade do funcionário
 		elif not_none_not_empty(request.POST.get('estabilidade_inicio')):
 			try:
@@ -295,7 +296,7 @@ def EditarFuncionarioView(request, func):
 				messages.success(request, 'Estabilidade salva com sucesso!')
 			except Exception as e:
 				messages.error(request, f'Estabilidade não foi salva! {e}')
-		
+
 		# Atualização e edição do histórico de jornadas
 		elif not_none_not_empty(request.POST.get('inicio_vigencia')):
 			if len([i for i in request.POST.getlist('final_vigencia') if i is not None and i != '']) != 1:

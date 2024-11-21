@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+# ruff: noqa: F401
 import argparse
 import json
 import logging

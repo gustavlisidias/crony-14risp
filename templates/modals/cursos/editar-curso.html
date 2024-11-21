@@ -2,7 +2,7 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <form method="POST" class="modal-content" id="formEditarCurso">
             {% csrf_token %}
-            <div class="modal-header bg-body">
+            <div class="modal-header">
                 <h2 class="modal-title fs-5" id="modalEditarCursoLabel">Editar Curso</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -16,7 +16,7 @@
 					<label for="cursoDescricao">Descrição *</label>
                 </div>
                 <div class="form-floating mb-3">
-                    <select class="form-select" id="cursoContrato" name="contrato" multiple style="height: 100%;">
+                    <select class="form-select" id="cursoContrato" name="contrato" multiple style="height: 12rem;">
                         {% for contrato in contratos %}
                             <option value="{{ contrato.id }}">{{ contrato }}</option>
                         {% endfor %}
@@ -25,7 +25,7 @@
                 </div>
 				{% if etapas %}
 					<div class="form-floating mb-3">
-						<select class="form-select" id="cursoEtapas" name="etapa" multiple style="height: 100%;">
+						<select class="form-select" id="cursoEtapas" name="etapa" multiple style="height: 12rem;">
 							{% for etapa in etapas %}
 								<option value="{{ etapa.id }}">{{ etapa.titulo }}</option>
 							{% endfor %}
@@ -37,7 +37,7 @@
 				<div id="etapasContainer">
                     <!-- Etapas novas serão adicionadas aqui -->
                 </div>
-				<button type="button" class="btn btn-primary text-light" onclick="botaoAdicionarEtapaModal('modalEditarCurso')">Adicionar Etapa</button>
+				<button type="button" class="btn btn-secondary text-light" onclick="botaoAdicionarEtapaModal('modalEditarCurso')">Adicionar Etapa</button>
 
             </div>
             <div class="modal-footer">

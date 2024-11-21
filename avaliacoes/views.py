@@ -8,8 +8,8 @@ from django.shortcuts import render, redirect
 from datetime import datetime
 from slugify import slugify
 
-from avaliacao.models import Avaliacao, PesoAvaliador, Criterio, Pergunta, PesoCriterio, Resposta
-from avaliacao.utils import dados_avaliacao
+from avaliacoes.models import Avaliacao, Nivel, Pergunta, PerguntaAvaliacao, Resposta
+from avaliacoes.utils import dados_avaliacao
 from funcionarios.models import Funcionario
 from notifications.models import Notification
 from ponto.renderers import RenderToPDF
@@ -30,14 +30,12 @@ def AvaliacaoView(request):
 	else:
 		avaliacoes = Avaliacao.objects.filter(avaliadores=funcionario)
 
-	niveis = [{'key': i[0], 'value': i[1]} for i in PesoAvaliador.Nivel.choices]
-	criterios = Criterio.objects.all()
+	niveis = [{'key': i[0], 'value': i[1]} for i in Nivel.Tipo.choices]
 	perguntas = Pergunta.objects.all()
 
 	if request.method == 'POST':
 		try:
 			avaliado = Funcionario.objects.get(pk=int(request.POST.get('avaliado')))
-			perguntas_avaliacao = list()
 
 			with transaction.atomic():
 				avaliacao = Avaliacao.objects.create(
@@ -49,43 +47,42 @@ def AvaliacaoView(request):
 					data_encerramento=datetime.strptime(request.POST.get('encerramento'), '%Y-%m-%d'),
 				)
 
-				avaliacao.avaliadores.set([int(i) for i in request.POST.getlist('funcionarios')])
+				avaliacao.avaliadores.set([int(i) for i in request.POST.getlist('avaliadores')])
 				avaliacao.save()
 
 				# Peso de cada nivel de avaliador na avaliação
-				for nivel in niveis:
-					PesoAvaliador(
+				for obj in niveis:
+					Nivel(
 						avaliacao=avaliacao,
-						nivel=nivel['key'],
-						peso=request.POST.get(nivel['value'].lower())
+						tipo=obj['key'],
+						peso=request.POST.get(obj['value'].lower())
 					).save()
 
 				# Se selecionei perguntas já prontas, guardo o id delas
+				perguntas_avaliacao = []
 				if not_none_not_empty(request.POST.get('perguntas')):
 					for i in request.POST.getlist('perguntas'):
 						pergunta = Pergunta.objects.get(pk=int(i))
-						perguntas_avaliacao.append(pergunta.id)
+						perguntas_avaliacao.append(pergunta)
 
 				# Se criei novas perguntas, salvo no banco e as adiciono na lista
-				if not_none_not_empty(request.POST.get('texto-pergunta-nova')):
-					novos_titulos = request.POST.getlist('titulo-pergunta-nova')
-					novas_perguntas = request.POST.getlist('texto-pergunta-nova')
-					for i, texto in enumerate(novas_perguntas):
+				if not_none_not_empty(request.POST.get('nova-pergunta')):
+					for i, _ in enumerate(request.POST.getlist('nova-pergunta')):
+						if not not_none_not_empty(request.POST.get('pergunta-titulo[0]')):
+							i += 1
 						pergunta = Pergunta.objects.create(
-							titulo=novos_titulos[i],
-							texto=texto
+							titulo=request.POST.get(f'pergunta-titulo[{i}]'),
+							texto=request.POST.get(f'pergunta-texto[{i}]'),
+							peso=request.POST.get(f'pergunta-peso[{i}]')
 						)
-						perguntas_avaliacao.append(pergunta.id)
+						perguntas_avaliacao.append(pergunta)
 
-				# Peso de cada criterio de cada pergunta na avaliação
-				for pergunta in Pergunta.objects.filter(pk__in=perguntas_avaliacao):
-					for criterio in criterios:
-						PesoCriterio(
-							avaliacao=avaliacao,
-							pergunta=pergunta,
-							criterio=criterio,
-							peso=request.POST.get(criterio.nome.lower())
-						).save()
+				# Salvo as perguntas na tabela de relacionamento PerguntaAvaliacao
+				for pergunta in perguntas_avaliacao:
+					PerguntaAvaliacao(
+						pergunta=pergunta,
+						avaliacao=avaliacao
+					).save()
 
 				messages.success(request, 'Avaliação criada com sucesso!')
 
@@ -101,7 +98,6 @@ def AvaliacaoView(request):
 
 		'avaliacoes': avaliacoes,
 		'niveis': niveis,
-		'criterios': criterios,
 		'perguntas': perguntas
 	}
 	return render(request, 'pages/avaliacao.html', context)
@@ -115,19 +111,19 @@ def AvaliacaoDetalhesView(request, avaid):
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
 
 	avaliacao = Avaliacao.objects.get(pk=avaid)
-	perguntas = PesoCriterio.objects.filter(avaliacao=avaliacao)
+	perguntas = [i.pergunta for i in PerguntaAvaliacao.objects.filter(avaliacao=avaliacao)]
+
 	if request.user.get_access != 'common':
-		respostas = Resposta.objects.filter(pergunta__avaliacao=avaliacao)
+		respostas = Resposta.objects.filter(referencia__avaliacao=avaliacao)
 	else:
-		respostas = Resposta.objects.filter(pergunta__avaliacao=avaliacao, funcionario=funcionario)
-	respondido = funcionario in [i.funcionario for i in respostas]
+		respostas = Resposta.objects.filter(referencia__avaliacao=avaliacao, funcionario=funcionario)
 
 	if respostas:
-		dados = dados_avaliacao(avaliacao, respostas)
+		dados = dados_avaliacao(avaliacao, perguntas, respostas)
 	else:
 		dados = None
 
-	if request.method == 'GET' and not_none_not_empty(request.GET.get('exportar')):
+	if not_none_not_empty(request.GET.get('exportar')):
 		filename = f'avaliacao_{slugify(avaliacao.avaliado.nome_completo.lower())}.pdf'
 		context = {
 			'autor': Funcionario.objects.get(usuario=request.user),
@@ -138,33 +134,38 @@ def AvaliacaoDetalhesView(request, avaid):
 		return RenderToPDF(request, 'relatorios/avaliacao.html', context, filename).weasyprint()
 
 	if request.method == 'POST':
-		if request.POST.get('salvar'):
+		# Editar avaliação
+		if request.POST.get('editar-avaliacao'):
 			avaliacao.inicio = datetime.strptime(request.POST.get('inicio'), '%Y-%m-%d')
 			avaliacao.final = datetime.strptime(request.POST.get('final'), '%Y-%m-%d')
+			avaliacao.descricao = request.POST.get('descricao')
 			avaliacao.data_encerramento = datetime.strptime(request.POST.get('encerramento'), '%Y-%m-%d')
 			avaliacao.avaliadores.set([int(i) for i in request.POST.getlist('funcionarios')])
 			avaliacao.save()
 			messages.success(request, 'Avaliação alterada com sucesso!')
 			return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 		
-		if request.POST.get('encerrar'):
+		# Encerrar avaliação
+		elif request.POST.get('encerrar-avaliacao'):
 			avaliacao.status = True
 			avaliacao.save()
 			messages.success(request, 'Avaliação encerrada com sucesso!')
 			return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 		
-		if request.POST.get('excluir'):
+		# Excluir avaliação
+		elif request.POST.get('excluir-avaliacao'):
 			avaliacao.delete()
 			messages.success(request, 'Avaliação excluída com sucesso!')
 			return redirect('avaliacao')
 		
+		# Responder avaliação
 		else:
 			try:
-				for obj in perguntas:
+				for item in PerguntaAvaliacao.objects.filter(avaliacao=avaliacao):
 					Resposta(
-						pergunta=obj,
-						nota=request.POST.get(f'{obj.pergunta.titulo.lower()}-{obj.criterio.nome.lower()}'),
-						observacao=request.POST.get(f'{obj.pergunta.titulo.lower()}-observacao'),
+						referencia=item,
+						nota=request.POST.get(f'resposta-nota[{item.id}]'),
+						observacao=request.POST.get(f'resposta-observacao[{item.id}]'),
 						funcionario=funcionario
 					).save()
 
@@ -183,8 +184,55 @@ def AvaliacaoDetalhesView(request, avaid):
 		'avaliacao': avaliacao,
 		'perguntas': perguntas,
 		'respostas': respostas,
-		'respondido': respondido,
+		'respondido': funcionario in [i.funcionario for i in respostas],
 		'comentarios': True in [not_none_not_empty(i.observacao) for i in respostas],
 		'dados': dados
 	}
 	return render(request, 'pages/avaliacao-detalhes.html', context)
+
+
+@login_required(login_url='entrar')
+def DuplicarAvaliacaoView(request, avaid):
+	if request.user.get_access == 'common':
+		messages.warning(request, 'Você não possui acesso para realizar essa ação!')
+		return redirect('avaliacao')
+	
+	if request.method != 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return redirect('avaliacao')
+
+	try:
+		avaliacao = Avaliacao.objects.get(pk=avaid)
+		
+		with transaction.atomic():
+			nova_avaliacao = Avaliacao.objects.create(
+				titulo=avaliacao.titulo,
+				descricao=avaliacao.descricao,
+				avaliado=Funcionario.objects.get(pk=int(request.POST.get('novo_avaliado'))),
+				inicio=avaliacao.inicio,
+				final=avaliacao.final,
+				data_encerramento=avaliacao.data_encerramento,
+			)
+
+			nova_avaliacao.avaliadores.set([i.id for i in avaliacao.avaliadores.all()])
+			nova_avaliacao.save()
+
+			for nivel in Nivel.objects.filter(avaliacao=avaliacao):
+				Nivel.objects.create(
+					avaliacao=nova_avaliacao,
+					tipo=nivel.tipo,
+					peso=nivel.peso
+				)
+
+			for item in PerguntaAvaliacao.objects.filter(avaliacao=avaliacao):
+				PerguntaAvaliacao.objects.create(
+					pergunta=item.pergunta,
+					avaliacao=nova_avaliacao
+				)
+
+		messages.success(request, 'Avaliação duplicada com sucesso!')
+
+	except Exception as e:
+		messages.error(request, f'Avaliação não foi duplicada! {e}')
+
+	return redirect('avaliacao')

@@ -2,7 +2,7 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <form method="POST" class="modal-content" id="formAdicionarPesquisa">
             {% csrf_token %}
-            <div class="modal-header bg-body">
+            <div class="modal-header">
                 <h2 class="modal-title fs-5" id="modalAdicionarPesquisaLabel">Adicionar Nova Pesquisa</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -28,7 +28,7 @@
                 <div id="perguntasContainer">
                     <!-- Perguntas serão adicionadas aqui -->
                 </div>
-                <button type="button" class="btn btn-secondary text-light" id="adicionarPergunta">Adicionar Pergunta</button>
+                <button type="button" class="btn btn-primary text-light" id="adicionarPergunta">Adicionar Pergunta</button>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>

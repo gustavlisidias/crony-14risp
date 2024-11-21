@@ -190,7 +190,7 @@ def pontos_por_dia(data_inicial=None, data_final=None, funcionarios=None, fecham
 			qtd_pontos = len(pontos)
 
 			weekday = 1 if dia.weekday() + 2 == 8 else dia.weekday() + 2
-			tolerancia = timedelta(minutes=10) if dado['funcionario'].get_contrato.slug.split('-')[0] == 'clt' else timedelta(minutes=5)
+			tolerancia = timedelta(minutes=5) if dado['funcionario'].get_contrato.tipo == 'est' else timedelta(minutes=10)
 
 			jornada = []
 			for _, info in jornadas_dict.get(dado['funcionario'].id, {}).items():

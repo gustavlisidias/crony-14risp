@@ -27,13 +27,18 @@
 						</div>
 					</div>
 				</div>
+				<div class="mb-3">
+					<label class="form-label" for="avaliacaoDescricao">Descrição *</label>
+					<textarea class="ck-editor-5" id="avaliacaoDescricao" name="descricao"></textarea>
+					<span class="word-count" id="avaliacaoDescricao_script-word-count"></span>
+				</div>
 				<div class="form-floating mb-3">
-					<select class="form-select" id="avaliacaoFuncionarios" name="funcionarios" multiple style="height: 100%;">
+					<select class="form-select" id="avaliacaoFuncionarios" name="funcionarios" multiple style="height: 12rem;">
 						{% for funcionario in funcionarios %}
 							{% if funcionario in avaliacao.avaliadores.all %}
-								<option value="{{ funcionario.id }}" selected>{{ funcionario }}</option>
+								<option value="{{ funcionario.id }}" selected>{{ funcionario }} ({{funcionario.cargo}} - {{funcionario.setor}})</option>
 							{% else %}
-								<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+								<option value="{{ funcionario.id }}">{{ funcionario }} ({{funcionario.cargo}} - {{funcionario.setor}})</option>
 							{% endif %}
 						{% endfor %}
 					</select>
@@ -42,9 +47,9 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-				<button type="submit" class="btn btn-danger text-light" name="excluir" value="true">Excluir</button>
-				<button type="submit" class="btn bg-secondary-subtle text-secondary-emphasis" name="encerrar" value="true">Encerrar</button>
-				<button type="submit" class="btn btn-secondary text-light" name="salvar" value="true">Salvar</button>
+				<button type="submit" class="btn btn-danger text-light" name="excluir-avaliacao" value="true">Excluir</button>
+				<button type="submit" class="btn bg-secondary-subtle text-secondary-emphasis" name="encerrar-avaliacao" value="true">Encerrar</button>
+				<button type="submit" class="btn btn-secondary text-light" name="editar-avaliacao" value="true">Salvar</button>
 			</div>
 		</form>
 	</div>

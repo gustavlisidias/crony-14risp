@@ -2,7 +2,7 @@
 	<div class="modal-dialog modal-lg modal-dialog-scrollable">
 		<form method="POST" action="{% url 'adicionar-evento' %}" class="modal-content" id="formAdicionarAtividade">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalAdicionarAtividadeLabel">Nova Atividade</h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
@@ -17,7 +17,6 @@
 					</select>
 					<label class="form-label" for="atividadeTipo">Tipo *</label>
 				</div>
-
 				<div class="form-floating mb-3">
 					<select class="form-select" id="atividadeRecorrencia" name="recorrencia">
 						<option value="none">Não Recorrente</option>
@@ -28,7 +27,6 @@
 					</select>
 					<label class="form-label" for="atividadeRecorrencia">Recorrência</label>
 				</div>
-				  
 				<div class="form-floating mb-3">
 					<input type="text" class="form-control" id="atividadeTitulo" name="titulo" placeholder required>
 					<label class="form-label" for="atividadeTitulo">Título *</label>
@@ -59,11 +57,14 @@
 						</div>
 					</div>
 				</div>
-				<select class="form-select" id="atividadeUsuarios" name="usuarios" multiple required>
-					{% for funcionario in funcionarios %}
-						<option value="{{funcionario.id}}">{{funcionario}}</option>
-					{% endfor %}
-				</select>
+				<div class="form-floating mb-3">
+					<select class="form-select" id="atividadeUsuarios" name="usuarios" multiple required style="height: 12rem;">
+						{% for funcionario in funcionarios %}
+							<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+						{% endfor %}
+					</select>
+					<label for="atividadeUsuarios">Colaboradores</label>
+				</div>
 				<small class="fs-7">* Campos obrigatórios</small>
 			</div>
 			<div class="modal-footer">

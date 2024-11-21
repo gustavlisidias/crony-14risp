@@ -39,7 +39,7 @@
 				<div class="tab-content">
 					{% for etapa in progresso %}
 						<div class="tab-pane" role="tabpanel" id="{{etapa.etapa.titulo|slugify}}-{{etapa.id}}" aria-labelledby="{{etapa.etapa.titulo|slugify}}-{{etapa.id}}">
-							<div class="card p-3 bg-body">
+							<div class="card p-3 bg-body-tertiary">
 								{{etapa.etapa.texto|safe}}
 								{% if etapa.data_conclusao %}
 									<div class="text-end">

@@ -22,6 +22,7 @@ from django.utils.timezone import make_aware
 
 from agenda.models import Ferias
 from configuracoes.models import Jornada, Usuario
+from cursos.models import Curso, CursoFuncionario
 from funcionarios.models import (
 	Cargo,
 	Funcionario,
@@ -83,7 +84,7 @@ def adicionar_ferias(funcionario):
 		)
 
 
-def importar_funcionario(planilha):
+def importar_funcionario(dados):
 	log_file = f'importador_funcionarios_{datetime.now().replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")}.log'
 	log_path = os.path.join(BASE_DIR, f'logs/tasks/{log_file}')
 	logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
@@ -112,7 +113,7 @@ def importar_funcionario(planilha):
 		cep = row['cep'] if not pd.isna(row['cep']) else None
 		setor = Setor.objects.get(pk=row['setor'])
 		cargo = Cargo.objects.get(pk=row['cargo'])
-		gerente = Funcionario.objects.get(matricula=row['responsavel']) if not pd.isna(row['responsavel']) else None
+		gerente = Funcionario.objects.get(pk=row['responsavel']) if not pd.isna(row['responsavel']) else None
 		salario = row['salario'] if not pd.isna(row['salario']) else 0
 		data_expedicao = parse_date(row['data_expedicao']) if not pd.isna(row['data_expedicao']) else None
 		data_nascimento = parse_date(row['data_nascimento']) if not pd.isna(row['data_nascimento']) else None
@@ -202,6 +203,12 @@ def importar_funcionario(planilha):
 				# Criar Score inicial do Funcionario
 				Score.objects.create(funcionario=funcionario)
 
+				# Atribuir cursos ao novo Funcionário
+				cursos = Curso.objects.filter(contrato=jornadas.first().contrato)
+				if cursos:
+					for curso in cursos:
+						CursoFuncionario(funcionario=funcionario, curso=curso).save()
+
 				# Criar férias
 				adicionar_ferias(funcionario)
 				
@@ -212,5 +219,5 @@ def importar_funcionario(planilha):
 		
 
 if __name__ == '__main__':
-	planilha = os.path.join(BASE_DIR, 'documentacao\\FUNCIONARIOS 2.xlsx')
+	planilha = os.path.join(BASE_DIR, 'documentacao\\14risp\\FUNCIONARIOS.xlsx')
 	importar_funcionario(planilha)

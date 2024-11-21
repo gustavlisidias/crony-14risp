@@ -36,7 +36,7 @@ def importar_historico(planilha):
 		matricula = f'{int(row["matricula"]):06}'
 		data_alteracao = parse_date(row['data_cadastro'])
 		salario = float(row['salario'])
-		motivo = row['motivo'] if not pd.isna(row['motivo']) else None
+		observacao = row['motivo'] if not pd.isna(row['motivo']) else None
 
 		try:
 			funcionario = Funcionario.objects.get(matricula=matricula)
@@ -47,11 +47,11 @@ def importar_historico(planilha):
 				contrato=funcionario.get_contrato,
 				salario=salario,
 				data_alteracao=data_alteracao,
-				observacao=motivo
+				observacao=observacao
 			)
-			logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, data: {data_alteracao}, salario: {salario}, motivo: {motivo}')
+			logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, data: {data_alteracao}, salario: {salario}, observacao: {observacao}')
 		except Exception as e:
-			logging.info(f'ERROR::CREATE::matricula: {matricula}, data: {data_alteracao}, salario: {salario}, motivo: {motivo}, e: {e}')
+			logging.info(f'ERROR::CREATE::matricula: {matricula}, data: {data_alteracao}, salario: {salario}, observacao: {observacao}, e: {e}')
 
 
 if __name__ == '__main__':

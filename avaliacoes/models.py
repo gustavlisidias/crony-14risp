@@ -31,77 +31,62 @@ class Avaliacao(models.Model):
 		verbose_name_plural = 'Avaliações'
 
 
-class Criterio(models.Model):
-	nome = models.CharField(max_length=120, null=False, blank=False, verbose_name='Nome')
-	slug = models.SlugField(default='', editable=False, null=True, blank=True, max_length=240)
+class Nivel(models.Model):
+	class Tipo(models.IntegerChoices):
+		GESTOR = 2, 'Gestor'
+		PAR = 1, 'Par'
+		AUTO = 0, 'Auto'
+
+	avaliacao = models.ForeignKey(Avaliacao, on_delete=models.CASCADE, verbose_name='Avaliação')
+	tipo = models.IntegerField(choices=Tipo.choices, verbose_name='Tipo de Avaliador')
+	peso = models.FloatField(verbose_name='Peso')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
-	def save(self, *args, **kwargs):
-		self.slug = slugify(self.nome, allow_unicode=False)
-		super().save(*args, **kwargs)
-
 	def __str__(self):
-		return self.nome
+		tipo = [i[1] for i in self.Tipo.choices if i[0] == self.tipo][0]
+		return f'Nível "{tipo}" com peso {self.peso} para avaliação {self.avaliacao}'
 
 	class Meta:
-		verbose_name = 'Critério'
-		verbose_name_plural = 'Critérios'
+		verbose_name = 'Nível'
+		verbose_name_plural = 'Níveis'
 
 
 class Pergunta(models.Model):
 	titulo = models.CharField(max_length=120, null=False, blank=False, verbose_name='Título')
 	texto = CKEditor5Field('Texto', config_name='extends')
+	peso = models.FloatField(verbose_name='Peso')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
-		return self.titulo
+		return f'{self.titulo} (Peso de {self.peso})'
 
 	class Meta:
 		verbose_name = 'Pergunta'
 		verbose_name_plural = 'Perguntas'
 
 
-class PesoCriterio(models.Model):
-	avaliacao = models.ForeignKey(Avaliacao, on_delete=models.CASCADE, verbose_name='Avaliação')
+class PerguntaAvaliacao(models.Model):
 	pergunta = models.ForeignKey(Pergunta, on_delete=models.CASCADE, verbose_name='Pergunta')
-	criterio = models.ForeignKey(Criterio, on_delete=models.CASCADE, verbose_name='Critério')
-	peso = models.FloatField(verbose_name='Peso')
-
-	def __str__(self):
-		return f'{self.avaliacao} - {self.pergunta} - {self.criterio}'
-
-	class Meta:
-		verbose_name = 'Pergunta por Avaliação'
-		verbose_name_plural = 'Perguntas por Avaliação'
-
-
-class PesoAvaliador(models.Model):
-	class Nivel(models.IntegerChoices):
-		GESTOR = 2, 'Gestor'
-		PAR = 1, 'Par'
-		AUTO = 0, 'Auto'
-
 	avaliacao = models.ForeignKey(Avaliacao, on_delete=models.CASCADE, verbose_name='Avaliação')
-	nivel = models.IntegerField(choices=Nivel.choices, verbose_name='Nível')
-	peso = models.FloatField(verbose_name='Peso')
-
-	def __str__(self):
-		return f'{self.avaliacao} - {self.nivel}'
-
-	class Meta:
-		verbose_name = 'Nível por Avaliação'
-		verbose_name_plural = 'Níveis por Avaliação'
-
-
-class Resposta(models.Model):
-	pergunta = models.ForeignKey(PesoCriterio, on_delete=models.CASCADE, verbose_name='Pergunta')
-	nota = models.FloatField(verbose_name='Nota')
-	observacao = models.TextField(verbose_name='Observação')
-	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='funcionario_reposta_avaliacao', verbose_name='Funcionário')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
-		return f'Reposta de {self.funcionario} - {self.pergunta}'
+		return f'{self.pergunta} de {self.avaliacao}'
+
+	class Meta:
+		verbose_name = 'Pergunta x Avaliação'
+		verbose_name_plural = 'Perguntas x Avaliação'
+
+
+class Resposta(models.Model):
+	referencia = models.ForeignKey(PerguntaAvaliacao, on_delete=models.CASCADE, verbose_name='Pergunta')
+	observacao = models.TextField(verbose_name='Observação')
+	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='reposta_funcionario', verbose_name='Funcionário')
+	nota = models.FloatField(verbose_name='Nota')
+	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
+
+	def __str__(self):
+		return f'Reposta de {self.funcionario} em {self.referencia}'
 
 	class Meta:
 		verbose_name = 'Resposta'

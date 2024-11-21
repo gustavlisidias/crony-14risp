@@ -4,6 +4,11 @@
 
 {% block title %} | Avaliação - {{avaliacao.titulo}}{% endblock %}
 
+{% block header %}
+<link rel="stylesheet" href="{% static 'smartwizard/smartWizard.min.css' %}">
+<script src="{% static 'smartwizard/smartWizard.min.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 
 {% include "includes/messages.html" %}
@@ -17,12 +22,12 @@
 			<div>
 				<a class="text-light" href="{% url 'avaliacao' %}">Avaliações</a>
 				<i class="fa-solid fa-caret-right fa-2xs mx-2"></i>
-				{{avaliacao}}
+				{{avaliacao}} ({{avaliacao.avaliado}})
 			</div>
 			<form method="GET" id="formExportarAvaliacao">
 				<div class="btn-group">
 					{% if not respondido and not avaliacao.status %}
-						<button class="btn btn-secondary text-light" type="button" title="Responder avaliação" data-bs-toggle="modal" data-bs-target="#modalResponderAvaliacao1">
+						<button class="btn btn-secondary text-light" type="button" title="Responder avaliação" onclick="responderAvaliacao()">
 							Responder
 						</button>
 					{% endif %}
@@ -45,6 +50,10 @@
 			</form>
 		</div>
 		<div class="card-body">
+			<div class="card p-2 mb-3 bg-body-tertiary">
+				{{avaliacao.descricao|safe}}
+			</div>
+
 			{% if respostas and request.user.get_access != 'common' %}
 				<!-- Cards Importantes -->
 				<div class="row mb-5">
@@ -109,11 +118,12 @@
 						<th scope="col">#</th>
 						<th scope="col">Avaliador</th>
 						<th scope="col">Pergunta</th>
-						<th scope="col">Critério</th>
 						<th scope="col">Nível</th>
 						<th scope="col">Nota</th>
 						{% if request.user.get_access != 'common' %}
 							<th scope="col">Peso</th>
+						{% else %}
+							<th scope="col">Observações</th>
 						{% endif %}
 					</tr>
 				</thead>
@@ -122,8 +132,7 @@
 						<tr>
 							<th scope="row">{{forloop.counter}}</th>
 							<td>{{resposta.funcionario}}</td>
-							<td>{{resposta.pergunta.pergunta.titulo}}</td>
-							<td>{{resposta.pergunta.criterio.nome}}</td>
+							<td>{{resposta.referencia.pergunta.titulo}}</td>
 							{% if resposta.funcionario == avaliacao.avaliado %}
 								<td>Auto</td>
 							{% elif resposta.funcionario.usuario.get_access != 'common' %}
@@ -133,7 +142,9 @@
 							{% endif %}
 							<td>{{resposta.nota}}</td>
 							{% if request.user.get_access != 'common' %}
-								<td>{{resposta.pergunta.peso}}</td>
+								<td>{{resposta.referencia.pergunta.peso}}</td>
+							{% else %}
+								<td>{{resposta.observacao}}</td>
 							{% endif %}
 						</tr>
 					{% endfor %}
@@ -157,33 +168,155 @@
 	});
 </script>
 
+<script>
+	function responderAvaliacao() {
+		const modal = $("#modalResponderAvaliacao");
+		const perguntas = [
+			{% for pergunta in perguntas %}
+				{
+					"id": parseInt("{{pergunta.id}}"),
+					"titulo": "{{pergunta.titulo}}",
+					"texto": `{{pergunta.texto|safe}}`,
+					"peso": parseFloat("{{pergunta.peso}}".replace(",", ".")),
+				},
+			{% endfor %}
+		];
+
+		// Clear existing navigation and content
+		$("#smartwizard .nav").empty();
+		$("#smartwizard .tab-content").empty();
+		modal.find("#modalResponderAvaliacaoLabel").html(`Responder a Avaliação - {{avaliacao.titulo}}`);
+
+		// Create navigation items and tab content for each question
+		perguntas.forEach((pergunta, index) => {
+			// Add navigation tab for each question
+			const navItem = document.createElement("li");
+			navItem.className = "nav-item";
+			navItem.innerHTML = `<a class="nav-link" href="#pergunta-${index + 1}"><div class="num">${index + 1}</div></a>`;
+			$("#smartwizard .nav").append(navItem);
+
+			// Create step content
+			const stepContent = document.createElement("div");
+			stepContent.className = "tab-pane";
+			stepContent.id = `step-${index + 1}`;
+			
+			// Add label for the question
+			stepContent.innerHTML = `<p class="text-center fst-italic">${pergunta.titulo}</p>`;
+
+			// Add desc text for the question
+			const descText = document.createElement("p");
+			descText.className = "text-center";
+			descText.innerHTML = `${pergunta.texto}`;
+
+			stepContent.appendChild(descText);
+
+			// Add stars note for the question
+			const starRow = document.createElement("div");
+			starRow.className = "row my-3";
+
+			const starCol = document.createElement("div");
+			starCol.className = "col text-center";
+			starCol.innerHTML = `
+				<div class="rating">
+					<input value="5" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][5]" type="radio">
+					<label for="resposta-nota[${pergunta.id}][5]"></label>
+					<input value="4" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][4]" type="radio">
+					<label for="resposta-nota[${pergunta.id}][4]"></label>
+					<input value="3" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][3]" type="radio">
+					<label for="resposta-nota[${pergunta.id}][3]"></label>
+					<input value="2" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][2]" type="radio">
+					<label for="resposta-nota[${pergunta.id}][2]"></label>
+					<input value="1" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][1]" type="radio">
+					<label for="resposta-nota[${pergunta.id}][1]"></label>
+				</div>
+			`;
+
+			starRow.appendChild(starCol);
+			stepContent.appendChild(starRow);
+			
+			// Add textarea for observations
+			const textAreaDiv = document.createElement("div");
+			textAreaDiv.className = "form-floating";
+
+			const textArea = document.createElement("textarea");
+			textArea.className = "form-control";
+			textArea.placeholder = "";
+			textArea.name = `resposta-observacao[${pergunta.id}]`;
+			textArea.id = `respostaObservacao[${pergunta.id}]`;
+			textArea.required = false;
+
+			const textAreaLabel = document.createElement("label");
+			textAreaLabel.for = `respostaObservacao[${pergunta.id}]`;
+			textAreaLabel.innerHTML = "Observações";
+
+			textAreaDiv.appendChild(textArea);
+			textAreaDiv.appendChild(textAreaLabel);
+			stepContent.appendChild(textAreaDiv);
+
+			// Append step content to the tab content container
+			$("#smartwizard .tab-content").append(stepContent);
+		});
+
+		// Initialize SmartWizard with settings
+		$("#smartwizard").smartWizard({
+			theme: "dots",
+			justified: true,
+			autoAdjustHeight: true,
+			lang: {
+				next: "Próximo",
+				previous: "Anterior",
+			},
+			toolbar: {
+				position: "bottom",
+				showNextButton: true,
+				showPreviousButton: true,
+				extraHtml: `
+					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-info text-light">Enviar</button>
+				`
+			},
+			transition: {
+				animation: "fade",
+				speed: "400",
+			},
+		});
+
+		modal.modal("show");
+	};
+</script>
+
 {% if respostas %}
 <script src="{% static 'chartjs/chart.min.js' %}"></script>
 <script>
 	document.addEventListener("DOMContentLoaded", function () {
+		setTimeout(() => {
+			window.editors["avaliacaoDescricao"].setData(`{{avaliacao.descricao|safe}}`);
+		}, "1000");
+
+		// Gráficos
 		const grafico1 = document.getElementById("graficoChart").getContext("2d");
 		const dadosGrafico1 = [
 			{% for resposta in respostas %}
 				{
 					"avaliador": "{{resposta.funcionario.nome_completo}}",
-					"criterio": "{{resposta.pergunta.criterio.nome}}",
+					"pergunta": "{{resposta.referencia.pergunta.titulo}}",
 					"nota": parseFloat("{{resposta.nota|floatformat:02}}".replace(",", ".")),
 				},
 			{% endfor %}
 		];
 
 		// Extrair os critérios únicos e avaliadores únicos
-		const criterios = [...new Set(dadosGrafico1.map(item => item.criterio))];
+		const perguntas = [...new Set(dadosGrafico1.map(item => item.pergunta))];
 		const avaliadores = [...new Set(dadosGrafico1.map(item => item.avaliador))];
 
 		// Inicializar um objeto para armazenar as notas por critério para cada avaliador
 		const dadosAgrupados = {};
 
 		// Preencher o objeto dadosAgrupados
-		criterios.forEach(criterio => {
-			dadosAgrupados[criterio] = avaliadores.map(avaliador => {
+		perguntas.forEach(pergunta => {
+			dadosAgrupados[pergunta] = avaliadores.map(avaliador => {
 				// Encontrar a nota para o avaliador e critério atuais
-				const item = dadosGrafico1.find(g => g.criterio === criterio && g.avaliador === avaliador);
+				const item = dadosGrafico1.find(g => g.pergunta === pergunta && g.avaliador === avaliador);
 				return item ? item.nota : 0;
 			});
 		});
@@ -191,7 +324,7 @@
 		const datasets = avaliadores.map((avaliador, index) => {
 			return {
 				label: avaliador,
-				data: criterios.map(criterio => dadosAgrupados[criterio][index]),
+				data: perguntas.map(pergunta => dadosAgrupados[pergunta][index]),
 				backgroundColor: `rgba(${250 - (index * 30)}, ${115 + (index * 30)}, ${0 + (index * 40)}, 0.25)`,
 				borderColor: `rgba(${250 - (index * 30)}, ${115 + (index * 30)}, ${0 + (index * 40)}, 0.75)`,
 				borderWidth: 1
@@ -201,7 +334,7 @@
 		new Chart(grafico1, {
 			type: "bar",
 			data: {
-				labels: criterios,
+				labels: perguntas,
 				datasets: datasets
 			},
 			options: {
@@ -217,7 +350,7 @@
 					},
 					title: {
 						display: true,
-						text: "Notas por Critério"
+						text: "Notas por Pergunta"
 					}
 				}
 			}
@@ -253,7 +386,7 @@
 				labels: niveis,
 				datasets: [
 					{
-						label: "Média das Notas por Nível (aplicado peso por critério)",
+						label: "Média das Notas por Nível (não aplicado peso)",
 						data: medias,
 						backgroundColor: "rgba(250, 115, 0, 0.25)",
 						borderColor: "rgba(250, 115, 0, 0.75)",

@@ -2,7 +2,7 @@
 	<div class="modal-dialog modal-lg">
 		<form method="POST" action="" class="modal-content" enctype="multipart/form-data" id="formSolicitacaoFerias">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalSolicitarFeriasLabel">Solicitação de Férias</h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
@@ -15,7 +15,10 @@
 				</div>
 				<div class="form-check mb-3">
 					<input class="form-check-input me-2" type="checkbox" value="true" id="solicitacaoAbono" name="abono" style="height: 20px; width: 20px;">
-					<label class="form-check-label" for="solicitacaoAbono" style="margin-top: 3px;">Abono Pecuniário</label>
+					<label class="form-check-label" for="solicitacaoAbono" style="margin-top: 3px;">
+						Abono Pecuniário
+						<i class="fa-duotone fa-solid fa-circle-info fa-lg" data-bs-title="Direito trabalhista que permite ao trabalhador vender até um terço das suas férias para o empregador, recebendo uma quantia em dinheiro" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip"></i>
+					</label>
 				</div>
 				<div class="row mb-3">
 					<div class="col">

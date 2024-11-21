@@ -39,13 +39,11 @@
 						Perfil
 					</button>
 				</li>
-				{% comment %} 
-					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="tab-dados" data-bs-toggle="tab" data-bs-target="#pane-dados" type="button" role="tab">
-							Dados
-						</button>
-					</li> 
-				{% endcomment %}
+				<!-- <li class="nav-item" role="presentation">
+					<button class="nav-link" id="tab-dados" data-bs-toggle="tab" data-bs-target="#pane-dados" type="button" role="tab">
+						Dados
+					</button>
+				</li> -->
 				<li class="nav-item" role="presentation">
 					<button class="nav-link" id="tab-ajustes" data-bs-toggle="tab" data-bs-target="#pane-ajustes" type="button" role="tab">
 						Horários
@@ -72,7 +70,7 @@
 									<p class="text-light mb-4">{{colaborador.setor}}</p>
 									<p class="text-light mb-4 fs-7">Contratado em {{colaborador.data_contratacao}}</p>
 									{% if estavel.status %}
-										<p class="fw-bold" style="color: #932c2c !important; font-size: 17px; text-decoration: underline;">
+										<p class="fw-bold text-warning" style="font-size: 20px; text-decoration: underline;">
 											EM ESTABILIDADE ATÉ {{estavel.vencimento|date:"d/m/Y"}}
 										</p>
 									{% endif %}
@@ -203,7 +201,7 @@
 									<div class="card-body overflow-y-auto">
 										<!-- Filtros -->
 										<div class="card card-filtros mb-4">
-											<div class="card-header">
+											<div class="card-header bg-body-tertiary">
 												Filtros
 											</div>
 											<div class="card-body">
@@ -721,13 +719,20 @@
 
 <script>
 	document.addEventListener("DOMContentLoaded", function () {
-		const config = Object.assign(
+		const config1 = Object.assign(
 			datatables_config, {
 			scrollY: 300,
 		});
 
-		const table1 = $(".table-documentos").DataTable(config);
-		const table2 = $(".table-ferias").DataTable(config);
+		const config2 = Object.assign(
+			datatables_config, {
+			paging: false,
+			scrollY: 260,
+		});
+
+		const table1 = $(".table-documentos").DataTable(config1);
+		const table2 = $(".table-ferias").DataTable(config1);
+		const table3 = $(".table-estabilidade").DataTable(config2);
 
 		$("#tab-perfil").on("click", function() {
 			setTimeout(() => {table1.draw(false)}, "200");
@@ -735,6 +740,10 @@
 
 		$("#tab-ferias").on("click", function() {
 			setTimeout(() => {table2.draw(false)}, "200");
+		});
+
+		$("#btnModalEstabilidade").on("click", function() {
+			setTimeout(() => {table3.draw(false); table3.buttons().remove()}, "200");
 		});
 	});
 </script>

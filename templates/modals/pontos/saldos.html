@@ -18,12 +18,12 @@
 				</div>
 				<div class="form-floating">
 					<select class="form-select" id="saldoFuncionario" name="funcionario" required>
-					  <option value="">Selecione um Funcionário</option>
+					  <option value="">Selecione um Colaborador</option>
 					  {% for funcionario in funcionarios %}
 					  	<option value="{{funcionario.id}}">{{funcionario}}</option>
 					  {% endfor %}
 					</select>
-					<label for="saldoFuncionario">Funcionário *</label>
+					<label for="saldoFuncionario">Colaborador *</label>
 				</div>
 			</div>
 			<div class="modal-footer">

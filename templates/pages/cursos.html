@@ -30,7 +30,7 @@
 
 			<!-- Filtros -->
 			<div class="card card-filtros mb-4">
-				<div class="card-header">
+				<div class="card-header bg-body-tertiary">
 					Filtros
 				</div>
 				<div class="card-body">
@@ -49,7 +49,7 @@
 								</div>
 							</div>
 							<div class="col-md-4 col-12">
-								<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+								<label for="selectUsers" class="form-label fs-6">Colaboradores</label>
 								<select class="form-select select-users" id="selectUsers" name="funcionarios" multiple>
 									{% for funcionario in funcionarios %}
 										<option value="{{ funcionario.id }}" {% if funcionario.id|value_to_string in request.GET|item_from_dict:"funcionarios" %} selected {% endif %}>{{ funcionario }}</option>
@@ -146,8 +146,8 @@
 										</div>
 										<div class="d-flex align-items-center">
 											<div>
-												{% if request.user.get_access != 'common' %}
-													<button type="button" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;" onclick="atribuirCurso({{curso.id}}, {{funcionario.id}})">Atribuir</button>
+												{% if request.user.get_access == "admin" %}
+													<button type="button" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;" onclick="atribuirCurso(event, {{curso.id}}, {{funcionario.id}})">Atribuir</button>
 												{% endif %}
 												{% if funcionario.get_perfil.time|value_to_string in curso.time.all|query_to_list:"titulo" %}
 													<button type="submit" name="curso" value="{{curso.id}}" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;">Adicionar</button>
@@ -197,7 +197,9 @@
 </script>
 
 <script>
-	function atribuirCurso(course, func) {
+	function atribuirCurso(event, course, func) {
+		event.stopPropagation();
+
         const modal = $("#modalAtribuirCurso");
         const action = `{% url "atribuir-curso" 0 %}`.replace("0", course);
 

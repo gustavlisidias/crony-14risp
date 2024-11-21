@@ -2,7 +2,7 @@
 	<div class="modal-dialog modal-lg modal-dialog-scrollable">
 		<form method="POST" action="" class="modal-content" id="">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalEventoLabel">Modal title</h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
@@ -40,12 +40,14 @@
 						</div>
 					</div>
 				</div>
-				<select class="form-select mb-3" id="atividadeUsuarios" name="usuarios" multiple required>
-					{% for funcionario in funcionarios %}
-						<option value="{{funcionario.id}}">{{funcionario}}</option>
-					{% endfor %}
-				</select>
-
+				<div class="form-floating mb-3">
+					<select class="form-select" id="atividadeUsuarios" name="usuarios" multiple required style="height: 12rem;">
+						{% for funcionario in funcionarios %}
+							<option value="{{ funcionario.id }}">{{ funcionario }}</option>
+						{% endfor %}
+					</select>
+					<label for="atividadeUsuarios">Colaboradores</label>
+				</div>
 				<div class="row">
 					<div class="col">
 						<div class="form-check form-switch d-flex align-items-center">
@@ -60,7 +62,6 @@
 						</div>
 					</div>
 				</div>
-
 				<small class="fs-7">* Campos obrigatórios</small>
 			</div>
 			<div class="modal-footer">

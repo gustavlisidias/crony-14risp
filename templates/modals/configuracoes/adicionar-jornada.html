@@ -2,7 +2,7 @@
 	<div class="modal-dialog">
 		<form method="POST" action="{% url 'adicionar-jornada' %}" class="modal-content" id="formAdicionarJornada">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalAdicionarJornadaLabel">Adicionar Jornada</h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
@@ -13,7 +13,15 @@
 				</div>
 				<div class="form-floating mb-3">
 					<input type="text" class="form-control" id="jornadaDescricao" name="descricao" value="00:00 - 00:00/00:00 - 00:00">
-					<label class="form-label" for="jornadaDescricao">Descrição</label>
+					<label class="form-label" for="jornadaDescricao">Descrição da Jornada</label>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" id="jornadaTipo" name="tipo">
+						{% for tipo in tipos_contrato %}
+							<option value="{{ tipo.key }}">{{ tipo.value }}</option>
+						{% endfor %}
+					</select>
+					<label for="jornadaTipo">Tipo de Contrato</label>
 				</div>
 			</div>
 			<div class="modal-footer">

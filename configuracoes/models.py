@@ -76,8 +76,19 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 
 
 class Contrato(models.Model):
+	class Tipo(models.TextChoices):
+		DETERMINADO = 'det', 'Tempo Determinado'
+		INDETERMINADO = 'ind', 'Tempo Indeterminado'
+		EVENTUAL = 'evn', 'Eventual'
+		ESTAGIO = 'est', 'Estágio'
+		EXPERIENCIA = 'exp', 'Experiência'
+		TELETRABALHO = 'tel', 'Teletrabalho'
+		INTERMITENTE = 'int', 'Intermitente'
+		AUTONOMO = 'pj', 'Autônomo'
+
 	titulo = models.CharField(max_length=60, null=False, blank=False, verbose_name='Contrato')
-	descricao = models.CharField(max_length=60, null=False, blank=False, verbose_name='Jornada')
+	descricao = models.CharField(max_length=60, null=False, blank=False, verbose_name='Descrição da Jornada')
+	tipo = models.CharField(max_length=3, choices=Tipo.choices, default=Tipo.INDETERMINADO, verbose_name='Tipo de Contrato')
 	slug = models.SlugField(default='', editable=False, null=True, blank=True, max_length=120)
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 

@@ -21,45 +21,49 @@
 
 		<div class="card-body">
 
-			<ul class="nav nav-tabs d-flex" id="nav-feedback" role="tablist" style="height: 2.5rem">
-				<li class="nav-item" role="presentation">
-					<button class="nav-link active" id="nav-geral" data-bs-toggle="tab" data-bs-target="#tab-geral" type="button" role="tab" aria-controls="tab-geral" aria-selected="true">
-						Resumo
-					</button>
-				</li>
-				<li class="nav-item" role="presentation">
-					<button class="nav-link" id="nav-enviado" data-bs-toggle="tab" data-bs-target="#tab-enviado" type="button" role="tab" aria-controls="tab-enviado" aria-selected="false">
-						Enviados
-					</button>
-				</li>
-				<li class="nav-item {% if request.user.get_access != "admin" %}flex-fill{% endif %}" role="presentation">
-					<button class="nav-link" id="nav-recebido" data-bs-toggle="tab" data-bs-target="#tab-recebido" type="button" role="tab" aria-controls="tab-recebido" aria-selected="false">
-						Recebidos
-					</button>
-				</li>
+			<div class="d-flex">
+				<div class="flex-fill">
+					<ul class="nav nav-tabs d-flex" id="nav-feedback" role="tablist">
+						<li class="nav-item" role="presentation">
+							<button class="nav-link active" id="nav-geral" data-bs-toggle="tab" data-bs-target="#tab-geral" type="button" role="tab" aria-controls="tab-geral" aria-selected="true">
+								Resumo
+							</button>
+						</li>
+						<li class="nav-item" role="presentation">
+							<button class="nav-link" id="nav-enviado" data-bs-toggle="tab" data-bs-target="#tab-enviado" type="button" role="tab" aria-controls="tab-enviado" aria-selected="false">
+								Enviados
+							</button>
+						</li>
+						<li class="nav-item" role="presentation">
+							<button class="nav-link" id="nav-recebido" data-bs-toggle="tab" data-bs-target="#tab-recebido" type="button" role="tab" aria-controls="tab-recebido" aria-selected="false">
+								Recebidos
+							</button>
+						</li>
+						{% if request.user.get_access == "admin" %}
+							<li class="nav-item" role="presentation">
+								<button class="nav-link" id="nav-todos" data-bs-toggle="tab" data-bs-target="#tab-todos" type="button" role="tab" aria-controls="tab-todos" aria-selected="false">
+									Todos
+								</button>
+							</li>
+						{% endif %}
+					</ul>
+				</div>
 				{% if request.user.get_access == "admin" %}
-					<li class="nav-item flex-fill" role="presentation">
-						<button class="nav-link" id="nav-todos" data-bs-toggle="tab" data-bs-target="#tab-todos" type="button" role="tab" aria-controls="tab-todos" aria-selected="false">
-							Todos
-						</button>
-					</li>
+					<div>
+						<div class="btn-group">
+							<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalEnviarFeedback">
+								Enviar
+							</button>
+							<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitarFeedback">
+								Solicitar
+							</button>
+							<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitacoesFeedback">
+								Recebidas
+							</button>
+						</div>
+					</div>
 				{% endif %}
-				<li class="nav-item" role="presentation">
-					<button class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalEnviarFeedback">
-						Enviar Feedback
-					</button>
-				</li>
-				<li class="nav-item" role="presentation">
-					<button class="btn btn-secondary text-light me-2" data-bs-toggle="modal" data-bs-target="#modalSolicitarFeedback">
-						Solicitar Feedback
-					</button>
-				</li>
-				<li class="nav-item" role="presentation">
-					<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitacoesFeedback">
-						Solicitações Recebidas
-					</button>
-				</li>
-			</ul>
+			</div>
 
 			<div class="tab-content" id="tab-feedback">
 

@@ -20,7 +20,7 @@
 
 			<!-- Filtros -->
 			<div class="card card-filtros mb-4">
-				<div class="card-header">
+				<div class="card-header bg-body-tertiary">
 					Filtros
 				</div>
 				<div class="card-body">
@@ -42,7 +42,7 @@
 								</select>
 							</div>
 							<div class="col-md-4 col-12">
-								<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+								<label for="selectUsers" class="form-label fs-6">Colaboradores</label>
 								<select class="form-select select-users" id="selectUsers" name="funcionarios" multiple>
 									{% for funcionario in funcionarios %}
 										<option value="{{ funcionario.id }}" {% if funcionario.id|value_to_string in request.GET|item_from_dict:"funcionarios" %} selected {% endif %}>{{ funcionario }}</option>
@@ -59,7 +59,12 @@
 			<!-- Avaliações -->
 			<div class="list-group">
 				{% for avaliacao in avaliacoes %}
-					<div class="list-group-item list-group-item-action list-avaliacoes" role="button" {% if avaliacao.status == 0 %} onclick="avaliarAtividade({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}'})" {% else %} onclick="visualizarAvaliacao({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}', desempenho: {{avaliacao.desempenho_id}}, potencial: {{avaliacao.potencial_id}}, observacao: '{{avaliacao.observacao|replace:"\u0027, \u0022"}}', funcionarios: {{avaliacao.funcionarios|safe}}})" {% endif %}>
+					<div class="list-group-item list-group-item-action list-avaliacoes" role="button" 
+						{% if avaliacao.status == 0 %} 
+							onclick="avaliarAtividade({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}', descricao: '{{avaliacao.descricao|safe}}', funcionarios: {{avaliacao.funcionarios|safe}}})" 
+						{% else %} 
+							onclick="visualizarAvaliacao({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}', desempenho: {{avaliacao.desempenho_id}}, potencial: {{avaliacao.potencial_id}}, observacao: '{{avaliacao.observacao|replace:"\u0027, \u0022"}}', funcionarios: {{avaliacao.funcionarios|safe}}})" 
+						{% endif %}>
 						<div class="d-flex w-100 justify-content-between">
 							<h5 class="mb-1" {% if avaliacao.status == 1 %} title="Avaliado" {% else %} title="Pendente" {% endif %}>
 								{{avaliacao.titulo}}
@@ -116,6 +121,8 @@
 		const modal = $("#modalEnviarAvaliacao");
 		const action = `{% url "desempenho-avaliacao" 0 %}`.replace("0", atividade.atvid);
 
+		modal.find(".card-descricao").children().remove();
+
 		modal.find("#modalEnviarAvaliacaoLabel").html(`Avaliar Atividade - ${atividade.titulo}`);
 		modal.find("form").attr("action", action);
 
@@ -124,6 +131,12 @@
 		} else {
 			modal.find("#btnEnviarFeedback").css("display", "block");
 		};
+
+		modal.find(".card-descricao").append(`
+			<p class="fw-bold">DESCRIÇÃO DA ATIVIDADE E PARTICIPANTES</p> 
+			${atividade.descricao} 
+			<small class="fw-light fst-italic">${atividade.funcionarios.join(', ')}</small>
+		`);
 
 		modal.modal("show");
 	};

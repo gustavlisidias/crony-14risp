@@ -2,7 +2,7 @@
 	<div class="modal-dialog modal-lg modal-dialog-scrollable">
 		<form method="POST" action="" class="modal-content" id="formEditarPesquisa">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalVisualizarPesquisaLabel"></h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
@@ -20,12 +20,12 @@
 					<label for="pesquisaEditarDescricao">Descrição</label>
 				</div>
 				<div class="form-floating mb-3">
-					<select class="form-select" size="5" id="pesquisaEditarFuncionarios" name="funcionarios" multiple style="height: 100%;">
+					<select class="form-select" size="5" id="pesquisaEditarFuncionarios" name="funcionarios" multiple style="height: 12rem;">
 						{% for funcionario in funcionarios %}
 							<option value="{{funcionario.id}}">{{funcionario}}</option>
 						{% endfor %}
 					</select>
-					<label for="pesquisaEditarFuncionarios">Funcionarios</label>
+					<label for="pesquisaEditarFuncionarios">Colaboradores</label>
 				</div>
 			</div>
 			<div class="modal-footer">

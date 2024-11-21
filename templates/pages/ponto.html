@@ -47,7 +47,7 @@
 
 			<!-- Filtros -->
 			<div class="card card-filtros mb-4">
-				<div class="card-header">
+				<div class="card-header bg-body-tertiary">
 					Filtros & Ações
 				</div>
 				<div class="card-body">
@@ -66,7 +66,7 @@
 								</div>
 							</div>
 							<div class="col-md-4 col-12">
-								<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+								<label for="selectUsers" class="form-label fs-6">Colaboradores</label>
 								<select class="form-select select-users" id="selectUsers" name="funcionarios" multiple>
 									{% for funcionario in funcionarios %}
 										<option value="{{ funcionario.id }}" {% if funcionario.id|value_to_string in request.GET|item_from_dict:"funcionarios" %} selected {% endif %}>{{ funcionario }}</option>
@@ -101,7 +101,7 @@
 							<thead>
 								<tr>
 									<th scope="col">Data</th>
-									<th scope="col">Funcionário</th>
+									<th scope="col">Colaborador</th>
 									<th scope="col">Entrada</th>
 									<th scope="col">Saída</th>
 									<th scope="col">Total</th>
@@ -152,7 +152,7 @@
 										<input class="form-check-input" type="checkbox" value="" id="solicitacao-marcar-tudo" onclick="marcarTodasSolicitacoes(event, this);">
 									</th>
 									<th scope="col">#</th>
-									<th scope="col">Funcionário</th>
+									<th scope="col">Colaborador</th>
 									<th scope="col">Tipo</th>
 									<th scope="col" class="text-center">Arquivo</th>
 									<th scope="col">Data</th>
@@ -819,6 +819,20 @@
 
 <script>
 	document.addEventListener("DOMContentLoaded", function() {
+		document.getElementById("abonoTipoSolicitacao").addEventListener("change", function() {
+			if (this.value == "tempo") {
+				document.getElementById("divPeriodoAbono").classList.add("d-none");
+				document.getElementById("divPeriodoAbono").classList.remove("mb-3");
+				document.getElementById("divTempoAbono").classList.add("mb-3");
+				document.getElementById("divTempoAbono").classList.remove("d-none");
+			} else {
+				document.getElementById("divPeriodoAbono").classList.remove("d-none");
+				document.getElementById("divPeriodoAbono").classList.add("mb-3");
+				document.getElementById("divTempoAbono").classList.remove("mb-3");
+				document.getElementById("divTempoAbono").classList.add("d-none");
+			}
+		});
+
 		const form = document.getElementById("formSolicitarAbono");
 		const abonoInicio = document.getElementById("abonoInicio");
 		const abonoFinal = document.getElementById("abonoFinal");

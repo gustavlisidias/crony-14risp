@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import JsonResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.timezone import make_aware
 
@@ -20,6 +21,7 @@ from agenda.models import (
 from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
 from funcionarios.models import Documento, TipoDocumento
+from notifications.signals import notify
 from ponto.models import Ponto, Saldos
 from ponto.utils import filtrar_abonos, total_saldo
 from web.utils import not_none_not_empty, add_coins
@@ -202,6 +204,8 @@ def ProcurarDocumentosFeriasView(request, solic):
 				'abono': solicitacao.abono or 0,
 				'decimo': '13º solicitado' if solicitacao.decimo else '13º não solicitado',
 				'docs': list(documentos.values('id', 'caminho')),
+				'status_label': solicitacao.get_status,
+				'status': solicitacao.status
 			}
 			return JsonResponse(data, safe=False, status=200)
 		
@@ -214,69 +218,66 @@ def ProcurarDocumentosFeriasView(request, solic):
 
 
 @login_required(login_url='entrar')
-def ExcluirSolicitacaoFeriasView(request, solic):
+def AlterarSolicitacaoFeriasView(request, solic):
 	if request.method != 'POST':
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
 
 	try:
-		SolicitacaoFerias.objects.get(pk=solic).delete()
-		messages.success(request, 'Solicitação de férias removida com sucesso!')
-		return JsonResponse({'message': 'success'}, status=200)
+		status = int(request.POST.get('novo_stauts'))
+		solicitacao = SolicitacaoFerias.objects.get(pk=solic)
 
-	except Exception as e:
-		messages.error(request, f'Solicitação de férias não foi removida! {e}')
-		return JsonResponse({'message': e}, status=400)
+		if status == SolicitacaoFerias.Status.APROVADO:
+			with transaction.atomic():
+				# Aprovar a solicitação
+				solicitacao.status = True
+				solicitacao.save()
 
+				# Enviar documentos de férias para a documentação do funcionario
+				documentos = DocumentosFerias.objects.filter(solicitacao=solicitacao)
+				if documentos:
+					for documento in documentos:
+						Documento.objects.create(
+							funcionario=solicitacao.funcionario,
+							tipo=TipoDocumento.objects.get(slug='ferias'),
+							documento=documento.documento,
+							caminho=documento.caminho,
+							data_documento=timezone.localdate(),
+						)
+					
+						# Salvo os documentos na pasta do funcionario
+						pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
+						os.makedirs(pasta, exist_ok=True)
+						caminho = os.path.join(pasta, f'{documento.caminho}.pdf')
 
-@login_required(login_url='entrar')
-def AprovarSolicitacaoFeriasView(request, solic):
-	if request.method != 'POST':
-		messages.warning(request, 'Método não permitido!')
-		return JsonResponse({'message': 'forbidden'}, status=404)
+						with open(caminho, 'wb') as f:
+							f.write(documento.documento)
 
-	try:
-		with transaction.atomic():
-			# Aprovar a solicitação
+				# Criar agenda de férias
+				atividade = Atividade.objects.create(
+					titulo=f'Férias {solicitacao.funcionario}',
+					descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio_ferias.strftime('%d/%m/%Y')} até {solicitacao.final_ferias.strftime('%d/%m/%Y')}<br>Observações: {solicitacao.observacao}",
+					tipo=TipoAtividade.objects.get(slug='ferias'),
+					inicio=make_aware(datetime.combine(solicitacao.inicio_ferias, datetime.min.time())),
+					final=make_aware(datetime.combine(solicitacao.final_ferias, datetime.min.time())),
+					autor=solicitacao.funcionario,
+					solic_ferias=solicitacao
+				)
+				atividade.funcionarios.set([solicitacao.funcionario.id])
+
+				messages.success(request, 'Solicitação de férias aprovada com sucesso!')
+		else:
 			solicitacao = SolicitacaoFerias.objects.get(pk=solic)
-			solicitacao.status = True
+			solicitacao.status = status
 			solicitacao.save()
 
-			# Enviar documentos de férias para a documentação do funcionario
-			documentos = DocumentosFerias.objects.filter(solicitacao=solicitacao)
-			if documentos:
-				for documento in documentos:
-					Documento.objects.create(
-						funcionario=solicitacao.funcionario,
-						tipo=TipoDocumento.objects.get(codigo='037'), # Aviso De Ferias - 037
-						documento=documento.documento,
-						caminho=documento.caminho,
-						data_documento=timezone.localdate(),
-					)
-				
-					# Salvo os documentos na pasta do funcionario
-					pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
-					os.makedirs(pasta, exist_ok=True)
-					caminho = os.path.join(pasta, f'{documento.caminho}.pdf')
-
-					with open(caminho, 'wb') as f:
-						f.write(documento.documento)
-
-			# Criar agenda de férias
-			atividade = Atividade.objects.create(
-				titulo=f'Férias {solicitacao.funcionario}',
-				descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio_ferias.strftime('%d/%m/%Y')} até {solicitacao.final_ferias.strftime('%d/%m/%Y')}<br>Observações: {solicitacao.observacao}",
-				tipo=TipoAtividade.objects.get(slug='ferias'),
-				inicio=make_aware(datetime.combine(solicitacao.inicio_ferias, datetime.min.time())),
-				final=make_aware(datetime.combine(solicitacao.final_ferias, datetime.min.time())),
-				autor=solicitacao.funcionario,
-				solic_ferias=solicitacao
-			)
-			atividade.funcionarios.set([solicitacao.funcionario.id])
-
-			messages.success(request, 'Solicitação de férias aprovada com sucesso!')
-			return JsonResponse({'message': 'success'}, status=200)
+		notify.send(
+			sender=request.user,
+			recipient=solicitacao.funcionario.usuario,
+			verb=f'Sua solicitação de férias foi atualizada: {solicitacao.get_status}',
+		)
 
 	except Exception as e:
 		messages.error(request, f'Solicitação de férias não foi aprovada! {e}')
-		return JsonResponse({'message': e}, status=400)
+
+	return redirect('ferias')

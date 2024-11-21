@@ -42,8 +42,9 @@ def relatorio_semanal():
 		email = EmailMessage(subject, message, EMAIL_HOST_USER, destinatarios)
 		email.send()
 
+		logging.info('Relatorio semanal enviado com sucesso!')
+
 	except Exception as e:
-		print(e)
 		logging.info(f'Relatorio semanal não foi realizado: {e}')
 
 

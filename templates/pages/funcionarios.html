@@ -38,9 +38,9 @@
 						<th scope="col">Gestor</th>
 						<th scope="col">Ativo</th>
 						<th scope="col">Data Contratação</th>
-						{% if request.user.get_access == "admin" %}
+						<!-- {% if request.user.get_access == "admin" %}
 							<th class="text-center" scope="col">Ações</th>
-						{% endif %}
+						{% endif %} -->
 					</tr>
 				</thead>
 				<tbody>
@@ -48,7 +48,7 @@
 						{% if request.user.get_access == "admin" or request.user == funcionario.gerente.usuario or request.user == funcionario.usuario %}
 							<tr role="button" onclick="window.location.href = `{% url 'editar-funcionario' funcionario.id %}`" title="Visualizar {{funcionario.nome_completo}}">
 						{% else %}
-							<tr role="button" onclick="visualizarFuncionario({nome: '{{funcionario}}', cargo: '{{funcionario.cargo.cargo}}', setor: '{{funcionario.setor.setor}}', foto: '{{funcionario.id|photo}}', contato: '{{funcionario.contato}}', resposavel: '{{funcionario.gerente}}', cor: '{{funcionario.get_perfil.time.cor}}'})" title="Visualizar {{funcionario.nome_completo}}">
+							<tr role="button" onclick="visualizarFuncionario({nome: '{{funcionario}}', cargo: '{{funcionario.cargo.cargo}}', setor: '{{funcionario.setor.setor}}', foto: '{{funcionario.id|photo}}', contato: '{{funcionario.contato}}', resposavel: '{{funcionario.gerente}}'})" title="Visualizar {{funcionario.nome_completo}}">
 						{% endif %}
 							<th scope="row">{{funcionario.matricula}}</th>
 							<td>{{funcionario}}</td>
@@ -70,7 +70,7 @@
 
 							<td>{{funcionario.data_contratacao|date:"d/m/Y"}}</td>
 							
-							{% if request.user.get_access == "admin" %}
+							<!-- {% if request.user.get_access == "admin" %}
 								<td class="text-center">
 									<div class="d-flex justify-content-around">
 										<a onclick="event.stopPropagation();" href="{% url 'detalhes-ponto' funcionario.id %}" title="Abrir cartão de ponto">
@@ -78,7 +78,7 @@
 										</a>
 									</div>
 								</td>
-							{% endif %}
+							{% endif %} -->
 						</tr>
 					{% endfor %}
 				</tbody>
@@ -102,12 +102,15 @@
 </script>
 
 <script>
-	function visualizarFuncionario(funcionario) {
+	function visualizarFuncionario(funcionario) {		
 		const modal = $("#modalVisualizarFuncionario");
 		const src = funcionario.foto == "None" || funcionario.foto == "" ? "static/images/avatar.jpg" : `media/${funcionario.foto}`;
 		const contato = funcionario.contato == "None" || funcionario.contato == "" ? "" : funcionario.contato;
 
+		const style = {"width": "136px", "height": "136px"};
+
 		modal.find(".foto-funcionario").attr("src", src);
+		modal.find(".foto-funcionario").css(style);
 		modal.find(".nome-funcionario").html(funcionario.nome);
 		modal.find(".cargo-funcionario").html(`${funcionario.cargo} de ${funcionario.setor}`);
 		modal.find(".gerente-funcionario").html(funcionario.gerente);

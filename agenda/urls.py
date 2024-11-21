@@ -1,9 +1,8 @@
 from django.urls import path
 
 from agenda.ajax import (
-    AprovarSolicitacaoFeriasView,
+    AlterarSolicitacaoFeriasView,
     EditarEventoView,
-    ExcluirSolicitacaoFeriasView,
     MoverEventoView,
     ProcurarDocumentosFeriasView,
 )
@@ -24,8 +23,7 @@ urlpatterns = [
 	
     path('ferias', FeriasView, name='ferias'),
     path('ferias/procurar/documentos/<int:solic>', ProcurarDocumentosFeriasView, name='procurar-documentos'),
-    path('ferias/excluir/solicitacao/<int:solic>', ExcluirSolicitacaoFeriasView, name='excluir-solicitacao-ferias'),
-    path('ferias/aprovar/solicitacao/<int:solic>', AprovarSolicitacaoFeriasView, name='aprovar-solicitacao-ferias'),
+    path('ferias/alterar/solicitacao/<int:solic>', AlterarSolicitacaoFeriasView, name='alterar-solicitacao-ferias'),
 
     path('desempenho', DesempenhoView, name='desempenho'),
     path('desempenho/avaliar/atividade/<int:atvid>', AdicionarAvaliacaoView, name='desempenho-avaliacao'),

@@ -23,7 +23,7 @@
 		<div class="card-body">
 
 			<div class="card mb-4">
-				<div class="card-header">
+				<div class="card-header bg-body-tertiary">
 					Filtros
 				</div>
 				<div class="card-body">
@@ -44,7 +44,7 @@
 							</select>
 						</div>
 						<div class="col-md-4 col-12">
-							<label for="selectUsers" class="form-label fs-6">Funcionários</label>
+							<label for="selectUsers" class="form-label fs-6">Colaboradores</label>
 							<select class="form-select select-users" id="selectUsers" multiple>
 								{% for funcionario in funcionarios %}
 									<option value="{{ funcionario.id }}">{{ funcionario }}</option>

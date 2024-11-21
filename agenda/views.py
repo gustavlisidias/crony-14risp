@@ -163,7 +163,9 @@ def FeriasView(request):
 	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
 	funcionario = funcionarios.get(usuario=request.user)
 	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-	ferias = ferias_funcionarios(funcionarios.exclude(matricula='000000'))
+
+	ferias = ferias_funcionarios(funcionarios)
+	statuses = [{'key': i[0], 'value': i[1]} for i in SolicitacaoFerias.Status.choices]
 
 	# Filtro de solicitações por role
 	if funcionario.usuario.get_access == 'common':
@@ -193,7 +195,7 @@ def FeriasView(request):
 				messages.warning(request, 'Você já possui férias em aberto!')
 				return redirect('ferias')
 			
-			if SolicitacaoFerias.objects.filter(funcionario=funcionario, status=False).exists():
+			if SolicitacaoFerias.objects.filter(funcionario=funcionario).exclude(Q(status=SolicitacaoFerias.Status.APROVADO) | Q(status=SolicitacaoFerias.Status.RECUSADO)).exists():
 				messages.warning(request, 'Você possui uma solicitação de férias em aberto!')
 				return redirect('ferias')
 			
@@ -272,6 +274,7 @@ def FeriasView(request):
 		'funcionario': funcionario,
 		'notificacoes': notificacoes,
 		'ferias': ferias,
+		'statuses': statuses,
 		'minhas_ferias': ferias.get(funcionario, []),
 		'solicitacoes': solicitacoes.order_by('-status'),
 	}

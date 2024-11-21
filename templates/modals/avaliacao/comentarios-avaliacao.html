@@ -18,7 +18,7 @@
 							<div id="collapseComentario{{forloop.counter}}" class="accordion-collapse collapse" data-bs-parent="#accordionComentario">
 								<div class="accordion-body">
 									{% for comentario in comentarios %}
-										<p class="m-0 p-0">{{comentario}}</p>
+										<p class="m-0 p-0 mb-2">{{forloop.counter}}. Pergunta: {{comentario.pergunta}} <br> Comentário: {{comentario.observacao}}</p>
 									{% endfor %}
 								</div>
 							</div>

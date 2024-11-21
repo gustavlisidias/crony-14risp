@@ -2,7 +2,7 @@
 	<div class="modal-dialog modal-dialog-scrollable modal-lg">
 		<form method="POST" action="{% url 'importar-documentos' %}" class="modal-content" id="formImportarDocumentos">
 			{% csrf_token %}
-			<div class="modal-header bg-body">
+			<div class="modal-header">
 				<h2 class="modal-title fs-5" id="modalImportarDocumentosLabel">Importar Documentos</h2>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>

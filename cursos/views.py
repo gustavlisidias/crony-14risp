@@ -113,7 +113,7 @@ def ProgressoCursoView(request, course, func):
 		'curso': curso,
 		'progresso': progresso,
 	}
-	return render(request, 'pages/progresso-curso.html', context)
+	return render(request, 'pages/cursos-progresso.html', context)
 
 
 # Modal

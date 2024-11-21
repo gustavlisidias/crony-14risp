@@ -10,10 +10,13 @@ sys.path.append('C:\inetpub\wwwroot\crony')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
-from datetime import date, datetime
+from django.db import transaction
+
+from datetime import date, datetime, time
 
 from funcionarios.models import JornadaFuncionario
-from ponto.models import Feriados, Ponto
+from ponto.models import Feriados, Ponto, Saldos
+from ponto.utils import total_saldo
 from settings.settings import BASE_DIR
 
 
@@ -29,18 +32,33 @@ def abonar_feriados():
 	if feriados:
 		for feriado in feriados:
 			try:
-				for funcionario in feriado.funcionarios.all():
-					jornada_funcionario = JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None, dia=weekday).order_by('funcionario__id', 'dia', 'ordem')
+				with transaction.atomic():
+					for funcionario in feriado.funcionarios.all():
+						ponto_funcionario = Ponto.objects.filter(funcionario=funcionario, data=feriado.data).exists()
 
-					for horario in jornada_funcionario:
-						Ponto(
+						jornada_funcionario = JornadaFuncionario.objects.filter(
+							funcionario=funcionario, final_vigencia=None, dia=weekday
+						).order_by('agrupador', 'dia', 'ordem').values_list('hora', flat=True)
+
+						saldo = total_saldo(jornada_funcionario)
+
+						if not ponto_funcionario:
+							Ponto(
+								funcionario=funcionario,
+								data=hoje,
+								hora=time(0),
+								motivo=feriado.titulo,
+								alterado=True,
+								encerrado=True
+							).save()
+
+						Saldos(
 							funcionario=funcionario,
-							data=hoje,
-							hora=horario.hora,
-							motivo=feriado.titulo,
-							alterado=True,
-							encerrado=True
+							saldo=saldo,
+							data=hoje
 						).save()
+
+					logging.info(f'Feriado {feriado.titulo} rodou o saldo com sucesso para {len(feriado.funcionarios.all())} funcionários')
 
 			except Exception as e:
 				logging.info(f'Ocorreu um erro ao abonar o feriado {feriado.titulo}: {e}')

@@ -8,6 +8,7 @@
 
 {% include "includes/messages.html" %}
 {% include "modals/avaliacao/adicionar-avaliacao.html" %}
+{% include "modals/avaliacao/duplicar-avaliacao.html" %}
 
 <div class="fluid-container p-4 m-0">
   	<div class="card w-100">
@@ -31,6 +32,9 @@
 						<th scope="col">Avaliado</th>
 						<th scope="col">Data Encerramento</th>
 						<th scope="col" class="text-center">Status</th>
+						{% if request.user.get_access == "admin" %}
+							<th scope="col" class="text-center">Ações</th>
+						{% endif %}
 					</tr>
 				</thead>
 				<tbody>
@@ -52,7 +56,13 @@
 									<span class="d-none">Aberto</span>
 									<i class="fa-duotone fa-circle-check text-success"></i>
 								</td>
-							{%endif %}
+							{% endif %}
+							
+							{% if request.user.get_access == "admin" %}
+								<td class="text-center" role="button" onclick="duplicarAvaliacao(event, {{avaliacao.id}}, '{{avaliacao.titulo}}')" title="Duplicar Avaliação">
+									<i class="fa-duotone fa-thin fa-clone fa-lg"></i>
+								</td>
+							{% endif %}
 						</tr>
 					{% endfor %}
 				</tbody>
@@ -76,45 +86,59 @@
 </script>
 
 <script>
-	document.addEventListener("DOMContentLoaded", function () {
-		let perguntaCount = 0;
-
-		const perguntasContainer = document.getElementById("perguntasContainer");
-		const adicionarPerguntaBtn = document.getElementById("adicionarPergunta");
+	document.addEventListener("DOMContentLoaded", function () {	
+		document.getElementById("btnAdicionarPergunta").addEventListener("click", function () {
+			const perguntaCount = document.getElementById("perguntasContainer").childElementCount + 1;
 	
-		adicionarPerguntaBtn.addEventListener("click", function () {
-			let currentCount = document.getElementById("perguntasContainer").childElementCount + 1;
-
-			perguntaCount++;
-	
-			const perguntaHtml = `
-				<div class="card mb-3" id="pergunta-${perguntaCount}">
-					<div class="card-body">
-						<h5 class="card-title">Pergunta ${currentCount}</h5>
-						<div class="form-floating mb-3">
-							<input type="text" class="form-control" id="tituloPergunta${perguntaCount}" name="titulo-pergunta-nova" placeholder="Título da Pergunta" required>
-							<label for="tituloPergunta${perguntaCount}">Título</label>
-						</div>
-						<div class="mb-3">
-							<label class="form-label" for="avaliacaoPergunta${perguntaCount}">Pergunta *</label>
-							<textarea class="ck-editor-5" id="avaliacaoPergunta${perguntaCount}" name="texto-pergunta-nova"></textarea>
-							<span class="word-count" id="avaliacaoPergunta${perguntaCount}_script-word-count"></span>
-						</div>
-						<button type="button" class="btn btn-danger btn-sm" onclick="removerPergunta(${perguntaCount})">Remover</button>
+			$("#perguntasContainer").append(`
+				<div id="novaPergunta${perguntaCount}">
+					<hr>
+					<h5 class="mb-3">Nova Pergunta ${perguntaCount}</h5>
+					<input type="hidden" id="perguntaIndex${perguntaCount}" name="nova-pergunta" value="${perguntaCount}">
+					<div class="form-floating mb-3">
+						<input type="text" class="form-control" id="perguntaTitulo${perguntaCount}" name="pergunta-titulo[${perguntaCount}]" placeholder required>
+						<label for="perguntaTitulo${perguntaCount}">Título Pergunta *</label>
 					</div>
+					<div class="mb-3">
+						<label class="form-label" for="perguntaDescricao${perguntaCount}">Pergunta *</label>
+						<textarea class="ck-editor-5" id="perguntaDescricao${perguntaCount}" name="pergunta-texto[${perguntaCount}]"></textarea>
+						<span class="word-count" id="perguntaDescricao${perguntaCount}_script-word-count"></span>
+					</div>
+					<div class="form-floating mb-3">
+						<input type="number" class="form-control" id="perguntaPeso${perguntaCount}" name="pergunta-peso[${perguntaCount}]" value="0" min="0" max="1" step="0.1" placeholder required>
+						<label for="perguntaPeso${perguntaCount}">Peso Pergunta *</label>
+					</div>
+					<button type="button" class="btn btn-danger btn-sm" onclick="removerPergunta(${perguntaCount})">Remover</button>
 				</div>
-			`;
-	
-			perguntasContainer.insertAdjacentHTML("beforeend", perguntaHtml);
+			`);
+			
 			iniciarCKEditor();
 		});
 	});
 
 	function removerPergunta(perguntaId) {
-		const perguntaElement = document.getElementById(`pergunta-${perguntaId}`);
+		const perguntaElement = document.getElementById(`novaPergunta${perguntaId}`);
 		if (perguntaElement) {
 			perguntaElement.remove();
-		}
+			delete window.editors[`perguntaDescricao${perguntaId}`];
+		};
+	};
+
+	function duplicarAvaliacao(event, avaliacaoId, titulo) {
+		event.stopPropagation();
+
+		const modal = $("#modalDuplicarAvaliacao");
+		const action = `{% url "duplicar-avaliacao" 0 %}`.replace("0", avaliacaoId);
+
+		modal.find("#modalDuplicarAvaliacaoLabel").html(`Duplicar Avaliação - ${titulo}`);
+		modal.find("form").attr("action", action);
+		modal.modal("show");
+	};
+
+	function ParseFloatDecimal(str,val) {
+		str = str.toString();
+		str = str.slice(0, (str.indexOf(".")) + val + 1); 
+		return Number(str);   
 	};
 </script>
 
@@ -146,19 +170,16 @@
 		btnProximo2.addEventListener("click", function (event) {
 			const inputs = document.getElementById("modalAdicionarAvaliacao2").querySelectorAll("input");
 			let allFieldsFilled = true;
-			let pesoSomado = 1;
+			let pesoSomado = 0;
 
 			inputs.forEach(function (input) {
-				if (!input.value.trim() && !input.classList.contains("ck-hidden")) {
-					allFieldsFilled = false;
-				};
-
-				pesoSomado -= parseFloat(input.value);
+				const valor = parseFloat(input.value);
+				pesoSomado += valor;
 			});
 
 			if (!allFieldsFilled) {
 				alert("Por favor, preencha todos os campos obrigatórios.");
-			} else if (pesoSomado != 0) {
+			} else if (ParseFloatDecimal(pesoSomado, 2) !== 1) {
 				alert("A soma dos pesos deve ser igual à 1.");
 			} else {
 				btnProximo2.setAttribute("data-bs-target", "#modalAdicionarAvaliacao3");
@@ -168,16 +189,24 @@
 		});
 
 		btnConcluir.addEventListener("click", function (event) {
-			const inputs = document.getElementById("modalAdicionarAvaliacao3").querySelectorAll("input");
-			let pesoSomado = 1;
-			const epsilon = 0.0001;
-			
-			inputs.forEach(function (input) {
-				const valor = parseFloat(input.value);
-				pesoSomado -= valor;
-			});
+			const options = document.getElementById("avaliacaoPerguntas");
+			let pesoPerguntas = 0;
+			let pesoInputs = 0;
 
-			if (Math.abs(pesoSomado) > epsilon) {
+			if (options) {
+				Array.from(options.selectedOptions).forEach(option => {
+					pesoPerguntas += ParseFloatDecimal(option.getAttribute("data-peso").replace(",", "."), 2);
+				});
+			};			
+
+			for (let i=0; i < 100; i++) {
+				const input = document.getElementById(`perguntaPeso${i}`);
+				if (input) {
+					pesoInputs += ParseFloatDecimal(input.value, 2);
+				}
+			};
+
+			if (ParseFloatDecimal(pesoPerguntas + pesoInputs, 2) !== 1) {
 				alert("A soma dos pesos deve ser igual à 1.");
 			} else {
 				document.getElementById("formAdicionarCurso").submit();
