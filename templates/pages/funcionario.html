@@ -23,7 +23,7 @@
 				<div class="btn-group">
 					<form method="POST" class="btn btn-secondary p-0 m-0" id="formHistoricoFuncionario">
 						{% csrf_token %}
-						<button class="btn btn-secondary text-light" name="historico" value="true" type="submit" title="Histórico funcionário">
+						<button class="btn btn-secondary text-light" name="historico" value="true" type="submit" title="Histórico colaborador">
 							Histórico
 						</button>
 					</form>
@@ -89,7 +89,7 @@
 													<a type="button" data-bs-toggle="modal" data-bs-target="#modalAtividades" title="Ver atividades">
 														<i class="fa-thin fa-calendar-lines fa-xl text-primary me-2"></i>
 													</a>
-													<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar funcionário">
+													<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar colaborador">
 														<i class="fa-thin fa-pen-to-square fa-xl text-primary me-2"></i>
 													</a>
 													{% if request.user.get_access != "common" %}
@@ -415,7 +415,7 @@
 										</ul>
 									</p>
 									<small class="text-muted fs-7 fst-italic">
-										Este é um modelo simplificado com poucas variações, acompanhe o funcionário e se
+										Este é um modelo simplificado com poucas variações, acompanhe o colaborador e se
 										preciso procure ajuda profissional.
 									</small>
 								</div>

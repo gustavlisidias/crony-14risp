@@ -7,8 +7,19 @@
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
+				{% if request.user.get_access == "admin" %}
+					<div class="form-floating mb-3">
+						<select class="form-select" id="abonoFuncionario" name="colaborador">
+							<option value="" selected hidden>Selecione um colaborador...</option>
+							{% for funcionario in funcionarios %}
+								<option value="{{funcionario.id}}">{{funcionario}}</option>
+							{% endfor %}
+						</select>
+						<label class="form-label" for="abonoFuncionario">Colaborador</label>
+					</div>
+				{% endif %}
 				<div class="form-floating mb-3">
-					<select class="form-select" id="abonoTipoSolicitacao" name="solicitacao" aria-label="Floating label select example">
+					<select class="form-select" id="abonoTipoSolicitacao" name="solicitacao">
 						<option value="periodo">Período</option>
 						<option value="tempo">Tempo Faltante</option>
 					</select>
@@ -49,7 +60,7 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-				<button type="submit" class="btn btn-secondary text-light">Enviar</button>
+				<button type="submit" class="btn btn-info text-light">Enviar</button>
 			</div>
 		</form>
 	</div>

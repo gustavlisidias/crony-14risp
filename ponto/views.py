@@ -203,7 +203,7 @@ def SolicitarAbonoView(request):
 		messages.warning(request, 'Método não permitido!')
 		return redirect('pontos')
 
-	funcionario = Funcionario.objects.get(usuario=request.user)
+	funcionario = Funcionario.objects.get(pk=int(request.POST.get('colaborador'))) if not_none_not_empty(request.POST.get('colaborador')) else Funcionario.objects.get(usuario=request.user)
 	admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
 	solicitacao = request.POST.get('solicitacao')

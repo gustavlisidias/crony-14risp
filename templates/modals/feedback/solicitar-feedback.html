@@ -11,7 +11,7 @@
 					<label class="form-label" for="feedbackSolicitacao">Solicitação *</label>
 					<textarea class="form-control" id="feedbackSolicitacao" name="solicitacao" placeholder="Ex: Olá Fulano, você poderia me enviar um feedback referente a minha última atividade?" required></textarea>
 				</div>
-				<label class="form-label" for="feedbackDestinatario">Funcionário *</label>
+				<label class="form-label" for="feedbackDestinatario">Colaborador *</label>
 				<select class="form-select" id="feedbackDestinatario" name="destinatario" required>
 					{% for funcionario in funcionarios %}
 						<option value="{{funcionario.id}}">{{funcionario}}</option>

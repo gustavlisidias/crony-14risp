@@ -15,24 +15,29 @@ from web.utils import not_none_not_empty
 def NotificacoesView(request):
 	funcionarios = Funcionario.objects.all()
 	funcionario = funcionarios.get(usuario=request.user)
-	comunicados = list(Notification.objects.values('id', 'level', 'verb', 'description', 'unread', 'timestamp', 'recipient', 'actor_object_id'))
 
 	if request.user.get_access == 'common':
-		comunicados = [i for i in comunicados if i['recipient'] == request.user.id]
+		users = [request.user.id]
+	elif request.user.get_access == 'manager':
+		users = [j.usuario.id for j in funcionarios.filter(data_demissao=None).filter(Q(gerente=funcionario) | Q(pk=funcionario.pk)).distinct()]
+	else:
+		users = [i.usuario.id for i in funcionarios]
 
-	if request.user.get_access == 'manager':
-		funcionarios = funcionarios.filter(data_demissao=None).filter(Q(gerente=funcionario) | Q(pk=funcionario.pk)).distinct()
-		comunicados = [i for i in comunicados if i['recipient'] in [j.usuario.id for j in funcionarios]]
-
+	comunicados = Notification.objects.filter(recipient__id__in=users).values('id', 'level', 'verb', 'description', 'unread', 'timestamp', 'recipient__id', 'actor_object_id')
+	nomes = [{'nome': i.nome_completo, 'user_id': i.usuario.id} for i in funcionarios]
 	listagem = []
-	for comunicado in comunicados:		
+
+	for comunicado in comunicados:
+		remetente = [i['nome'] for i in nomes if i['user_id'] == int(comunicado['actor_object_id'])]
+		destinatario = [i['nome'] for i in nomes if i['user_id'] == int(comunicado['recipient__id'])]
+		
 		listagem.append({
 			'id': comunicado['id'],
 			'level': comunicado['level'],
 			'verb': comunicado['verb'],
 			'description': comunicado['description'],
-			'remetente': funcionarios.get(usuario__id=int(comunicado['actor_object_id'])).nome_completo,
-			'destinatario': funcionarios.get(usuario=comunicado['recipient']).nome_completo,
+			'remetente': remetente[0] if remetente else None,
+			'destinatario': destinatario[0] if destinatario else None,
 			'unread': comunicado['unread'],
 			'timestamp': comunicado['timestamp'].strftime('%d/%m/%Y'),
 		})

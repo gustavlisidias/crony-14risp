@@ -90,9 +90,9 @@
 						<option value="{{modelo.key}}">{{modelo.value}}</option>
 					{% endfor %}
 				</select>
-				<label class="form-label" for="feedbackDestinatario">Funcionário *</label>
+				<label class="form-label" for="feedbackDestinatario">Colaborador *</label>
 				<select class="form-select mb-3" id="feedbackDestinatario" name="destinatario" required>
-					<option value="" selected hidden>Selecione um funcionário...</option>
+					<option value="" selected hidden>Selecione um colaborador...</option>
 					{% for funcionario in funcionarios %}
 						<option value="{{funcionario.id}}">{{funcionario}}</option>
 					{% endfor %}

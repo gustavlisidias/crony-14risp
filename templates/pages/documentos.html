@@ -429,7 +429,7 @@
 			metaFields: [
 				{
 					id: "enviar",
-					name: "Enviar documento para a pasta do Funcionário",
+					name: "Enviar documento para a pasta do Colaborador",
 					render: ({ value, onChange }, h) => {
 						return h("input", {
 							type: "checkbox",
@@ -440,7 +440,7 @@
 				},
 				{
 					id: "funcionario",
-					name: "Funcionário",
+					name: "Colaborador",
 					render: ({ value, onChange }, h) => {
 						const options = funcionarios.map(funcionario => {
 							return h("option", { value: funcionario.id, selected: funcionario.id === value }, funcionario.nome_completo);

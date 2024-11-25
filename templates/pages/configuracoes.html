@@ -83,7 +83,7 @@
 							<div class="form-group mb-3">
 								<label for="pontoMatriculas">Matrículas</label>
 								<input type="text" class="form-control" id="pontoMatriculas" name="matriculas_externo" {% for variavel in variaveis %}{% if variavel.chave == "MATRICULAS_EXTERNAS" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
-								<small id="pontoMatriculasHelp" class="form-text text-muted">Matrículas dos funcionários liberados para registro externo</small>
+								<small id="pontoMatriculasHelp" class="form-text text-muted">Matrículas dos colaboradores liberados para registro externo</small>
 							</div>
 							<div class="form-check">
 								<input class="form-check-input" type="checkbox" value="True" id="pontoRegistrar" name="registrar_externo" {% for variavel in variaveis %}{% if variavel.chave == "REGISTRO_EXTERNO" and variavel.valor == "True" %}checked{% endif %}{% endfor %}>
