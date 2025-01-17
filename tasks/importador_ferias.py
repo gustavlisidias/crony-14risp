@@ -1,5 +1,4 @@
 # ruff: noqa: E402
-# ruff: noqa: F401
 import logging
 import pytz
 import os
@@ -16,6 +15,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 from agenda.models import Ferias
 from agenda.utils import ferias_funcionarios
@@ -36,64 +36,58 @@ def importar_ferias(planilha):
 	log_file = f'importador_ferias_{datetime.now().replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")}.log'
 	log_path = os.path.join(BASE_DIR, f'logs/tasks/{log_file}')
 	logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
+	
+	ferias_por_matricula = defaultdict(list)
 
 	df = pd.read_excel(planilha, dtype={'matricula': str})
-	ferias_por_matricula = {}
 	for _, row in df.iterrows():
-		matricula = f'{int(row["Matrícula"]):06}'
-		# abono = int(row['abono']) if not pd.isna(row['abono']) and row['abono'] not in ['', ' '] else 0
-		inicio_periodo = parse_date(row['Início'])
-		final_periodo = parse_date(row['Vencimento'])
-		# inicio_ferias = parse_date(row['inicio_ferias'])
-		# final_ferias = parse_date(row['final_ferias']) if not pd.isna(row['final_ferias']) else inicio_ferias + timedelta(days=30-abono)
-		ano_referencia = row['Período']
+		matricula = f'{int(row["matricula"]):06}'
+		ano_referencia = row['periodo']
+		abono = int(row['abono']) if not pd.isna(row['abono']) and row['abono'] not in ['', ' '] else 0
+		inicio_periodo = parse_date(row['inicio'])
+		final_periodo = parse_date(row['final'])
+		inicio_ferias = parse_date(row['entrada'])
+		final_ferias = parse_date(row['saida'])
 
-		if matricula not in ferias_por_matricula:
-			ferias_por_matricula[matricula] = []
+		if not pd.isna(inicio_ferias):
+			ferias_por_matricula[matricula].append({
+				'periodo': ano_referencia,
+				'inicio_periodo': inicio_periodo,
+				'final_periodo': final_periodo,
+				'inicio_ferias': inicio_ferias,
+				'final_ferias': final_ferias,
+				'abono': abono
+			})
 
-		ferias_por_matricula[matricula].append({'periodo': ano_referencia, 'inicio': inicio_periodo, 'vencimento': final_periodo})
+	for matricula, dados in ferias_por_matricula.items():
+		for dado in dados:
+			try:
+				funcionario = Funcionario.objects.filter(matricula=matricula)
+				calculo_ferias = ferias_funcionarios(funcionario).get(funcionario.first())
+				
+				inicio_periodo, final_periodo = None, None
+				for calculo in calculo_ferias:
+					if calculo['periodo'] == dado['periodo']:
+						inicio_periodo = calculo['inicio']
+						final_periodo = calculo['vencimento']
 
-		# try:
-		# 	funcionario = Funcionario.objects.get(matricula=matricula)
-		# 	Ferias.objects.create(
-		# 		funcionario=funcionario,
-		# 		ano_referencia=ano_referencia,
-		# 		inicio_periodo=inicio_periodo,
-		# 		final_periodo=final_periodo,
-		# 		inicio_ferias=inicio_ferias,
-		# 		final_ferias=final_ferias,
-		# 		abono=abono
-		# 	)
-		# 	logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, inicio: {inicio_ferias}, final: {final_ferias}, abono: {abono}')
-		# except Exception:
-		# 	logging.info(f'ERROR::CREATE::matricula: {matricula}, inicio: {inicio_ferias}, final: {final_ferias}, abono: {abono}')
+				Ferias(
+					funcionario=funcionario.first(),
+					ano_referencia=dado['periodo'],
+					inicio_ferias=dado['inicio_ferias'],
+					final_ferias=dado['final_ferias'],
+					inicio_periodo=inicio_periodo,
+					final_periodo=final_periodo,
+					abono=dado['abono']
+				).save()
 
-	ferias_calculadas = ferias_funcionarios(Funcionario.objects.all())
-
-	for funcionario, dados in ferias_calculadas.items():
-		ferias_abertas = ferias_por_matricula.get(funcionario.matricula)
-		if ferias_abertas:
-			periodos_abertos = [i['periodo'] for i in ferias_abertas]
-			for dado in dados:
-				if dado['periodo'] not in periodos_abertos:
-					try:
-						final = dado['inicio'] + dado['direito']
-						Ferias(
-							funcionario=funcionario,
-							ano_referencia=dado['periodo'],
-							inicio_periodo=dado['inicio'],
-							final_periodo=dado['vencimento'],
-							inicio_ferias=dado['inicio'],
-							final_ferias=final,
-							abono=0
-						).save()
-
-						logging.info(f"SUCCESS::CREATE::funcionario: {funcionario}, inicio: {dado['inicio']}, final: {final}")
-					
-					except Exception:
-						logging.info(f"ERROR::CREATE::matricula: {matricula}, inicio: {dado['inicio']}, final: {final}")
+				logging.info(f"SUCCESS::CREATE::matricula: {matricula}, periodo: {dado['periodo']}, inicio: {inicio_periodo}, vencimento: {final_periodo}")
+			
+			except Exception as e:
+				logging.info(f"ERROR::CREATE::matricula: {matricula}, periodo: {dado['periodo']}, inicio: {inicio_periodo}, vencimento: {final_periodo}")
+				logging.error(e)
 
 
 if __name__ == '__main__':
-	planilha = os.path.join(BASE_DIR, 'media\\ferias-nova.xlsx')
+	planilha = os.path.join(BASE_DIR, 'documentacao/ferias_14risp.xlsx')
 	importar_ferias(planilha)

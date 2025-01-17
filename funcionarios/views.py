@@ -185,8 +185,9 @@ def EditarFuncionarioView(request, func):
 	else:
 		pontos, scores = None, None
 	
-	graph = {'scores': scores.get(colaborador.id), 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'debito': timedelta(seconds=0), 'credito': timedelta(seconds=0)}
-	if pontos:
+	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'debito': timedelta(seconds=0), 'credito': timedelta(seconds=0), 'scores': {}}
+	if scores and pontos:
+		graph['scores'] = scores.get(colaborador.id)
 		for _, funcs in pontos.items():
 			for func, dados in funcs.items():
 				graph['total'] += dados['total']
