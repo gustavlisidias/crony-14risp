@@ -17,7 +17,7 @@ urlpatterns = [
 	re_path(r'^media/(?P<path>.*)$', serve,{'document_root': settings.MEDIA_ROOT}), 
 	re_path(r'^static/(?P<path>.*)$', serve,{'document_root': settings.STATIC_ROOT}),
 
-	path("ckeditor5/", include('django_ckeditor_5.urls')),
+	path('ckeditor5/', include('django_ckeditor_5.urls')),
 	path('admin/', admin.site.urls),
 
 	path('registrar', RegistrationView, name='registrar'),
@@ -29,6 +29,8 @@ urlpatterns = [
 	path('recuperar/senha/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='recuperar-senha-alterar'),
 
 	path('', include('agenda.urls')),
+	path('', include('avaliacoes.urls')),
+	path('', include('chat.urls')),
 	path('', include('configuracoes.urls')),
 	path('', include('cursos.urls')),
 	path('', include('funcionarios.urls')),

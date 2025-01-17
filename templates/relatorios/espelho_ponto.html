@@ -13,14 +13,21 @@
 
 		<style>
 			@page {
-				size: A4 landscape;
-				margin: 15px;
+				@bottom-right {
+					content: "Página " counter(page) " de " counter(pages);
+					font-size: 8px;
+					color: #555;
+					margin-bottom: 5px;
+				};
+
+				size: A4 portrait;
+				margin: 12px;
 			}
 
 			body {
 				font-family: "Lato", sans-serif;
 				font-weight: 400;
-				font-size: 10px;
+				font-size: 6px;
 				font-style: normal;
 				letter-spacing: 0.2px;
 				color: #202020;
@@ -29,57 +36,55 @@
 			table tbody tr td span {
 				color: red;
 			}
+
+			table th, table td {
+				padding: 3px;
+			}
 		</style>
 	</head>
 
 	<body>
-		<div class="container-fluid border p-2">
+		<div class="container-fluid">
 
-			<div class="d-flex justify-content-between align-items-center mt-3 mb-4">
-				<div><img class="img img-fluid" src="{% static 'images/logo-text.png' %}" style="width: 136px; height: 50px"></div>
+			<div class="d-flex justify-content-between align-items-center my-2">
+				<div class="ps-2"><img class="img img-fluid" src="{% static 'images/logo-text.png' %}" style="width: 100px; height: 37px"></div>
 				<div class="flex-fill">
-					<p class="text-center fw-bold mb-0" style="font-size: 11px">ESPELHO DE PONTO - {{funcionario}}</p>
-					<p class="text-center fw-medium mb-0" style="font-size: 11px">{{periodo.inicio|date:"d/m/Y"}} até {{periodo.final|date:"d/m/Y"}}</p>
+					<p class="text-center fw-bold mb-0" style="font-size: 8px">ESPELHO DE PONTO - {{funcionario}}</p>
+					<p class="text-center fw-medium mb-0" style="font-size: 8px">{{periodo.inicio|date:"d/m/Y"}} até {{periodo.final|date:"d/m/Y"}}</p>
 				</div>
-				<div><p style="font-size: 10px; text-align: end;">Gerado por {{autor}} <br> em {% now "d F Y H:i" %}</p></div>
+				<div class="pe-2"><p class="text-end" style="font-size: 8px">Gerado por {{autor}} <br> em {% now "d F Y H:i" %}</p></div>
 			</div>
 
 			<hr>
 
-			<div class="d-flex justify-content-between">
-					<div class="p-2">
-						<p class="fw-semibold mb-0">Unidade de Negócio</p>
-						<p class="fw-semibold mb-0">CNPJ</p>
-						<p class="fw-semibold mb-0">Colaborador(a)</p>
-						<p class="fw-semibold mb-0">CPF</p>
-						<p class="fw-semibold mb-0">Equipe</p>
-						<p class="fw-semibold mb-0">Cargo</p>
-						<p class="fw-semibold mb-0">Matrícula</p>
-						<p class="fw-semibold mb-0">Data de Admissão</p>
-					</div>
-					<div class="p-2 flex-grow-1">
-						<p class="mb-0">{{dados_empresa.nome}}</p>
-						<p class="mb-0">{{dados_empresa.cnpj}}</p>
-						<p class="mb-0">{{funcionario.nome_completo|default_if_none:"---"}}</p>
-						<p class="mb-0">{{funcionario.cpf|default_if_none:"---"}}</p>
-						<p class="mb-0">{{funcionario.setor.setor|default_if_none:"---"}}</p>
-						<p class="mb-0">{{funcionario.cargo.cargo|default_if_none:"---"}}</p>
-						<p class="mb-0">{{funcionario.matricula|default_if_none:"---"}}</p>
-						<p class="mb-0">{{funcionario.data_contratacao|default_if_none:"---"}}</p>
-					</div>
+			<div class="d-flex justify-content-between mb-2">
+				<div class="p-2">
+					<p class="fw-semibold mb-0">Unidade de Negócio</p>
+					<p class="fw-semibold mb-0">CNPJ</p>
+					<p class="fw-semibold mb-0">Colaborador(a)</p>
+					<p class="fw-semibold mb-0">CPF</p>
+				</div>
+				<div class="p-2 flex-grow-1">
+					<p class="mb-0">{{dados_empresa.nome}}</p>
+					<p class="mb-0">{{dados_empresa.cnpj}}</p>
+					<p class="mb-0">{{funcionario.nome_completo}}</p>
+					<p class="mb-0">{{funcionario.cpf}}</p>
+				</div>
 
 				<div class="p-2">
+					<p class="fw-semibold mb-0">Cargo</p>
+					<p class="fw-semibold mb-0">Matrícula</p>
+					<p class="fw-semibold mb-0">Data de Admissão</p>
+					<p class="fw-semibold mb-0">Contrato</p>
+				</div>
+				<div class="p-2 flex-grow-1">
+					<p class="mb-0">{{funcionario.setor.setor}} - {{funcionario.cargo.cargo}}</p>
+					<p class="mb-0">{{funcionario.matricula}}</p>
+					<p class="mb-0">{{funcionario.data_contratacao}}</p>
 					{% for dia, horarios in jornada.items %}
 						{% if forloop.first %}
-							<p class="fw-semibold mb-1">Horários ({{ horarios.0.contrato }})</p>
+							<p class="mb-0">{{horarios.0.contrato}}</p>
 						{% endif %}
-
-						<p class="mb-1">
-							<b>{{ dia|weekday }}:</b>
-							{% for hora in horarios %}
-								{{hora.hora}}{% if not forloop.last %}-{% endif %}
-							{% endfor %}
-						</p>
 					{% endfor %}
 				</div>
 			</div>
@@ -96,33 +101,29 @@
 							{% endif %}
 						{% endfor %}
 						<th class="bg-body">Saldo</th>
-						<th class="bg-body">H.E. 1 50%</th>
-						<th class="bg-body">H.E. 2 100%</th>
-						<th class="bg-body">Noturno</th>
-						<th class="bg-body">Motivo</th>
+						<th class="bg-body">H.E Total</th>
+						<th class="bg-body">Banco de Horas</th>
+						<th class="bg-body">Observação</th>
 					</tr>
 				</thead>
 				<tbody>
-					{% for data, dados in pontos.items reversed %}
-						{% for dado in dados %}
+					{% for data, funcionarios in pontos.items %}
+						{% for funcionario, dados in funcionarios.items %}
 							<tr>
 								<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
 								{% for nro in nro_colunas %}
-									<td {% if not dado.pontos|length|divisibleby:"2" %} class="text-danger" {% endif %}>{{ dado.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
+									<td {% if not dados.pontos|length|divisibleby:"2" %} class="text-danger" {% endif %}>{{ dados.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
 								{% endfor %}
-								<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-									{{dado.saldo|timedelta}}
+								<td class="{% if "-" in dados.saldo|timedelta %} text-danger {% elif dados.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+									{{dados.saldo|timedelta}}
 								</td>
-								<td class="{% if "-" in dado.he50|timedelta %} text-danger {% elif dado.he50|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-									{{dado.he50|timedelta}}
+								<td class="text-dark-emphasis">
+									{{dados.hora_extra|timedelta}}
 								</td>
-								<td class="{% if "-" in dado.he100|timedelta %} text-danger {% elif dado.he100|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-									{{dado.he100|timedelta}}
+								<td class="text-dark-emphasis fw-bold">
+									{{dados.banco|timedelta}}
 								</td>
-								<td class="{% if "-" in dado.noturno|timedelta %} text-danger {% elif dado.noturno|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-									{{dado.noturno|timedelta}}
-								</td>
-								<td>{{dado.motivo|default_if_none:""}}</td>
+								<td>{{dados.motivo|default_if_none:""}}</td>
 							</tr>
 						{% endfor %}
 					{% endfor %}
@@ -132,7 +133,7 @@
 			<div class="row">
 				<div class="col-6">
 					<table class="table table-sm table-bordered caption-top">
-						<caption style="font-size: 11px">Totais Gerais (Período)</caption>
+						<caption style="font-size: 8px">Totais de Horas Gerais (Período)</caption>
 						<tbody>
 							<tr>
 								<td>Trabalhado</td>
@@ -155,15 +156,15 @@
 				</div>
 			</div>
 
-			<p class="fw-bold text-center" style="margin-top: 8rem; margin-bottom: 5rem;">Assinaturas</p>
+			<p class="fw-bold text-center" style="margin-top: 3rem; margin-bottom: 5rem; font-size: 8px">Assinaturas</p>
 			<div class="d-flex justify-content-around">
 				<div class="text-center">
-					<span>_________________________</span>
+					<span>__________________________________________________</span>
 					<br>
-					<span>Gestor(a)</span>
+					<span>Empregador(a)</span>
 				</div>
 				<div class="text-center">
-					<span>_________________________</span>
+					<span>__________________________________________________</span>
 					<br>
 					<span>Colaborador(a)</span>
 				</div>

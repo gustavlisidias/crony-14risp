@@ -44,19 +44,20 @@
 							<p class="text-white fw-semibold m-0">{{funcionario}}</p>
 							<a href="{% url 'sair' %}" class="text-white fw-semibold m-0 float-end">Sair</a>
 						</div>
-						<img src="{{ funcionario.id|photo:'url' }}" class="img img-fluid rounded-circle mx-1" style="border: 3px solid {{funcionario.get_perfil.time.cor}}; width: 45px; height: 45px;">
+						<img src="{{ funcionario.id|photo:'url' }}" class="img img-fluid rounded-circle mx-1" style="width: 45px; height: 45px;">
 					</div>
 				</div>
 			</div>
 		</nav>
 
 		<div class="container-fluid main-content p-4 min-vh-100">
-			<div class="card w-100 mx-auto mt-4">
+			<form method="POST" class="card w-100 mx-auto mt-4" id="formRegistroExterno">
+				{% csrf_token %}
 				<div class="card-body">
 					<h2 class="text-center">Registro de Ponto Externo</h2>
-					<a class="d-flex" role="button" hx-post="{% url 'registrar-ponto' %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
+					<button class="d-flex" type="submit" style="background: transparent; border: none; justify-self: center;">
 						<img src="{% static 'images/digital.svg' %}" height="260px" width="100%">
-					</a>
+					</button>
 				</div>
 				<div class="card-footer text-body-secondary d-flex flex-nowrap align-items-center">
 					{% if ponto %}
@@ -67,7 +68,7 @@
 						<div class="order-1 pe-2 fs-7 fw-medium">Nenhum ponto registrado</div>
 					{% endif %}
 				</div>
-			</div>
+			</form>
 		</div>
 	</body>
 

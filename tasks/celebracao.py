@@ -6,7 +6,11 @@ import sys
 import django
 import pytz
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
@@ -15,6 +19,7 @@ from datetime import date, datetime
 from django.db.models import Case, CharField, Q, Value, When
 
 from funcionarios.models import Funcionario
+from notifications.signals import notify
 from settings.settings import BASE_DIR
 from web.models import Celebracao
 
@@ -39,7 +44,7 @@ def create_celebrations():
 		for funcionario in celebracoes:
 			if funcionario.celebracao == 'aniversario':
 				texto = f'''Hoje temos um aniversariante na empresa. Nada melhor que celebrar com ele(a), não é mesmo?
-				Vamos dar parabéns para {funcionario.nome_completo}! Ficamos muito felizes que você decidiu passar esta data tão especial conosco!
+				Vamos dar parabéns para {funcionario.get_tag}! Ficamos muito felizes que você decidiu passar esta data tão especial conosco!
 				Feliz aniversário!'''
 				nova_celebracao = Celebracao.objects.create(
 					titulo='Aniversário',
@@ -49,7 +54,7 @@ def create_celebrations():
 				)
 
 			else:
-				texto = f'{funcionario.nome_completo} completa hoje mais um ano na nossa empresa. Bora comemorar com ele(a)??'
+				texto = f'{funcionario.get_tag} completa hoje mais um ano na nossa empresa. Vamos comemorar com ele(a)??'
 				nova_celebracao = Celebracao.objects.create(
 					titulo='Tempo de Empresa',
 					texto=texto,
@@ -57,10 +62,16 @@ def create_celebrations():
 					data_celebracao=hoje
 				)
 
-		if nova_celebracao:
-			nova_celebracao.funcionario.set([i.id for i in funcionarios])
-			nova_celebracao.save()
-			logging.info(f'Nova celebração salva: {nova_celebracao.titulo} de {nova_celebracao.celebrante}')
+			notify.send(
+				sender=Funcionario.objects.get(pk=1).usuario,
+				recipient=funcionario.usuario,
+				verb='Você foi marcado em uma nova celebração!'
+			)
+
+			if nova_celebracao:
+				nova_celebracao.funcionario.set([i.id for i in funcionarios])
+				nova_celebracao.save()
+				logging.info(f'Nova celebração salva: {nova_celebracao.titulo} de {nova_celebracao.celebrante}')
 	
 	else:
 		logging.info(f'Sem celebrações no dia {hoje}')

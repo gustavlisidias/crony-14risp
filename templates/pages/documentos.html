@@ -90,7 +90,7 @@
 						{% for documento in documentos %}
 							<tr>
 								<th scope="row">{{forloop.counter}}</th>
-								<td>{{documento.caminho}}</td>
+								<td>{{documento.get_short_name}}</td>
 								<td>{{documento.tipo}}</td>
 								<td>{{documento.data_documento|date:"d/m/Y"}}</td>
 								<td class="text-center">
@@ -99,6 +99,7 @@
 											<a id="verificar-documento" data-id="{{documento.id}}" role="button" title="Visualizar documento">
 												<i class="fa-duotone fa-eye text-body"></i>
 											</a>
+											<a title="Baixar documento (bloqueado)" disabled><i class="fa-duotone fa-download text-body"></i></a>
 										{% else %}
 											<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" rel="noopener noreferrer" title="Visualizar documento">
 												<i class="fa-duotone fa-eye text-body"></i>
@@ -271,12 +272,6 @@
 							"checkbox", 
 							"types", 
 							"wholerow",
-							// "contextmenu"
-							// "sort",
-							// "search",
-							// "changed",
-							// "conditionalselect",
-							// "dnd"
 						]
 					});
 				});
@@ -340,15 +335,15 @@
 					scrollY: 500,
 				});
 	
-				const dataTableData = data.map(function (documento, index) {
+				const dataTableData = data.map(function (item, index) {
 					return {
 						"row": index + 1,
-						"id": documento.id,
-						"caminho": documento.caminho,
-						"tipo": `${documento.tipo__tipo} - ${documento.tipo__codigo}`,
-						"data": formatarData(documento.data_documento),
-						"viewUrl": `{% url 'stream-documento' 0 'doc' 'visualizar' %}`.replace("0", documento.id),
-						"downloadUrl": `{% url 'stream-documento' 0 'doc' 'download' %}`.replace("0", documento.id)
+						"id": item.id,
+						"caminho": item.documento,
+						"tipo": `${item.tipo} - ${item.codigo}`,
+						"data": formatarData(item.data_documento),
+						"viewUrl": `{% url 'stream-documento' 0 'doc' 'visualizar' %}`.replace("0", item.id),
+						"downloadUrl": `{% url 'stream-documento' 0 'doc' 'download' %}`.replace("0", item.id)
 					};
 				});
 	
@@ -364,7 +359,7 @@
 						render: function (data, type, row) {
 							if (type === "display") {
 								return `<div class="d-flex justify-content-around">
-											<a href="${data.viewUrl}" target="_blank" title="Visualizar documento">
+											<a href="${data.viewUrl}" target="_blank" rel="noopener noreferrer" title="Visualizar documento">
 												<i class="fa-duotone fa-eye text-body"></i>
 											</a>
 											<a href="${data.downloadUrl}" download title="Baixar documento">
@@ -428,15 +423,14 @@
 
 			metaFields: [
 				{
-					id: "enviar",
-					name: "Enviar documento para a pasta do Colaborador",
+					id: "tipo",
+					name: "Tipo Documento *",
 					render: ({ value, onChange }, h) => {
-						return h("input", {
-							type: "checkbox",
-							onChange: (ev) => onChange(ev.target.checked ? "on" : "off"),
-							defaultChecked: value === "off",
+						const options = tiposDocumento.map(tipo => {
+							return h("option", { value: tipo.opcao, selected: tipo.opcao === value }, tipo.label);
 						});
-					},
+						return h("select", { value, onChange: e => onChange(e.target.value) }, [options]);
+					}
 				},
 				{
 					id: "funcionario",
@@ -448,16 +442,6 @@
 						return h("select", { value, onChange: e => onChange(e.target.value) }, [options]);
 					}
 				},
-				{
-					id: "tipo",
-					name: "Tipo Documento",
-					render: ({ value, onChange }, h) => {
-						const options = tiposDocumento.map(tipo => {
-							return h("option", { value: tipo.opcao, selected: tipo.opcao === value }, tipo.label);
-						});
-						return h("select", { value, onChange: e => onChange(e.target.value) }, [options]);
-					}
-				},		
 				{ id: "data", name: "Data Documento", type: "date" }
 			]
 		});
@@ -469,7 +453,7 @@
 			method: "POST",
 			formData: true,
 			bundle: false,
-			allowedMetaFields: ["funcionario", "tipo", "enviar", "data", "csrfmiddlewaretoken"],
+			allowedMetaFields: ["funcionario", "tipo", "data", "csrfmiddlewaretoken"],
 		});
 
 		uppy.on("upload-error", (file, error, response) => {

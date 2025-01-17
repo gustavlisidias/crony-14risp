@@ -1,5 +1,6 @@
 import json
 import re
+import os
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -9,6 +10,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from pathlib import Path
 
 from agenda.models import TipoAtividade
 from configuracoes.models import Jornada, Usuario, Variavel, Contrato
@@ -115,8 +117,6 @@ def ConfiguracoesView(request):
 
 	if request.method == 'POST':
 		# Formulário para alterar/salvar caminhos das pastas, email, cnpj, nome da empresa e inscrição estadual
-		hosts = request.POST.get('hosts')
-		hosts_externo = request.POST.get('hosts_externo')
 		nome_empresa = request.POST.get('nome_empresa')
 		cnpj = request.POST.get('cnpj')
 		insc_estadual = request.POST.get('insc_estadual')
@@ -125,8 +125,6 @@ def ConfiguracoesView(request):
 		caminho_funcionarios = request.POST.get('caminho_funcionarios')
 
 		if not_none_not_empty(caminho_documentos, caminho_funcionarios):
-			Variavel.objects.update_or_create(chave='HOST', defaults={'valor': hosts})
-			Variavel.objects.update_or_create(chave='HOST_EXTERNO', defaults={'valor': hosts_externo})
 			Variavel.objects.update_or_create(chave='NOME_EMPRESA', defaults={'valor': nome_empresa})
 			Variavel.objects.update_or_create(chave='CNPJ', defaults={'valor': cnpj})
 			Variavel.objects.update_or_create(chave='INSC_ESTADUAL', defaults={'valor': insc_estadual})
@@ -170,25 +168,38 @@ def ConfiguracoesView(request):
 
 					###########################################################################
 
+					# Lista com as atividades enviadas pelo cliente
 					tipos_cadastrados = list(TipoAtividade.objects.values_list('tipo', flat=True))
+
+					# Para cada nova atividade, se não foi cadastrada, crio na tabela TipoAtividade
 					for index, tipo in enumerate(novos_tipos):
 						if tipo not in tipos_cadastrados:
 							TipoAtividade(tipo=tipo, cor=novas_cores[index]).save()
 
+					# Para cada atividade cadastrada, se não está listado nas atividades enviados, removo
 					for tipo in tipos_cadastrados:
 						if tipo not in novos_tipos:
 							TipoAtividade.objects.filter(tipo=tipo).delete()
 
 					###########################################################################
 
+					# Lista com os documentos enviados pelo cliente
 					docs_cadastrados = list(TipoDocumento.objects.values_list('tipo', flat=True))
+
+					# Para cada novo documento, se não foi cadastrado, crio na tabela TipoDocumento
 					for index, documento in enumerate(novos_documentos):
 						if documento not in docs_cadastrados:
 							TipoDocumento(tipo=documento, codigo=novos_codigos[index]).save()
 
+					# Para cada documento cadastrado, se não está listado nos documentos enviados, removo
 					for documento in docs_cadastrados:
 						if documento not in novos_documentos:
 							TipoDocumento.objects.filter(tipo=documento).delete()
+
+					# Criar pasta no servidor
+					for i in TipoDocumento.objects.all():
+						pasta = Path(Variavel.objects.get(chave='PATH_DOCS').valor, f'{i.codigo} - {i.tipo}')
+						os.makedirs(pasta, exist_ok=True)
 
 					messages.success(request, 'Dados salvos com sucesso!')
 

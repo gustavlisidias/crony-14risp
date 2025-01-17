@@ -35,13 +35,15 @@ def ferias_funcionarios(funcionarios):
 		if funcionario not in ferias_por_funcionario:
 			ferias_por_funcionario[funcionario] = []
 
+		data_inicio_ferias = funcionario.data_contratacao if funcionario.data_inicio_ferias is None else funcionario.data_inicio_ferias
+
 		if funcionario.get_contrato.tipo == 'est':
 			# Funcionario Estágio tem direito a 15 dias após 6 meses trabalhados
 			# Empresa tem mais 6 meses para liberar as ferias, porém não pode ultrapassar o limite de 1 ano consecutivos de trabalho do funcionario
 
 			# Exemplo: contratação em 01/03/2023, primeiro período de 01/09/2023 até 29/02/2023
 
-			inicio_periodo = funcionario.data_contratacao + relativedelta(months=6)
+			inicio_periodo =  data_inicio_ferias + relativedelta(months=6)
 
 			while inicio_periodo <= date.today():
 				periodo = (inicio_periodo - relativedelta(months=6)).year
@@ -80,9 +82,9 @@ def ferias_funcionarios(funcionarios):
 
 			# Exemplo: contratação em 20/12/1994, primeiro período de 20/12/1995 até 19/11/1996
 
-			for ano in range(funcionario.data_contratacao.year, datetime.now().year + 1):
-				inicio_periodo = add_years(funcionario.data_contratacao.replace(year=ano), 1)
-				final_periodo = add_years(funcionario.data_contratacao.replace(year=ano), 2) - timedelta(days=31)
+			for ano in range(data_inicio_ferias.year, datetime.now().year + 1):
+				inicio_periodo = add_years(data_inicio_ferias.replace(year=ano), 1)
+				final_periodo = add_years(data_inicio_ferias.replace(year=ano), 2) - timedelta(days=31)
 
 				direito = get_saldo(funcionario, inicio_periodo - relativedelta(months=6))
 				saldo = direito

@@ -18,7 +18,7 @@ from pesquisa.models import Pesquisa, Resposta
 from ponto.models import Ponto
 from notifications.models import Notification
 from notifications.signals import notify
-from web.models import Comentario, Humor, Postagem, Ouvidoria, MensagemOuvidoria, Celebracao, Sugestao, Moeda
+from web.models import Comentario, Humor, Postagem, Ouvidoria, MensagemOuvidoria, Celebracao, Moeda
 from web.utils import not_none_not_empty, add_coins
 
 
@@ -40,7 +40,7 @@ def InicioView(request):
 	atividades = Atividade.objects.filter(funcionarios=funcionario, data_finalizacao=None).values('titulo', 'inicio', 'final').order_by('inicio')
 	humor = Humor.objects.filter(funcionario=funcionario, data_cadastro__date=hoje)
 	perfil = Perfil.objects.get(funcionario=funcionario)
-	ponto = Ponto.objects.filter(funcionario=funcionario).order_by('id').last()
+	ponto = Ponto.objects.filter(funcionario=funcionario).order_by('data', 'hora').last()
 	moedas = sum([i.pontuacao for i in Moeda.objects.filter(funcionario=funcionario, fechado=False)])
 
 	pesquisas_pendentes = False
@@ -122,6 +122,16 @@ def AdicionarPostView(request):
 		try:
 			funcionario = Funcionario.objects.get(usuario=request.user)
 			Postagem(titulo=titulo, texto=texto, funcionario=funcionario).save()
+
+			for i in Funcionario.objects.filter(data_demissao=None):
+				if i.get_tag in texto:
+					notify.send(
+						sender=request.user,
+						recipient=i.usuario,
+						verb='Você foi marcado em uma nova postagem!'
+					)
+
+
 			add_coins(funcionario, 5)
 			messages.success(request, 'Postagem criada com sucesso!')
 
@@ -156,6 +166,15 @@ def AdicionarCelebracaoView(request):
 			celebracao = Celebracao.objects.create(titulo=titulo, texto=texto, data_celebracao=data, celebrante=celebrante)
 			celebracao.funcionario.set(funcionarios)
 			celebracao.save()
+
+			for i in Funcionario.objects.filter(data_demissao=None):
+				if i.get_tag in texto:
+					notify.send(
+						sender=request.user,
+						recipient=i.usuario,
+						verb='Você foi marcado em uma nova celebração!'
+					)
+
 			messages.success(request, 'Celebração salva com sucesso!')
 
 		except Exception as e:
@@ -183,6 +202,15 @@ def EditarPostView(request, post):
 			postagem.titulo = titulo
 			postagem.texto = texto
 			postagem.save()
+
+			for i in Funcionario.objects.filter(data_demissao=None):
+				if i.get_tag in texto:
+					notify.send(
+						sender=request.user,
+						recipient=i.usuario,
+						verb='Você foi marcado em uma nova postagem!'
+					)
+
 			messages.success(request, 'Postagem alterada com sucesso!')
 
 		except Exception as e:
@@ -359,25 +387,6 @@ def AdicionarOuvidoriaView(request):
 		messages.error(request, f'Manifestação não foi salva! {e}')
 
 	return redirect('ouvidoria')
-
-
-# Modal
-@login_required(login_url='entrar')
-def AdicionarSugestaoView(request):
-	try:
-		Sugestao(
-			tipo=request.POST.get('tipo'),
-			modelo=request.POST.get('modelo'),
-			mensagem=request.POST.get('mensagem'),
-			funcionario=Funcionario.objects.get(usuario=request.user)
-		).save()
-
-		messages.success(request, 'Sugestão enviada com sucesso')
-
-	except Exception as e:
-		messages.error(request, f'Sugestão não foi enviada: {e}')
-
-	return redirect('inicio')
 
 
 # Page

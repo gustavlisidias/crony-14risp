@@ -108,6 +108,26 @@ def ProcurarCidadesView(request, estado):
 
 	except Exception as e:
 		return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
+	
+
+def FuncionariosTagsView(request):
+	if not request.method == 'GET':
+		return JsonResponse({'mensagem': 'Método não permitido.'}, status=400)
+
+	try:
+		funcionarios = Funcionario.objects.filter(data_demissao=None)
+		tags = {
+            'feeds': [{
+				'marker': '@',
+				'feed': [i.get_tag for i in funcionarios],
+				'minimumCharacters': 1
+            }]
+		}
+
+		return JsonResponse(tags, status=200)
+
+	except Exception as e:
+		return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
 
 
 def EditarOuvidoriaView(request, ticket):

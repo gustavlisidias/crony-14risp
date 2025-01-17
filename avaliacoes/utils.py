@@ -2,6 +2,8 @@ from avaliacoes.models import Nivel
 from funcionarios.models import Perfil
 from ponto.utils import pontos_por_dia
 
+from datetime import datetime, time as ctime
+
 
 def dados_avaliacao(avaliacao, perguntas, respostas):
 	total_respostas = len(respostas)
@@ -9,7 +11,7 @@ def dados_avaliacao(avaliacao, perguntas, respostas):
 	total_participantes_ativos = len(set([i.funcionario for i in respostas]))
 	total_perguntas = len(perguntas)
 	
-	_, score_periodo = pontos_por_dia(avaliacao.inicio, avaliacao.final, avaliacao.avaliado)
+	_, score_periodo = pontos_por_dia(datetime.combine(avaliacao.inicio, ctime()), datetime.combine(avaliacao.final, ctime()), avaliacao.avaliado)
 	time = Perfil.objects.get(funcionario=avaliacao.avaliado).time.titulo.lower()
 
 	cortes = {'diamante': 4.5, 'ouro': 4.0, 'prata': 3.5, 'bronze': 2.5}
@@ -48,7 +50,7 @@ def dados_avaliacao(avaliacao, perguntas, respostas):
 	# Cálculo da nota final
 	nota_final = sum([notas_por_nivel[i]['media'] * Nivel.objects.get(avaliacao=avaliacao, tipo=i).peso for i in notas_por_nivel])
 	if score_periodo:
-		nota_final = (nota_final + score_periodo[avaliacao.avaliado][0]) / 2
+		nota_final = (nota_final + score_periodo[avaliacao.avaliado.id]['media']) / 2
 	
 	# Definindo se usuário está dentro da nota de corte (aprovado)
 	corte = cortes.get(time, 0)
@@ -73,7 +75,7 @@ def dados_avaliacao(avaliacao, perguntas, respostas):
 		'total_participantes': total_participantes,
 		'total_participantes_ativos': total_participantes_ativos,
 		'total_perguntas': total_perguntas,
-		'score': score_periodo[avaliacao.avaliado][0] if score_periodo else 0,
+		'score': score_periodo.get(avaliacao.avaliado.id).get('media', 0),
 		'notas': notas_por_nivel,
 		'comentarios': comentarios,
 		'nota_final': nota_final,

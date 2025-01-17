@@ -32,13 +32,9 @@
 								<div>
 									<p class="ms-3 mb-0">{{colaborador.nome_completo}}</p>
 									<p class="ms-3 mb-0">{{colaborador.cargo}} - {{colaborador.setor}}</p>
-									<p class="ms-3 mb-0">Jornada atual:
-										{% for hora in jornada %}
-											{{hora}}{% if not forloop.last %} - {% endif %}
-										{% endfor %}
-									</p>
-									<p class="ms-3 mb-0">Banco de Horas: <b class="{% if '-' in dados.saldo|timedelta %} text-danger {% else %} text-success {% endif %}">{{dados.saldo|timedelta}}</b></p>
-									<p class="ms-3 mb-0">Score (Período): <b>{{dados.notas.0|floatformat:02}}</b></p>
+									<p class="ms-3 mb-0">Contrato: {{colaborador.get_contrato}}</p>
+									<p class="ms-3 mb-0">Saldo (Período): <b class="{% if '-' in graph.saldo|timedelta %} text-danger {% else %} text-success {% endif %}">{{graph.saldo|timedelta}}</b></p>
+									<p class="ms-3 mb-0">Score (Período): <b>{{graph.notas.media|floatformat:02}}</b></p>
 								</div>
 							</div>
 							<div class="col-md-4 col-12">
@@ -88,30 +84,32 @@
 									{% endfor %}
 									<th scope="col">Total</th>
 									<th scope="col">Saldo</th>
+									<th scope="col">Banco de Horas</th>
 									<th scope="col">Motivo</th>
 								</tr>
 							</thead>
 							<tbody>
-								{% for data, dados in pontos.items reversed %}
-									{% for dado in dados %}
+								{% for data, funcionarios in pontos.items reversed %}
+									{% for funcionario, dados in funcionarios.items %}
 										{% if request.user.get_access != "common" %}
-											<tr role="button" onclick="editarPonto('{{data|date:"Y-m-d"}}', {{dado.pontos|safe}})">
+											<tr role="button" onclick="editarPonto('{{data|date:"Y-m-d"}}', {{dados.pontos|safe}})">
 										{% else %}
 											<tr>
 										{% endif %}
 											<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
-	
 											{% for nro in nro_colunas %}
-												<td>{{ dado.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
-											{% endfor %}
-	
-											<td class="{% if "-" in dado.total|timedelta %} text-danger {% elif dado.total|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-												{{dado.total|timedelta}}
+												<td>{{ dados.pontos|index:forloop.counter0|default_if_none:"--:--" }}</td>
+											{% endfor %}	
+											<td class="{% if "-" in dados.total|timedelta %} text-danger {% elif dados.total|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dados.total|timedelta}}
 											</td>
-											<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-												{{dado.saldo|timedelta}}
+											<td class="{% if "-" in dados.saldo|timedelta %} text-danger {% elif dados.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dados.saldo|timedelta}}
 											</td>
-											<td>{{dado.motivo|default_if_none:""}}</td>
+											<td class="{% if "-" in dados.banco|timedelta %} text-danger {% elif dados.banco|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dados.banco|timedelta}}
+											</td>
+											<td>{{dados.motivo|default_if_none:""}}</td>
 										</tr>
 									{% endfor %}
 								{% endfor %}

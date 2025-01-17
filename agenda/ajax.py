@@ -20,7 +20,7 @@ from agenda.models import (
 )
 from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
-from funcionarios.models import Documento, TipoDocumento
+from funcionarios.models import Funcionario, Documento, TipoDocumento
 from notifications.signals import notify
 from ponto.models import Ponto, Saldos
 from ponto.utils import filtrar_abonos, total_saldo
@@ -109,7 +109,7 @@ def EditarEventoView(request):
 					# Ao finalizar a atividade, a férias é consumada
 					solicitacao = SolicitacaoFerias.objects.get(pk=atividade.solic_ferias.pk)
 					delta = atividade.final.date() - atividade.inicio.date()
-					dados_ferias = ferias_funcionarios(solicitacao.funcionario).get(solicitacao.funcionario.nome_completo, [])
+					dados_ferias = ferias_funcionarios(solicitacao.funcionario).get(solicitacao.funcionario, [])
 
 					# Preciso consultar o estado atual de saldos por período do funcionário
 					# No periodo cadastrado preciso que haja saldo suficiente
@@ -137,39 +137,25 @@ def EditarEventoView(request):
 						data__gte=solicitacao.inicio_ferias,
 						data__lte=solicitacao.final_ferias,
 					).delete()
-					
-					# jornadas = JornadaFuncionario.objects.filter(funcionario=solicitacao.funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem')
-					# data_inicial = solicitacao.inicio_ferias
-
-					# while data_inicial <= solicitacao.final_ferias:
-					# 	weekday = 1 if data_inicial.weekday() + 2 == 8 else data_inicial.weekday() + 2
-
-					# 	for jornada in jornadas.filter(dia=weekday):
-					# 		Ponto(
-					# 			funcionario=solicitacao.funcionario,
-					# 			data=data_inicial,
-					# 			hora=jornada.hora,
-					# 			alterado=True,
-					# 		).save()
-
-					# 	data_inicial += timedelta(days=1)
 
 					jornada_para_abonar = filtrar_abonos(atividade.inicio, atividade.final, solicitacao.funcionario)
 					for dia, pontos in jornada_para_abonar.items():
 						Ponto(
 							funcionario=solicitacao.funcionario,
 							data=dia,
-							hora=time(0, 0),
+							hora=time(),
 							motivo='Férias',
 							alterado=True,
-							encerrado=True
+							encerrado=True,
+							autor_modificacao=Funcionario.objects.get(usuario=request.user)
 						).save()
-						
-						Saldos(
-							funcionario=solicitacao.funcionario,
-							saldo=total_saldo(pontos),
-							data=dia
-						).save()
+
+						if dia.weekday() not in [5, 6]:
+							Saldos(
+								funcionario=solicitacao.funcionario,
+								saldo=total_saldo(pontos),
+								data=dia
+							).save()
 
 				message = 'Evento finalizado com sucesso!' if finalizado else 'Evento alterado com sucesso!'
 				messages.success(request, message)
@@ -236,22 +222,24 @@ def AlterarSolicitacaoFeriasView(request, solic):
 				# Enviar documentos de férias para a documentação do funcionario
 				documentos = DocumentosFerias.objects.filter(solicitacao=solicitacao)
 				if documentos:
-					for documento in documentos:
-						Documento.objects.create(
-							funcionario=solicitacao.funcionario,
-							tipo=TipoDocumento.objects.get(slug='ferias'),
-							documento=documento.documento,
-							caminho=documento.caminho,
-							data_documento=timezone.localdate(),
-						)
-					
+					for documento in documentos:					
 						# Salvo os documentos na pasta do funcionario
 						pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
 						os.makedirs(pasta, exist_ok=True)
-						caminho = os.path.join(pasta, f'{documento.caminho}.pdf')
+
+						data_documento = timezone.localdate()
+						tipo = TipoDocumento.objects.get(slug='ferias')
+						caminho = os.path.join(pasta, f'{data_documento.strftime("%Y-%m-%d")}_{tipo.codigo}_{documento.caminho}')
 
 						with open(caminho, 'wb') as f:
 							f.write(documento.documento)
+
+						Documento.objects.create(
+							funcionario=solicitacao.funcionario,
+							tipo=tipo,
+							caminho=caminho,
+							data_documento=data_documento,
+						)
 
 				# Criar agenda de férias
 				atividade = Atividade.objects.create(

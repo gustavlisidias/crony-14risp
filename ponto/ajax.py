@@ -1,4 +1,3 @@
-import logging
 import json
 import os
 import pytz
@@ -13,6 +12,7 @@ from django.utils import timezone
 from django.utils.timezone import now
 
 from datetime import datetime, timedelta, time
+from pathlib import Path
 
 from configuracoes.models import Variavel, Contrato
 from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario
@@ -20,7 +20,6 @@ from ponto.models import Ponto, SolicitacaoAbono, SolicitacaoPonto, Saldos
 from ponto.report import gerar_pdf_ponto
 from ponto.utils import filtrar_abonos, total_saldo
 from notifications.signals import notify
-from settings.settings import BASE_DIR
 from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty, create_log
 
@@ -30,33 +29,16 @@ def RegistrarPontoView(request):
 	if not request.method == 'POST':
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
-
-	log_file = 'log_pontos.log'
-	log_path = os.path.join(BASE_DIR, f'logs/{log_file}')
-	logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
 	
 	try:
-		registro_externo = Variavel.objects.filter(chave='REGISTRO_EXTERNO').first()
-		host_externo = Variavel.objects.filter(chave='HOST_EXTERNO').first()
-		matriculas_externo = Variavel.objects.filter(chave='MATRICULAS_EXTERNAS').first()
 		funcionario = Funcionario.objects.get(usuario=request.user)
-
-		permitir = registro_externo.valor == 'True' if registro_externo else False
-		hosts = [i.strip() for i in host_externo.valor.split(',')] if host_externo else []
-		matriculas = [i.strip() for i in matriculas_externo.valor.split(',')] if host_externo else []
-
-		logging.info(f'permitir: {permitir}, host: {str(request.get_host())}, hosts_liberados: {hosts}, matriculas_liberadas: {matriculas}, funcionario_matricula: {funcionario.matricula}')
 		
-		if permitir and str(request.get_host().split(':')[0]) in hosts:
-			if funcionario.matricula not in matriculas:
-				messages.error(request, 'Ponto não registrado! Registro externo ou matrícula não configurada!')
-				return JsonResponse({'message': 'error'}, status=400)
-			
-		if not permitir and str(request.get_host().split(':')[0]) in hosts:
-			messages.error(request, 'Ponto não registrado! Registro externo não liberado!')
-			return JsonResponse({'message': 'error'}, status=400)
-		
-		ponto = Ponto.objects.create(funcionario=funcionario, data=timezone.localdate(), hora=timezone.localtime())
+		ponto = Ponto.objects.create(
+			funcionario=funcionario,
+			data=timezone.localdate(),
+			hora=timezone.localtime(),
+			autor_modificacao=funcionario
+		)
 
 		create_log(
 			object_model=Ponto,
@@ -131,7 +113,7 @@ def EditarPontoView(request, data, func):
 				with transaction.atomic():
 					Ponto.objects.filter(funcionario=funcionario, data=data).delete()
 					for hora in novos_pontos:
-						novo_ponto = Ponto.objects.create(funcionario=funcionario, hora=hora, data=data)
+						novo_ponto = Ponto.objects.create(funcionario=funcionario, hora=hora, data=data, autor_modificacao=Funcionario.objects.get(usuario=request.user))
 
 						create_log(
 							object_model=Ponto,
@@ -216,7 +198,8 @@ def AprovarSolicitacaoView(request, solic, categoria):
 						hora=ponto.hora,
 						funcionario=ponto.funcionario,
 						alterado=True,
-						motivo=ponto.motivo
+						motivo=ponto.motivo,
+						autor_modificacao=Funcionario.objects.get(usuario=request.user)
 					).save()
 
 					ponto.status = True
@@ -242,10 +225,11 @@ def AprovarSolicitacaoView(request, solic, categoria):
 					Ponto(
 						funcionario=solicitacao.funcionario,
 						data=dia,
-						hora=time(0, 0),
+						hora=time(),
 						motivo=solicitacao.motivo,
 						alterado=True,
-						encerrado=True
+						encerrado=True,
+						autor_modificacao=Funcionario.objects.get(usuario=request.user)
 					).save()
 				
 				else:
@@ -264,14 +248,22 @@ def AprovarSolicitacaoView(request, solic, categoria):
 					).save()
 
 			if solicitacao.caminho:
+				pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
+				os.makedirs(pasta, exist_ok=True)
+
+				data_documento = timezone.localdate()
 				tipo = TipoDocumento.objects.get(tipo=solicitacao.get_tipo_display())
-				Documento(
+				caminho = os.path.join(pasta, f'{data_documento.strftime("%Y-%m-%d")}_{tipo.codigo}_{solicitacao.caminho}')
+
+				with open(caminho, 'wb') as f:
+					f.write(solicitacao.documento)
+
+				Documento.objects.create(
 					funcionario=solicitacao.funcionario,
 					tipo=tipo,
-					documento=solicitacao.documento,
-					caminho=solicitacao.caminho,
-					data_documento=timezone.localdate(),
-				).save()
+					caminho=caminho,
+					data_documento=data_documento,
+				)
 
 			solicitacao.aprovador = Funcionario.objects.get(usuario=request.user)
 			solicitacao.status = True
@@ -357,7 +349,7 @@ def AprovarSolicitacoesView(request):
 	
 	if not json.loads(request.body) and not request.POST:
 		messages.warning(request, 'Nenhuma solicitação foi alterada pois não foi enviado nenhum dado!')
-		return JsonResponse({'message': 'Solicitações aprovadas com sucesso!'}, status=200)
+		return JsonResponse({'message': 'Nenhuma solicitação foi alterada pois não foi enviado nenhum dado!'}, status=400)
 
 	try:
 		data = json.loads(request.body)
@@ -367,27 +359,29 @@ def AprovarSolicitacoesView(request):
 			if categoria.lower() == 'ajuste':
 				modelo = SolicitacaoPonto
 				message = 'Solicitação de Ajuste de Ponto aprovada'
+
 				solicitacao = modelo.objects.get(pk=solic)
+				solicitacoes = modelo.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data, status=False)
 
 				if request.user.get_access != 'admin' and solicitacao.aprovador.usuario != request.user:
 					messages.warning(request, 'Você não tem permissão para aprovar esta solicitação!')
 					return JsonResponse({'message': 'Você não tem permissão para aprovar esta solicitação!'}, status=200)
 				
-				solicitacoes = SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data, status=False)
 				with transaction.atomic():
 					Ponto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data).delete()
 
-					for ponto in solicitacoes:
+					for i in solicitacoes:
 						Ponto(
-							data=ponto.data, 
-							hora=ponto.hora,
-							funcionario=ponto.funcionario,
+							data=i.data, 
+							hora=i.hora,
+							funcionario=i.funcionario,
 							alterado=True,
-							motivo=ponto.motivo
+							motivo=i.motivo,
+							autor_modificacao=Funcionario.objects.get(usuario=request.user)
 						).save()
 
-						ponto.status = True
-						ponto.save()
+						i.status = True
+						i.save()
 
 					solicitacao.aprovador = Funcionario.objects.get(usuario=request.user)
 					solicitacao.status = True
@@ -409,10 +403,11 @@ def AprovarSolicitacoesView(request):
 						Ponto(
 							funcionario=solicitacao.funcionario,
 							data=dia,
-							hora=time(0, 0),
+							hora=time(),
 							motivo=solicitacao.motivo,
 							alterado=True,
-							encerrado=True
+							encerrado=True,
+							autor_modificacao=Funcionario.objects.get(usuario=request.user)
 						).save()
 					
 					else:
@@ -431,14 +426,22 @@ def AprovarSolicitacoesView(request):
 						).save()
 
 				if solicitacao.caminho:
+					pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
+					os.makedirs(pasta, exist_ok=True)
+
+					data_documento = timezone.localdate()
 					tipo = TipoDocumento.objects.get(tipo=solicitacao.get_tipo_display())
-					Documento(
+					caminho = os.path.join(pasta, f'{data_documento.strftime("%Y-%m-%d")}_{tipo.codigo}_{solicitacao.caminho}')
+
+					with open(caminho, 'wb') as f:
+						f.write(solicitacao.documento)
+
+					Documento.objects.create(
 						funcionario=solicitacao.funcionario,
 						tipo=tipo,
-						documento=solicitacao.documento,
-						caminho=solicitacao.caminho,
-						data_documento=timezone.localdate(),
-					).save()
+						caminho=caminho,
+						data_documento=data_documento,
+					)
 
 				solicitacao.aprovador = Funcionario.objects.get(usuario=request.user)
 				solicitacao.status = True
@@ -475,7 +478,7 @@ def ReprovarSolicitacoesView(request):
 	
 	if not json.loads(request.body) and not request.POST:
 		messages.warning(request, 'Nenhuma solicitação foi alterada pois não foi enviado nenhum dado!')
-		return JsonResponse({'message': 'Solicitações aprovadas com sucesso!'}, status=200)
+		return JsonResponse({'message': 'Nenhuma solicitação foi alterada pois não foi enviado nenhum dado!'}, status=400)
 	
 	try:
 		data = json.loads(request.body)
@@ -483,15 +486,15 @@ def ReprovarSolicitacoesView(request):
 			categoria, solic = ident['value'].split('-')
 
 			if categoria.lower() == 'ajuste':
-				solicitacao = SolicitacaoPonto.objects.get(pk=solic)
-				solicitacoes = SolicitacaoPonto.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data)
 				modelo = SolicitacaoPonto
+				solicitacao = modelo.objects.get(pk=solic)
+				solicitacoes = modelo.objects.filter(funcionario=solicitacao.funcionario, data=solicitacao.data)
 				message = 'Solicitação de Ajuste de Ponto excluída'
 
 			else:
-				solicitacao = SolicitacaoAbono.objects.get(pk=solic)
-				solicitacoes = SolicitacaoAbono.objects.filter(funcionario=solicitacao.funcionario, inicio=solicitacao.inicio, final=solicitacao.final)
 				modelo = SolicitacaoAbono
+				solicitacao = modelo.objects.get(pk=solic)
+				solicitacoes = modelo.objects.filter(funcionario=solicitacao.funcionario, inicio=solicitacao.inicio, final=solicitacao.final)
 				message = 'Solicitação de Abono excluída'
 
 			create_log(

@@ -1,0 +1,31 @@
+{% include "modals/chat/mensagem-massa.html" %}
+
+<div id="chat-main" class="floating-chat">
+	<i id="chat-icon" class="fa-solid fa-comments fa-lg"></i>
+	<div class="chat">
+		<div class="header bg-body-tertiary shadow-sm">
+			<span class="title">Chat</span>
+			{% if request.user.get_access != "common" %}
+				<button id="btn-chat-massive" type="button" class="btn-close me-4" title="Mensagem em massa (em desenvolvimento)" data-bs-toggle="modal" data-bs-target="#modalMensagemHorde">
+					<i class="fa-solid fa-users fa-xl"></i>
+				</button>
+			{% endif %}
+			<button id="btn-chat-close" type="button" class="btn-close me-2" title="Minimizar chat"><i class="fa-solid fa-minus fa-xl"></i></button>
+		</div>
+		<div class="mb-3 px-2 py-1 overflow-y-auto overflow-x-hidden">
+			<input id="input-search-users" class="form-control my-3 px-3" type="text" placeholder="Pesquisar..." oninput="filterUsers()">
+			<h6 id="chat-title-rooms" class="mb-2 px-1">Grupos</h6>
+			<div id="chat-list-rooms" class="py-1 px-2 mb-3"></div>
+			
+			<hr id="chat-divider-rooms">
+
+			<h6 id="chat-title-recent" class="mb-2 px-1">Conversas Recentes</h6>
+			<div id="chat-list-recent" class="py-1 px-2 mb-3"></div>
+
+			<hr id="chat-divider-recent">
+
+			<h6 id="chat-title-users" class="mb-2 px-1">Colaboradores</h6>
+			<div id="chat-list-users" class="py-1 px-2"></div>
+		</div>
+	</div>
+</div>

@@ -6,14 +6,15 @@ from funcionarios.models import Funcionario
 
 
 class Ponto(models.Model):
-	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
+	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='ponto_funcionario', verbose_name='Funcionário')
 	data = models.DateField(verbose_name='Data')
 	hora = models.TimeField(verbose_name='Hora')
 	alterado = models.BooleanField(default=False, verbose_name='Alterado')
 	motivo = models.TextField(null=True, blank=True, verbose_name='Motivo')
 	encerrado = models.BooleanField(default=False, verbose_name='Encerrado')
 	data_fechamento = models.DateField(blank=True, null=True, verbose_name='Encerrado')
-	data_cadastro = models.DateTimeField(auto_now_add=True, null=True, verbose_name='Data de Cadastro')
+	autor_modificacao = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='ponto_autor', editable=False, verbose_name='Autor da Modificação')
+	data_modificacao = models.DateTimeField(auto_now_add=True, null=True, editable=False, verbose_name='Data de Modificação')
 
 	def __str__(self):
 		return f'{self.funcionario} em {self.data} as {self.hora}'

@@ -47,7 +47,7 @@
 									<h5 class="mb-1">Documentos</h5>
 									<i class="fa-thin fa-arrow-up-right-from-square fa-xl text-body"></i>
 								</div>
-								<p class="my-1">Documentos gerais não vinculados a funcionarios</p>
+								<p class="my-1">Documentos gerais não vinculados à colaboradores</p>
 							</a>
 						</div>
 					</form>
@@ -74,11 +74,6 @@
 					</div>
 				</li>
 
-				<!-- Ouvidoria -->
-				{% comment %} <li class="nav-item dropstart me-4" title="Ouvidoria">
-					<a class="nav-link" href="{% url 'ouvidoria' %}" role="button"><i class="fa-light fa-handshake"></i></a>
-				</li> {% endcomment %}
-				
 				<!-- Tema -->
 				<li class="nav-item dropstart me-3" title="Trocar tema">
 					<div class="form-check form-switch ms-1">
@@ -86,8 +81,13 @@
 					</div>
 				</li>
 
+				<!-- Ouvidoria -->
+				<!-- <li class="nav-item dropstart me-4" title="Ouvidoria">
+					<a class="nav-link" href="{% url 'ouvidoria' %}" role="button"><i class="fa-light fa-handshake"></i></a>
+				</li> -->
+
 				<!-- Notifications -->
-				<li class="nav-item dropstart dropdown-notifications me-4">
+				<li class="nav-item dropstart dropdown-notifications me-4" title="Notificações">
 					<a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 						<i class="fa-thin fa-bell"></i>
 						{% if notificacoes %}
@@ -127,19 +127,31 @@
 					</div>
 				</li>
 
+				<!-- Novos Documentos -->
+				{% if funcionario.has_docpendentes %}
+					<li class="nav-item dropstart me-3" title="Documentos Pendentes">
+						<a class="nav-link" href="{% url 'editar-funcionario' funcionario.id %}" role="button">
+							<i class="fa-regular fa-folder-open"></i>
+							<span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle" style="padding: 0.35rem !important; top: 10px !important; left: 24px !important;">
+								<span class="visually-hidden">Novos Documentos</span>
+							</span>
+						</a>
+					</li>
+				{% endif %}
+
 				<!-- Profile -->
 				<li class="nav-item dropdown dropdown-profile">
 					<a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-						<img src="{{ funcionario.id|photo:'url' }}" class="img img-fluid rounded-circle me-2">
+						<img src="{{ funcionario.id|photo:'url' }}" class="img img-fluid rounded-circle me-2" style="width: 40px; height: 40px;">
 						<span class="ml-2 d-none d-lg-inline-block">{{funcionario}}</span>
 					</a>
 					<div class="dropdown-menu dropdown-menu-end">
 						<a class="dropdown-item" href="{% url 'perfil' %}"><i class="fa-thin fa-user text-body"></i> Perfil</a>
 						{% if request.user.get_access == "admin" %}
 							<a class="dropdown-item" href="{% url 'configuracoes' %}"><i class="fa-thin fa-gear text-body"></i> Configurações</a>
-							<a class="dropdown-item" href="/admin" target="_blank" rel="noopener noreferrer"><i class="fa-thin fa-chart-candlestick text-body"></i> Painel</a>
+							<a class="dropdown-item" href="/admin/" target="_blank" rel="noopener noreferrer"><i class="fa-thin fa-chart-candlestick text-body"></i> Painel</a>
 						{% endif %}
-						{% comment %} <a class="dropdown-item" href="{% url 'score' %}"><i class="fa-thin fa-star text-body"></i> Ranking</a> {% endcomment %}
+						<!-- <a class="dropdown-item" href="{% url 'score' %}"><i class="fa-thin fa-star text-body"></i> Ranking</a> -->
 						<a class="dropdown-item" href="{% url 'sair' %}"><i class="fa-thin fa-power-off text-body"></i> Sair</a>
 					</div>
 				</li>

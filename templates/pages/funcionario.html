@@ -256,12 +256,12 @@
 													{% for documento in documentos %}
 														<tr>
 															<th scope="row">{{ forloop.counter }}</th>
-															<td>{{ documento.caminho }}</td>
+															<td>{{ documento.get_short_name }}</td>
 															<td>{{ documento.tipo }}</td>
 															<td>{{ documento.data_documento|date:"d/m/Y" }}</td>
 															<td class="text-center">
 																<div class="d-flex justify-content-around">
-																	<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" rel="noopener noreferrer" title="Visualizar documento">
+																	<a href="{% url 'stream-documento' documento.id 'doc' 'visualizar' %}" target="_blank" rel="noopener noreferrer" title="Visualizar documento" {% if not documento.caminho|allowed_file %} disabled {% endif %}>
 																		<i class="fa-duotone fa-eye text-body"></i>
 																	</a>
 																	<a href="{% url 'stream-documento' documento.id 'doc' 'download' %}" download title="Baixar documento">
@@ -321,8 +321,8 @@
 
 									<span class="text-muted fs-7">Score de Pontualidade</span>
 									<div class="progress position-relative">
-										<div class="progress-bar bg-secondary" role="progressbar" style="width: {{graph.scores.1|floatformat:"3u"}}%" aria-valuenow="{{graph.scores.1|floatformat:"3u"}}" aria-valuemin="0" aria-valuemax="100"></div>
-										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.scores.0|floatformat:2}}</small>
+										<div class="progress-bar bg-secondary" role="progressbar" style="width: {{graph.scores.perc|floatformat:"3u"}}%" aria-valuenow="{{graph.scores.perc|floatformat:"3u"}}" aria-valuemin="0" aria-valuemax="100"></div>
+										<small class="justify-content-center text-light fs-7 d-flex position-absolute w-100">{{graph.scores.media|floatformat:2}}</small>
 									</div>
 
 									<div class="card bg-primary mt-5 mx-auto p-0" style="width: 13.25rem; height: 4rem;">
@@ -331,7 +331,7 @@
 												<i class="fa-thin fa-clock fa-2xl text-light"></i>
 												<div class="text-center">
 													<span class="text-light fs-7 fw-bold">
-														Saldo Bando de Horas <br> {{graph.saldo|timedelta}}
+														Banco de Horas <br> {{graph.banco|timedelta}}
 													</span>
 												</div>
 											</div>
@@ -693,6 +693,47 @@
 
 		//####################################################################################
 
+		document.getElementById("jornadaContrato").addEventListener("change", function(event) {
+			const opcao = event.target.options[event.target.selectedIndex].text;
+			const horarios = opcao.split("-").slice(1).map(horario => horario.trim().split("/")).flat();
+			const semana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+			$(".table-jornada thead tr").empty();
+			
+			$(".table-jornada thead tr").append(`<th scope="col">Dia</th>`);
+			horarios.forEach((hora, index) => {
+				let tipo = index % 2 == 0 ? "Entrada" : "Saída";
+				$(".table-jornada thead tr").append(`<th scope="col">${tipo}</th>`);
+			});
+
+			$(".table-jornada tbody").empty();
+
+			semana.forEach((dia, index) => {
+				let tipo = index % 2 == 0 ? "Entrada" : "Saída";
+
+				$(".table-jornada tbody").append(`
+					<tr class="tr-${index+1}"><th scope="row"><input type="hidden" name="dia" id="jornadaDia" value="${index+1}">${dia}</th></tr>
+				`);
+
+				horarios.forEach(hora => {
+					let hora_dia = dia != "Domingo" && dia != "Sábado" ? hora : "00:00";
+
+					$(`.table-jornada tbody .tr-${index+1}`).append(`
+						<td>
+							<input type="time" class="form-control" name="${tipo}" id="jornada${tipo}" value="${hora_dia}" disabled>
+						</td>
+					`);
+				});
+			});
+
+			$(".text-attention").remove();
+			$("#jornadaContrato").after(`<p class="text-attention">
+				VOCÊ PODERÁ EDITAR OS HORÁRIOS APÓS SALVAR O NOVO CONTRATO! PARA CANCELAR CLIQUE <a href="{% url 'editar-funcionario' colaborador.id %}">AQUI</a>
+			</p>`);			
+		});
+
+		//####################################################################################
+
 		// Atualizar listagem de cidades, selecionando a cidade atual do funcionário
 		const cidade = document.getElementById("funcionarioCidade").value;
 		updateSelectCidades(document.getElementById("funcionarioEstado").value);
@@ -767,8 +808,8 @@
 
 		// Construção do gráfico de Pontualidade
 		const dadosPonto = [
-			{% for data, dados in pontos.items %}
-				{% for dado in dados %}
+			{% for data, funcionarios in pontos.items %}
+				{% for funcionario, dado in funcionarios.items %}
 					{
 						"total": "{{ dado.total|timedelta }}",
 						"saldo": "{{ dado.saldo|timedelta }}",

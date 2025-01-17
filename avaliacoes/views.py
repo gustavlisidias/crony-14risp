@@ -162,10 +162,12 @@ def AvaliacaoDetalhesView(request, avaid):
 		else:
 			try:
 				for item in PerguntaAvaliacao.objects.filter(avaliacao=avaliacao):
+					nota = float(request.POST.get(f'resposta-nota[{item.pergunta.id}]')) if request.POST.get(f'resposta-nota[{item.pergunta.id}]') else 0
+					observacao = request.POST.get(f'resposta-observacao[{item.pergunta.id}]')
 					Resposta(
 						referencia=item,
-						nota=request.POST.get(f'resposta-nota[{item.id}]'),
-						observacao=request.POST.get(f'resposta-observacao[{item.id}]'),
+						nota=nota,
+						observacao=observacao,
 						funcionario=funcionario
 					).save()
 

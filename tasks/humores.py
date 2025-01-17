@@ -6,7 +6,11 @@ import sys
 import django
 import pytz
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 

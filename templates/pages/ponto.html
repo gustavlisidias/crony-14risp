@@ -110,26 +110,26 @@
 								</tr>
 							</thead>
 							<tbody>
-								{% for data, dados in pontos.items reversed %}
-									{% for dado in dados %}
+								{% for data, funcionarios in pontos.items reversed %}
+									{% for funcionario, dados in funcionarios.items %}
 										<tr>
 											<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
-											<td>{{dado.funcionario}}</td>
-											<td>{{dado.pontos|index:0|default_if_none:"--:--"}}</td>
-											{% with last=dado.pontos|length|add:-1 %}
-												<td>{{dado.pontos|index:last|default_if_none:"--:--"}}</td>
+											<td>{{dados.nome}}</td>
+											<td>{{dados.pontos|index:0|default_if_none:"--:--"}}</td>
+											{% with last=dados.pontos|length|add:-1 %}
+												<td>{{dados.pontos|index:last|default_if_none:"--:--"}}</td>
 											{% endwith %}
-											<td class="{% if "-" in dado.total|timedelta %} text-danger {% elif dado.total|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-												{{dado.total|timedelta}}
+											<td class="{% if "-" in dados.total|timedelta %} text-danger {% elif dados.total|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dados.total|timedelta}}
 											</td>
-											<td class="{% if "-" in dado.saldo|timedelta %} text-danger {% elif dado.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
-												{{dado.saldo|timedelta}}
+											<td class="{% if "-" in dados.saldo|timedelta %} text-danger {% elif dados.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
+												{{dados.saldo|timedelta}}
 											</td>
 											<td class="text-center">
-												{% if dado.pendente %}
+												{% if dados.pendente %}
 													<i class="fa-light fa-clock-rotate-left fa-lg text-warning" title="Solicitação pendente"></i>
 												{% else %}
-													<a class="text-primary" role="button" title="Editar ponto" onclick="editarPonto({funcionario: '{{dado.funcionario.id}}', data: '{{data|date:'Y-m-d'}}'}, {{data|date:'Y-m-d'|is_today}}, {{dado.encerrado}}, {{dado.pontos|length}})">
+													<a class="text-primary" role="button" title="Editar ponto" onclick="editarPonto({funcionario: '{{funcionario}}', data: '{{data|date:'Y-m-d'}}'}, {{data|date:'Y-m-d'|is_today}}, {{dados.encerrado}}, {{dados.pontos|length}})">
 														<i class="fa-duotone fa-calendar-lines-pen fa-lg text-body"></i>
 													</a>
 												{% endif %}
@@ -298,19 +298,19 @@
 				<small>O score de pontualidade atual se baseia apenas nos registros de ponto do mês, ao realizar o fechamento do mês este valor pode ser alterado dependendo da quantidade de Solicitações de Abono que você possuir. Para manter uma boa pontuação no score evite faltas desnecessárias e sempre as justifique.</small>
 				
 				<div class="progress mt-2 mb-4">
-					{% if graph.notas.0 >= 4.5 %}
-						<div class="progress-bar bg-success progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
-					{% elif graph.notas.0 >= 4 %}
-						<div class="progress-bar bg-secondary progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
-					{% elif graph.notas.0 >= 3.5 %}
-						<div class="progress-bar bg-warning progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
+					{% if graph.notas.media >= 4.5 %}
+						<div class="progress-bar bg-success progress-bar-striped" role="progressbar" style="width: {{graph.notas.perc|floatformat:0}}%;"></div>
+					{% elif graph.notas.media >= 4 %}
+						<div class="progress-bar bg-secondary progress-bar-striped" role="progressbar" style="width: {{graph.notas.perc|floatformat:0}}%;"></div>
+					{% elif graph.notas.media >= 3.5 %}
+						<div class="progress-bar bg-warning progress-bar-striped" role="progressbar" style="width: {{graph.notas.perc|floatformat:0}}%;"></div>
 					{% else %}
-						<div class="progress-bar bg-danger progress-bar-striped" role="progressbar" style="width: {{graph.notas.1|floatformat:0}}%;"></div>
+						<div class="progress-bar bg-danger progress-bar-striped" role="progressbar" style="width: {{graph.notas.perc|floatformat:0}}%;"></div>
 					{% endif %}
 				</div>
 
 				<div class="d-flex justify-content-around mb-3">
-					<p class="fw-bold">Score de Pontualidade: {{graph.notas.0|floatformat:2}}</p>
+					<p class="fw-bold">Score de Pontualidade: {{graph.notas.media|floatformat:2}}</p>
 					<p class="fw-bold">Total Trabalhado: {{graph.total|timedelta}}</p>
 					<p class="fw-bold">Saldo de Horas: {{graph.saldo|timedelta}}</p>
 				</div>
@@ -667,13 +667,16 @@
 
 		//####################################################################################
 
-		const numberPages = {{funcionarios|length}} > 1 ? {{funcionarios|length}} : 7;
+		const numberPages = {{funcionarios|length}} > 1 ? {{funcionarios|length}} : -1;
 		const hasAccess = "{{request.user.get_access}}" !== "common" ? true : false;
+		const lengthMenuConfig = numberPages > 0 
+			? [[numberPages, 100, 250, 500, -1], [numberPages, 100, 250, 500, "Tudo"]] 
+			: [[100, 250, 500, -1], [100, 250, 500, "Tudo"]];
 		
 		const config = Object.assign(
 			datatables_config, {
 			scrollY: 500,
-			lengthMenu: [[numberPages, 100, 250, 500, -1], [numberPages, 100, 250, 500, "Tudo"]],
+			lengthMenu: lengthMenuConfig,
 		});
 
 		const config2 = Object.assign({}, datatables_config, {
@@ -860,11 +863,11 @@
 	document.addEventListener("DOMContentLoaded", function () {
 		if (document.getElementById("saldoGrafico")) {
 			const dados = [
-				{% for data, dados in pontos.items %}
-					{% for dado in dados %}
+				{% for data, funcionarios in pontos.items %}
+					{% for funcionario, dados in funcionarios.items %}
 						{
 							data: `{{ data|date:"d/m/Y" }}`,
-							banco: parseFloat("{{ dado.saldo|floatdelta|floatformat:2 }}".replace(",", "."))
+							banco: parseFloat("{{ dados.saldo|floatdelta|floatformat:2 }}".replace(",", "."))
 						},
 					{% endfor %}
 				{% endfor %}

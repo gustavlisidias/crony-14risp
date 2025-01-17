@@ -3,6 +3,7 @@ import datetime
 from django import template
 from configuracoes.models import Jornada
 from funcionarios.models import Funcionario, Perfil
+from funcionarios.utils import allowed_extensions
 
 
 register = template.Library()
@@ -167,3 +168,10 @@ def filter_range(obj, value):
 		return obj[:value]
 	else:
 		return obj
+
+
+@register.filter
+def allowed_file(obj):
+	if obj.split('.')[-1] in allowed_extensions:
+		return True
+	return False

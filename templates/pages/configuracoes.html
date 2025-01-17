@@ -28,17 +28,6 @@
 					<div class="tab-pane fade show active" id="pills-documentos" role="tabpanel" aria-labelledby="pills-documentos-tab" tabindex="0">
 						<form method="POST" action="" id="formConfiguracaoDocumentos">
 							{% csrf_token %}
-							<h6>SITE</h6>
-							<hr>
-							<div class="form-group mb-3">
-								<label for="geralHosts">Hosts</label>
-								<input type="text" class="form-control" id="geralHosts" name="hosts" {% for variavel in variaveis %}{% if variavel.chave == "HOST" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
-							</div>
-							<div class="form-group mb-3">
-								<label for="geralHostsExterno">Hosts Externos</label>
-								<input type="text" class="form-control" id="geralHostsExterno" name="hosts_externo" {% for variavel in variaveis %}{% if variavel.chave == "HOST_EXTERNO" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
-							</div>
-
 							<h6 class="mt-5">IDENTIFICAÇÃO DA EMPRESA</h6>
 							<hr>
 							<div class="form-group mb-3">

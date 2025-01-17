@@ -16,11 +16,11 @@
 			<div>Colaboradores</div>
 			{% if request.user.get_access == "admin" %}
 				<div class="btn-group">
-					<button class="btn btn-secondary text-light" type="button" title="Novo Colaborador" data-bs-toggle="modal" data-bs-target="#modalAdicionarFuncionario">
+					<button class="btn btn-secondary text-light" type="button" title="Novo colaborador" data-bs-toggle="modal" data-bs-target="#modalAdicionarFuncionario">
 						Adicionar
 					</button>
 					<form method="GET" action="{% url 'exportar-funcionarios' %}" class="btn btn-secondary p-0 m-0" id="formExportarFuncionarios" onsubmit="gerarRelatorio()">
-						<button class="btn btn-secondary text-light" type="submit" title="Exportar Colaboradores">
+						<button class="btn btn-secondary text-light" type="submit" title="Exportar colaboradores">
 							Exportar
 						</button>
 					</form>

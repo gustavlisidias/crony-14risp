@@ -14,7 +14,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 from slugify import slugify
 
 from agenda.models import Atividade, Avaliacao
@@ -112,6 +112,8 @@ def EditarFuncionarioView(request, func):
 	filtro_nome = request.GET.get('nome')
 	filtro_tipo = request.GET.getlist('tipo')
 
+	Documento.objects.filter(funcionario=funcionario).update(lido=True)
+
 	setores = Setor.objects.all().order_by('setor')
 	cargos = Cargo.objects.all().order_by('cargo')
 	estados = Estado.objects.all().order_by('name')
@@ -179,22 +181,24 @@ def EditarFuncionarioView(request, func):
 
 	registros = Ponto.objects.filter(funcionario=colaborador).order_by('data', 'hora')
 	if registros:
-		pontos, scores = pontos_por_dia(registros.first().data, registros.last().data, colaborador)
+		pontos, scores = pontos_por_dia(datetime.combine(registros.first().data, time()), datetime.combine(registros.last().data, time()), colaborador)
 	else:
 		pontos, scores = None, None
 	
-	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'debito': timedelta(seconds=0), 'credito': timedelta(seconds=0)}
+	graph = {'scores': scores.get(colaborador.id), 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'debito': timedelta(seconds=0), 'credito': timedelta(seconds=0)}
 	if pontos:
-		graph['scores'] = list(scores.values())[0]
-		for _, dados in pontos.items():
-			for dado in dados:
-				graph['total'] += dado['total']
-				graph['saldo'] += dado['saldo']
+		for _, funcs in pontos.items():
+			for func, dados in funcs.items():
+				graph['total'] += dados['total']
+				graph['saldo'] += dados['saldo']
 
-				if dado['saldo'] < timedelta(0):
-					graph['debito'] += dado['saldo']
+				if dados['saldo'] < timedelta(0):
+					graph['debito'] += dados['saldo']
 				else:
-					graph['credito'] += dado['saldo']
+					graph['credito'] += dados['saldo']
+		
+		# Arrumar posteriormente
+		graph['banco'] = graph['saldo']
 
 	if request.method == 'POST':
 		if request.user.get_access == 'common':
@@ -299,8 +303,8 @@ def EditarFuncionarioView(request, func):
 
 		# Atualização e edição do histórico de jornadas
 		elif not_none_not_empty(request.POST.get('inicio_vigencia')):
-			if len([i for i in request.POST.getlist('final_vigencia') if i is not None and i != '']) != 1:
-				messages.error(request, 'Apenas 1 jornada pode estar ativa! Final Vigencia deve ter uma célula vazia!')
+			if len([i for i, v in enumerate(request.POST.getlist('final_vigencia')) if v == '']) != 1:
+				messages.error(request, 'Funcionário deve ter apenas uma jornada ativa (final da vigência vazia)!')
 				return redirect('editar-funcionario', colaborador.id)
 
 			for index, agrupador in enumerate(request.POST.getlist('agrupador')):

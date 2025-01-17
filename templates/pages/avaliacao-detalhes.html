@@ -165,6 +165,10 @@
 		});
 
 		$(".table-respostas").DataTable(config);
+
+		setTimeout(() => {
+			window.editors["avaliacaoDescricao"].setData(`{{avaliacao.descricao|safe}}`);
+		}, 500);
 	});
 </script>
 
@@ -182,104 +186,103 @@
 			{% endfor %}
 		];
 
-		// Clear existing navigation and content
-		$("#smartwizard .nav").empty();
-		$("#smartwizard .tab-content").empty();
 		modal.find("#modalResponderAvaliacaoLabel").html(`Responder a Avaliação - {{avaliacao.titulo}}`);
 
-		// Create navigation items and tab content for each question
-		perguntas.forEach((pergunta, index) => {
-			// Add navigation tab for each question
-			const navItem = document.createElement("li");
-			navItem.className = "nav-item";
-			navItem.innerHTML = `<a class="nav-link" href="#pergunta-${index + 1}"><div class="num">${index + 1}</div></a>`;
-			$("#smartwizard .nav").append(navItem);
+		if ($("#smartwizard .nav .nav-item").length == 0) {
+			// Create navigation items and tab content for each question
+			perguntas.forEach((pergunta, index) => {
+				// Add navigation tab for each question
+				const navItem = document.createElement("li");
+				navItem.className = "nav-item";
+				navItem.innerHTML = `<a class="nav-link" href="#pergunta-${index + 1}"><div class="num">${index + 1}</div></a>`;
+				$("#smartwizard .nav").append(navItem);
 
-			// Create step content
-			const stepContent = document.createElement("div");
-			stepContent.className = "tab-pane";
-			stepContent.id = `step-${index + 1}`;
-			
-			// Add label for the question
-			stepContent.innerHTML = `<p class="text-center fst-italic">${pergunta.titulo}</p>`;
+				// Create step content
+				const stepContent = document.createElement("div");
+				stepContent.className = "tab-pane";
+				stepContent.id = `step-${index + 1}`;
+				
+				// Add label for the question
+				stepContent.innerHTML = `<p class="text-center fst-italic">${pergunta.titulo}</p>`;
 
-			// Add desc text for the question
-			const descText = document.createElement("p");
-			descText.className = "text-center";
-			descText.innerHTML = `${pergunta.texto}`;
+				// Add desc text for the question
+				const descText = document.createElement("p");
+				descText.className = "text-center";
+				descText.innerHTML = `${pergunta.texto}`;
 
-			stepContent.appendChild(descText);
+				stepContent.appendChild(descText);
 
-			// Add stars note for the question
-			const starRow = document.createElement("div");
-			starRow.className = "row my-3";
+				// Add stars note for the question
+				const starRow = document.createElement("div");
+				starRow.className = "row my-3";
 
-			const starCol = document.createElement("div");
-			starCol.className = "col text-center";
-			starCol.innerHTML = `
-				<div class="rating">
-					<input value="5" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][5]" type="radio">
-					<label for="resposta-nota[${pergunta.id}][5]"></label>
-					<input value="4" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][4]" type="radio">
-					<label for="resposta-nota[${pergunta.id}][4]"></label>
-					<input value="3" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][3]" type="radio">
-					<label for="resposta-nota[${pergunta.id}][3]"></label>
-					<input value="2" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][2]" type="radio">
-					<label for="resposta-nota[${pergunta.id}][2]"></label>
-					<input value="1" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][1]" type="radio">
-					<label for="resposta-nota[${pergunta.id}][1]"></label>
-				</div>
-			`;
+				const starCol = document.createElement("div");
+				starCol.className = "col text-center";
+				starCol.innerHTML = `
+					<div class="rating">
+						<input value="5" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][5]" type="radio">
+						<label for="resposta-nota[${pergunta.id}][5]"></label>
+						<input value="4" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][4]" type="radio">
+						<label for="resposta-nota[${pergunta.id}][4]"></label>
+						<input value="3" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][3]" type="radio">
+						<label for="resposta-nota[${pergunta.id}][3]"></label>
+						<input value="2" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][2]" type="radio">
+						<label for="resposta-nota[${pergunta.id}][2]"></label>
+						<input value="1" name="resposta-nota[${pergunta.id}]" id="resposta-nota[${pergunta.id}][1]" type="radio">
+						<label for="resposta-nota[${pergunta.id}][1]"></label>
+					</div>
+				`;
 
-			starRow.appendChild(starCol);
-			stepContent.appendChild(starRow);
-			
-			// Add textarea for observations
-			const textAreaDiv = document.createElement("div");
-			textAreaDiv.className = "form-floating";
+				starRow.appendChild(starCol);
+				stepContent.appendChild(starRow);
+				
+				// Add textarea for observations
+				const textAreaDiv = document.createElement("div");
+				textAreaDiv.className = "form-floating";
 
-			const textArea = document.createElement("textarea");
-			textArea.className = "form-control";
-			textArea.placeholder = "";
-			textArea.name = `resposta-observacao[${pergunta.id}]`;
-			textArea.id = `respostaObservacao[${pergunta.id}]`;
-			textArea.required = false;
+				const textArea = document.createElement("textarea");
+				textArea.className = "form-control";
+				textArea.placeholder = "";
+				textArea.name = `resposta-observacao[${pergunta.id}]`;
+				textArea.id = `respostaObservacao[${pergunta.id}]`;
+				textArea.required = false;
 
-			const textAreaLabel = document.createElement("label");
-			textAreaLabel.for = `respostaObservacao[${pergunta.id}]`;
-			textAreaLabel.innerHTML = "Observações";
+				const textAreaLabel = document.createElement("label");
+				textAreaLabel.for = `respostaObservacao[${pergunta.id}]`;
+				textAreaLabel.innerHTML = "Observações";
 
-			textAreaDiv.appendChild(textArea);
-			textAreaDiv.appendChild(textAreaLabel);
-			stepContent.appendChild(textAreaDiv);
+				textAreaDiv.appendChild(textArea);
+				textAreaDiv.appendChild(textAreaLabel);
+				stepContent.appendChild(textAreaDiv);
 
-			// Append step content to the tab content container
-			$("#smartwizard .tab-content").append(stepContent);
-		});
+				// Append step content to the tab content container
+				$("#smartwizard .tab-content").append(stepContent);
+			});
 
-		// Initialize SmartWizard with settings
-		$("#smartwizard").smartWizard({
-			theme: "dots",
-			justified: true,
-			autoAdjustHeight: true,
-			lang: {
-				next: "Próximo",
-				previous: "Anterior",
-			},
-			toolbar: {
-				position: "bottom",
-				showNextButton: true,
-				showPreviousButton: true,
-				extraHtml: `
-					<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-					<button type="submit" class="btn btn-info text-light">Enviar</button>
-				`
-			},
-			transition: {
-				animation: "fade",
-				speed: "400",
-			},
-		});
+			// Initialize SmartWizard with settings
+			$("#smartwizard").smartWizard({
+				theme: "dots",
+				justified: true,
+				autoAdjustHeight: true,
+				lang: {
+					next: "Próximo",
+					previous: "Anterior",
+				},
+				toolbar: {
+					position: "bottom",
+					showNextButton: true,
+					showPreviousButton: true,
+					extraHtml: `
+						<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+						<button type="submit" class="btn btn-info text-light">Enviar</button>
+					`
+				},
+				transition: {
+					animation: "fade",
+					speed: "400",
+				},
+			});
+		};
 
 		modal.modal("show");
 	};
@@ -289,10 +292,6 @@
 <script src="{% static 'chartjs/chart.min.js' %}"></script>
 <script>
 	document.addEventListener("DOMContentLoaded", function () {
-		setTimeout(() => {
-			window.editors["avaliacaoDescricao"].setData(`{{avaliacao.descricao|safe}}`);
-		}, "1000");
-
 		// Gráficos
 		const grafico1 = document.getElementById("graficoChart").getContext("2d");
 		const dadosGrafico1 = [

@@ -1,0 +1,29 @@
+<div class="modal fade" id="modalMensagemHorde" tabindex="-1" aria-labelledby="modalMensagemHordeLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <form method="POST" action="{% url 'mensagem-massa' %}" class="modal-content" id="formEditarCurso">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="modalMensagemHordeLabel">Mensagem em Massa</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+				<div class="form-floating mb-3">
+					<textarea class="form-control" placeholder="" id="mensagemTexto" name="mensagem-texto"></textarea>
+					<label for="mensagemTexto">Mensagem</label>
+				</div>
+				<div class="form-floating">
+					<select class="form-select" id="mensagemFuncionarios" name="mensagem-funcionarios" multiple style="height: 12rem;">
+						{% for funcionario in funcionarios %}
+							<option value="{{funcionario.id}}">{{funcionario.nome_completo}}</option>
+						{% endfor %}
+					</select>
+					<label for="mensagemFuncionarios">Colaboradores</label>
+				</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-info text-light">Enviar</button>
+            </div>
+        </form>
+    </div>
+</div>

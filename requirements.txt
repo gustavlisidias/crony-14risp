@@ -3,17 +3,20 @@ asn1crypto==1.5.1
 Brotli==1.1.0
 certifi==2024.6.2
 cffi==1.16.0
+channels-redis==4.2.1
 chardet==5.2.0
 charset-normalizer==3.3.2
 click==8.1.7
 colorama==0.4.6
 cryptography==42.0.8
 cssselect2==0.7.0
+daphne==4.1.2
 Django==5.0.6
 django-admin-interface==0.28.6
 django-appconf==1.0.6
 django-autoslug==1.9.9
 django-browser-reload==1.12.1
+django-channels==0.7.0
 django-cities-light==3.10.1
 django-ckeditor-5==0.2.13
 django-colorfield==0.11.0
@@ -49,6 +52,7 @@ pytz==2024.1
 PyYAML==6.0.1
 qrcode==7.4.2
 rcssmin==1.1.1
+redis==5.2.1
 reportlab==4.0.9
 requests==2.32.3
 rjsmin==1.2.1
@@ -68,3 +72,4 @@ weasyprint==62.2
 webencodings==0.5.1
 xhtml2pdf==0.2.15
 zopfli==0.2.3
+waitress==3.0.2

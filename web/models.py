@@ -143,21 +143,6 @@ class MensagemOuvidoria(models.Model):
 		verbose_name_plural = 'Mensagens Ouvidoria'
 
 
-class Sugestao(models.Model):
-	tipo = models.CharField(max_length=11, verbose_name='Tipo')
-	modelo = models.CharField(max_length=24, verbose_name='Modelo')
-	mensagem = CKEditor5Field('Mensagem', config_name='extends')
-	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
-	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
-	
-	def __str__(self):
-		return f'{self.tipo} de {self.funcionario.nome_completo}'
-
-	class Meta:
-		verbose_name = 'Sugestão'
-		verbose_name_plural = 'Sugestões'
-
-
 class Moeda(models.Model):
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
 	pontuacao = models.FloatField(default=0, verbose_name='Pontuação')

@@ -13,6 +13,7 @@ from datetime import date, datetime
 from pathlib import Path
 from PIL import Image
 
+from chat.models import Sala
 from cities_light.models import Region as Estado
 from cities_light.models import SubRegion as Cidade
 from configuracoes.models import Usuario, Jornada, Variavel, Contrato
@@ -23,7 +24,36 @@ from web.models import Celebracao
 from web.utils import not_none_not_empty, add_coins
 
 
+allowed_content_types = {
+	'pdf': 'application/pdf',
+	'jpeg': 'image/jpeg',
+	'jpg': 'image/jpeg',
+	'png': 'image/png',
+	'bmp': 'image/bmp',
+	'tif': 'image/tiff',
+	'tiff': 'image/tiff',
+	'webp': 'image/webp',
+	'gif': 'image/gif',
+	'svg': 'image/svg+xml',
+	'ico': 'image/x-icon',
+	'mp4': 'video/mp4',
+	'webm': 'video/webm',
+	'ogg': 'video/ogg',
+	'mp3': 'audio/mpeg',
+	'wav': 'audio/wav',
+	'json': 'application/json',
+	'html': 'text/html',
+	'css': 'text/css',
+	'js': 'application/javascript',
+}
+
+allowed_extensions = ['pdf', 'png', 'jpg', 'jpeg', 'docx', 'xlsx', 'xls', 'mp4', 'tif', 'tiff', 'bmp', 'webp', 'gif', 'wav', 'webm']
+
+
 def converter_documento(file):
+	'''
+	Função utilizada para envio dos documentos de férias e abono
+	'''
 	nome = '_'.join(file.name.split('.')[:-1])
 	extensao = file.name.split('.')[-1]
 	documento = file.read()
@@ -213,6 +243,10 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 				# Criar pasta no servidor
 				pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{matricula} - {nome_completo.title()}')
 				os.makedirs(pasta, exist_ok=True)
+
+				# Adicionar funcionário ao grupo todos
+				if Sala.objects.filter(nome='Todos').exists():
+					Sala.objects.get(nome='Todos').funcionarios.add(funcionario)
 				
 			return messages.success(request, 'Funcionário(a) criado(a) com sucesso!')
 					
@@ -239,6 +273,9 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 							ponto.encerrado = True
 							ponto.data_fechamento = datetime.now().replace(tzinfo=pytz.utc)
 							ponto.save()
+					
+					if Sala.objects.filter(nome='Todos').exists():
+						Sala.objects.get(nome='Todos').funcionarios.remove(funcionario)
 
 				funcionario.usuario.username=username
 				funcionario.usuario.first_name=first_name

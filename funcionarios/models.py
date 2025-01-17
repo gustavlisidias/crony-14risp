@@ -123,6 +123,10 @@ class Funcionario(models.Model):
 		return Perfil.objects.get(funcionario=self)
 	
 	@property
+	def get_tag(self):
+		return f"@{self.nome_completo.title().replace(' ', '')}"
+	
+	@property
 	def get_contrato(self):
 		jornadas = JornadaFuncionario.objects.filter(funcionario=self, final_vigencia=None).order_by('funcionario__id', 'dia', 'ordem')
 		return jornadas.first().contrato
@@ -134,6 +138,10 @@ class Funcionario(models.Model):
 	@property
 	def is_financeiro(self):
 		return True if 'financeiro' in self.setor.setor.lower() or 'diretor' in self.cargo.cargo.lower() else False
+	
+	@property
+	def has_docpendentes(self):
+		return True if Documento.objects.filter(funcionario=self, lido=False) else False
 
 	class Meta:
 		verbose_name = 'Funcionário'
@@ -255,14 +263,18 @@ class TipoDocumento(models.Model):
 class Documento(models.Model):
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Funcionário')
 	tipo = models.ForeignKey(TipoDocumento, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Tipo')
-	documento = models.BinaryField(verbose_name='Documento')
 	caminho = models.CharField(max_length=256, verbose_name='Caminho do Documento')
 	data_documento = models.DateField(null=True, blank=True, verbose_name='Data do Documento')
+	lido = models.BooleanField(default=False, verbose_name='Visualizado')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
 		return f'Documento: {self.caminho}'
 
+	@property
+	def get_short_name(self):
+		return self.caminho.split('\\')[-1]
+	
 	class Meta:
 		verbose_name = 'Documento'
 		verbose_name_plural = 'Documentos'

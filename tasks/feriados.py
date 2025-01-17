@@ -6,7 +6,11 @@ import sys
 import django
 import pytz
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
@@ -14,7 +18,7 @@ from django.db import transaction
 
 from datetime import date, datetime, time
 
-from funcionarios.models import JornadaFuncionario
+from funcionarios.models import Funcionario, JornadaFuncionario
 from ponto.models import Feriados, Ponto, Saldos
 from ponto.utils import total_saldo
 from settings.settings import BASE_DIR
@@ -46,10 +50,11 @@ def abonar_feriados():
 							Ponto(
 								funcionario=funcionario,
 								data=hoje,
-								hora=time(0),
+								hora=time(),
 								motivo=feriado.titulo,
 								alterado=True,
-								encerrado=True
+								encerrado=True,
+								autor_modificacao=Funcionario.objects.get(pk=1)
 							).save()
 
 						Saldos(

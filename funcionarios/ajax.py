@@ -1,5 +1,4 @@
 import os
-import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,6 +6,7 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
+from django.utils.text import slugify
 
 from datetime import datetime
 from pathlib import Path
@@ -14,7 +14,7 @@ from pathlib import Path
 from agenda.models import DocumentosFerias
 from configuracoes.models import Variavel
 from funcionarios.models import Documento, Funcionario, TipoDocumento, JornadaFuncionario, Estabilidade
-from funcionarios.utils import converter_documento
+from funcionarios.utils import allowed_extensions, allowed_content_types
 from ponto.models import SolicitacaoAbono
 from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty
@@ -26,49 +26,42 @@ def AdicionarDocumentoView(request):
 		messages.warning(request, 'Método não permitido!')
 		return JsonResponse({'message': 'forbidden'}, status=404)
 	
-	try:
-		if not_none_not_empty(request.POST.get('tipo')):
-			tipo = TipoDocumento.objects.get(pk=request.POST.get('tipo'))
-			nome, documento = converter_documento(request.FILES.get('file'))
-			funcionario, data_documento = None, timezone.localdate()
+	tipo = TipoDocumento.objects.get(pk=request.POST.get('tipo')) if request.POST.get('tipo') else None
+	data_documento = datetime.strptime(request.POST.get('data'), '%Y-%m-%d').date() if request.POST.get('data') else timezone.localdate()
+	funcionario = Funcionario.objects.get(pk=request.POST.get('funcionario')) if request.POST.get('funcionario') else None
 
-			if not documento:
-				return JsonResponse({'message': 'Verifique o tipo de documento. Permitido apenas os tipos JPG, JPEG, PNG e PDF.'}, status=400)
+	file = request.FILES.get('file')
+	filename, extension = file.name.split('.')
+	filename = f'{slugify(filename)}.{extension}'
 
-			pasta = Path(Variavel.objects.get(chave='PATH_DOCS').valor, f'{tipo.codigo} - {tipo.tipo}')
-			nome_lista = re.sub(r'[^a-zA-Z0-9]', '_', nome).split('_')
-		
-			if not_none_not_empty(request.POST.get('funcionario')):
-				funcionario = Funcionario.objects.get(pk=request.POST.get('funcionario'))
-				pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{funcionario.matricula} - {funcionario.nome_completo}')
-				nome_lista.insert(0, tipo.codigo)
+	if extension not in allowed_extensions:
+		return JsonResponse({'message': f'O arquivo não é em um dos formatos: {allowed_extensions}.'}, status=400)
 
-			if not_none_not_empty(request.POST.get('data')):
-				data_documento = datetime.strptime(request.POST.get('data'), '%Y-%m-%d').date()
-				nome_lista.insert(0, request.POST.get('data'))
-
-			if request.POST.get('enviar') == 'on':
-				os.makedirs(pasta, exist_ok=True)
-				caminho = os.path.join(pasta, f'{"_".join(nome_lista)}.pdf')
-
-				with open(caminho, 'wb') as f:
-					f.write(documento)
-
-			Documento(
-				funcionario=funcionario,
-				tipo=tipo,
-				documento=documento, 
-				caminho=f'{nome}.pdf',
-				data_documento=data_documento
-			).save()
-
+	if tipo:
+		if funcionario:
+			servidor = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor)
+			pasta = Path(servidor, f'{funcionario.matricula} - {funcionario.nome_completo}')
+			caminho = Path(pasta, f'{data_documento}_{tipo.codigo}_{filename}')
 		else:
-			return JsonResponse({'message': 'O campo Tipo Documento é obrigatório.'}, status=400)
+			servidor = Path(Variavel.objects.get(chave='PATH_DOCS').valor)
+			pasta = Path(servidor, f'{tipo.codigo} - {tipo.tipo}')
+			caminho = Path(pasta, f'{data_documento}_{filename}')
 		
+		os.makedirs(pasta, exist_ok=True)
+		with open(caminho, 'wb+') as destination:
+			for chunk in file.chunks():
+				destination.write(chunk)
+
+		Documento(
+			funcionario=funcionario,
+			tipo=tipo,
+			caminho=caminho,
+			data_documento=data_documento
+		).save()
+
 		return JsonResponse({'message': f'Documento {request.FILES.get("file")} salvo'}, status=200)
-				
-	except Exception as e:
-		return JsonResponse({'message': e}, status=500)
+	else:
+		return JsonResponse({'message': 'O campo Tipo Documento é obrigatório.'}, status=400)
 
 
 @login_required(login_url='entrar')
@@ -89,7 +82,7 @@ def RealoadDocumentosView(request):
 		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.ADMIN))
 	else:
 		tipos = TipoDocumento.objects.filter(visibilidade=TipoDocumento.Visoes.GERAL)
-
+	
 	documentos = Documento.objects.filter(funcionario=None, data_documento__range=[filtro_data_inicial, filtro_data_final], tipo__in=tipos).order_by('-data_documento')
 
 	if not_none_not_empty(filtro_nome):
@@ -98,7 +91,15 @@ def RealoadDocumentosView(request):
 	if not_none_not_empty(filtro_tipo):
 		documentos = documentos.filter(tipo__in=[int(i) for i in filtro_tipo])
 
-	tabela = list(documentos.values('id', 'caminho', 'tipo__tipo', 'tipo__codigo', 'data_documento'))
+	tabela = list()
+	for documento in documentos:
+		tabela.append({
+			'id': documento.id,
+			'documento': documento.get_short_name,
+			'data_documento': documento.data_documento,
+			'tipo': documento.tipo.tipo,
+			'codigo': documento.tipo.codigo
+		})
 	return JsonResponse(tabela, safe=False, status=200)
 
 
@@ -155,7 +156,6 @@ def ExcluirHistoricoJornadaView(request, func, agrupador):
 	return JsonResponse({'message': 'success'}, status=200)
 
 
-
 @login_required(login_url='entrar')
 def ExportarFuncionariosView(request):
 	if not request.method == 'GET':
@@ -180,21 +180,37 @@ def ExportarFuncionariosView(request):
 @login_required(login_url='entrar')
 def StreamDocumentoView(request, document, model, norm):
 	if model == 'doc':
-		documento = Documento.objects.get(pk=document)
+		query = Documento.objects.get(pk=document)
 	elif model == 'abono':
-		documento = SolicitacaoAbono.objects.get(pk=document)
+		query = SolicitacaoAbono.objects.get(pk=document)
+	elif model == 'ferias':
+		query = DocumentosFerias.objects.get(pk=document).documento
 	else:
-		documento = DocumentosFerias.objects.get(pk=document)
+		return HttpResponse(status=204)
+	
+	caminho = query.caminho if hasattr(query, 'caminho') else query.documento.path
 
-	if norm == 'download':
-		response = HttpResponse(documento.documento, content_type='application/octet-stream')
-		response['Content-Disposition'] = f'attachment; filename="{documento.caminho}"'
-		response['Content-Length'] = len(documento.documento)
+	if not os.path.exists(caminho):
+		return HttpResponse(status=204)
 	
-	if norm == 'visualizar':
-		response = HttpResponse(documento.documento, content_type='application/pdf')
-	
-	return response
+	try:
+		with open(caminho, 'rb') as documento:
+			if norm == 'download':
+				response = HttpResponse(documento, content_type='application/octet-stream')
+				response['Content-Disposition'] = f'attachment; filename="{os.path.basename(caminho)}"'
+				response['Content-Length'] = os.path.getsize(caminho)
+				return response
+			
+			elif norm == 'visualizar':
+				_, extensao = caminho.split('.')
+				if extensao in allowed_extensions and extensao in [k for k, _ in allowed_content_types.items()]:
+					response = HttpResponse(documento, content_type=allowed_content_types.get(extensao))
+					return response
+		
+		return HttpResponse(status=204)
+	 
+	except Exception:
+		return HttpResponse(status=204)
 
 
 @login_required(login_url='entrar')

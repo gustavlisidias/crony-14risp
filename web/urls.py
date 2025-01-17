@@ -1,7 +1,10 @@
 from django.urls import path
 
-from web.ajax import ProcurarCidadesView, AlterarTemaView, EditarOuvidoriaView
 from web.ajax import (
+	ProcurarCidadesView,
+	AlterarTemaView,
+	EditarOuvidoriaView,
+	FuncionariosTagsView,
 	CurtirPostView,
 	VisualizarReacoesView,
 	VisualizarComentariosView
@@ -28,6 +31,7 @@ urlpatterns = [
 	path('ranking', ScoreView, name='score'),
 	path('procurar/cidade/<int:estado>', ProcurarCidadesView, name='procurar-cidades'),
 	path('moedas/adicionar/<int:func>/<int:anomes>', AdicionarMoedaView, name='adicionar-moedas'),
+	path('consultar/funcionarios/tags', FuncionariosTagsView, name='funcionarios-tags'),
 
 	path('posts/adicionar/celebracao', AdicionarCelebracaoView, name='adicionar-celebracao'),
 	path('posts/adicionar/postagem', AdicionarPostView, name='adicionar-post'),

@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Min, Q, Max
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.timezone import make_aware
 
 from datetime import datetime, timedelta, date
@@ -47,7 +48,7 @@ def RegistrosPontoView(request):
 		filtros['funcionarios'] = funcionarios.filter(pk=funcionario.pk)
 		delta = timedelta(days=6)
 
-	data_ultimo_ponto = Ponto.objects.filter(funcionario__in=funcionarios).values_list('data', flat=True).distinct().order_by('-data').first()
+	data_ultimo_ponto = Ponto.objects.filter(funcionario__in=funcionarios).exclude(motivo='Férias').values_list('data', flat=True).distinct().order_by('-data').first()
 	data_ultimo_ponto = data_ultimo_ponto if data_ultimo_ponto else datetime.today()
 	filtros['final'] = request.GET.get('data_final') if request.GET.get('data_final') else data_ultimo_ponto.strftime('%Y-%m-%d')
 	filtros['inicio'] = request.GET.get('data_inicial') if request.GET.get('data_inicial') else (data_ultimo_ponto - delta).strftime('%Y-%m-%d')
@@ -98,7 +99,7 @@ def RegistrosPontoView(request):
 		for data_fechamento, dados in fechamentos_dict.items()
 	]
 
-	# Scores
+	# Scores Mensais
 	anomes = int(f'{date.today().year}{date.today().month:02}')
 	moedas = Moeda.objects.filter(fechado=True, anomes__lt=anomes, funcionario__visivel=True).values('funcionario__id', 'pontuacao', 'anomes')
 	pontuacoes = Score.objects.filter(fechado=True, anomes__lt=anomes, funcionario__visivel=True).order_by('-data_cadastro__date', '-pontuacao')
@@ -109,14 +110,14 @@ def RegistrosPontoView(request):
 	graph = {'plot': False}
 	if pontos and (len(request.GET.getlist('funcionarios')) == 1 or request.user.get_access == 'common'):
 		graph['plot'] = True
-		graph['notas'] = list(scores.values())[0]
+		graph['notas'] = scores.get(filtros['funcionarios'].first().id)
 		graph['total'] = timedelta(seconds=0)
 		graph['saldo'] = timedelta(seconds=0)
 
-		for _, i in pontos.items():
-			for j in i:
-				graph['total'] += j['total']
-				graph['saldo'] += j['saldo']
+		for _, funcs in pontos.items():
+			for func, dados in funcs.items():
+				graph['total'] += dados['total']
+				graph['saldo'] += dados['saldo']
 	
 	context = {
 		'funcionarios': funcionarios,
@@ -170,16 +171,15 @@ def RegistrosPontoFuncinarioView(request, func):
 	solicitacoes.extend([{'data': i.inicio.date, 'motivo': i.motivo, 'status': i.status, 'categoria': i.get_tipo, 'inicio': i.inicio, 'final': i.final } for i in solicitacoes_abono])
 
 	nro_colunas = 0
-	dados = {'notas': None, 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0)}
+	graph = {'notas': scores.get(colaborador.id), 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0)}
 	if pontos:
-		dados['notas'] = list(scores.values())[0]
-		for _, i in pontos.items():
-			for j in i:
-				dados['total'] += j['total']
-				dados['saldo'] += j['saldo']
+		for _, funcs in pontos.items():
+			for func, dados in funcs.items():
+				graph['total'] += dados['total']
+				graph['saldo'] += dados['saldo']
 
-				if len(j['pontos']) > nro_colunas:
-					nro_colunas = len(j['pontos'])
+				if len(dados['pontos']) > nro_colunas:
+					nro_colunas = len(dados['pontos'])
 
 	context = {
 		'funcionarios': funcionarios,
@@ -189,7 +189,7 @@ def RegistrosPontoFuncinarioView(request, func):
 		'jornada': jornada,
 		'filtros': filtros,
 		'pontos': pontos,
-		'dados': dados,
+		'graph': graph,
 		'nro_colunas': range(nro_colunas),
 		'solicitacoes': solicitacoes
 	}
@@ -432,9 +432,41 @@ def RegistrarPontoExternoView(request):
 	funcionario = funcionarios.get(usuario=request.user)
 	ponto = Ponto.objects.filter(funcionario=funcionario).order_by('id').last()
 
+	if request.POST:
+		conf_permissao = Variavel.objects.filter(chave='REGISTRO_EXTERNO').first()
+		conf_matriculas = Variavel.objects.filter(chave='MATRICULAS_EXTERNAS').first()
+
+		permitir = conf_permissao.valor == 'True' if conf_permissao else False
+		matriculas = [i.strip() for i in conf_matriculas.valor.split(',')] if conf_matriculas else []
+		funcionario = Funcionario.objects.get(usuario=request.user)
+		
+		if permitir and funcionario.matricula in matriculas:
+			ponto = Ponto.objects.create(
+				funcionario=funcionario,
+				data=timezone.localdate(),
+				hora=timezone.localtime(),
+				autor_modificacao=funcionario
+			)
+
+			create_log(
+				object_model=Ponto,
+				object_id=ponto.id,
+				user=funcionario.usuario,
+				message='Ponto cadastrado',
+				action=1
+			)
+
+			messages.success(request, 'Ponto registrado com sucesso!')
+		
+		else:
+			messages.error(request, 'Ponto não registrado! Este usuário não está liberado para registros externos.')
+
+		return redirect('registrar-externo')
+
 	context = {
 		'funcionarios': funcionarios,
 		'funcionario': funcionario,
 		'ponto': datetime.combine(ponto.data, ponto.hora) if ponto else None,
 	}
+
 	return render(request, 'pages/ponto-externo.html', context)

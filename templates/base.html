@@ -49,6 +49,7 @@
 		<!-- ChoicesJS -->
 		<script src="{% static 'choices/choices.min.js' %}"></script>
 		<!-- Emojionearea -->
+		<script src="{% static 'emojionearea/jquery.textcomplete.min.js' %}"></script>
 		<script src="{% static 'emojionearea/emojionearea.min.js' %}"></script>
 		<!-- HTMX, IMask, Fuse e HTML2Canvas -->
 		<script src="{% static 'main/htmx.min.js' %}"></script>
@@ -59,7 +60,14 @@
 
 		<!-- Customizações -->
 		{% block header %} {% endblock header %}
+
+		<script type="text/javascript">
+			var request_user = "{{ funcionario.nome_completo|escapejs }}"; 
+			var request_user_id = {% if request.user.is_authenticated %}{{ funcionario.id }}{% else %}0{% endif %};
+		</script>
+
 		<link rel="stylesheet" href="{% static 'main/main.css' %}?{% now 'U' %}">
+		<link rel="stylesheet" href="{% static 'main/chat.css' %}?{% now 'U' %}">
 	</head>
 
 	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
@@ -68,6 +76,8 @@
 			<div id="overlay" class="overlay">
 				<div id="loading" class="loading"></div>
 			</div>
+
+			{% include "includes/chat.html" %}
 
 			<div class="container-fluid">
 				<div class="row flex-nowrap">
@@ -82,7 +92,9 @@
 			{% block auth %} {% endblock auth %}
 		{% endif %}
 
-		<script src="{% static 'main/main.js' %}?{% now 'U' %}"></script>
+		<script type="text/javascript" src="{% static 'main/main.js' %}?{% now 'U' %}"></script>
+		<script type="text/javascript" src="{% static 'main/chat.js' %}?{% now 'U' %}" defer></script>
+		
 		{% if request.user.is_authenticated %}
 			<script defer>
 				function updateSelectCidades(estado) {
@@ -139,7 +151,7 @@
 
 						$.ajax({
 							type: "POST",	
-							url: `{% url "alterar-tema" %}`,
+							url: `{% url "alterar-tema" %}`,					
 							beforeSend: function (xhr) {
 								xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
 							},
@@ -150,6 +162,19 @@
 								console.log(error.responseJSON ? error.responseJSON.mensagem : error);
 							}
 						});
+					});
+
+					$.ajax({
+						type: "GET",
+						url: `{% url "funcionarios-tags" %}`,
+						success: function (data) {
+							ckeditor_config.mention = data;
+							iniciarCKEditor();
+						},
+						error: function (error) {
+							alert(error.responseJSON ? error.responseJSON.mensagem : error);
+							iniciarCKEditor();
+						}
 					});
 				});
 			</script>

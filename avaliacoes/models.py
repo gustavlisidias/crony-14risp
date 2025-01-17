@@ -80,7 +80,7 @@ class PerguntaAvaliacao(models.Model):
 
 class Resposta(models.Model):
 	referencia = models.ForeignKey(PerguntaAvaliacao, on_delete=models.CASCADE, verbose_name='Pergunta')
-	observacao = models.TextField(verbose_name='Observação')
+	observacao = models.TextField(verbose_name='Observação', null=True, blank=True)
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, related_name='reposta_funcionario', verbose_name='Funcionário')
 	nota = models.FloatField(verbose_name='Nota')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')

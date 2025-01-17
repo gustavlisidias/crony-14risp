@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import render, redirect
+from django.utils.text import slugify
 
 from datetime import datetime
 
@@ -102,12 +103,17 @@ def VisualizarRespostasView(request, pesqid):
 		})
 
 	if request.GET.get('exportar'):
-		filename = f'relatorio_pesquisa_{pesquisa.titulo.lower()}'
+		filename = f'relatorio_pesquisa_{slugify(pesquisa.titulo.lower())}'
 		colunas = ['Funcionário', 'Pergunta', 'Resposta']
 
 		dataset = list(pesquisa.respostas.values_list(
 			'funcionario__nome_completo', 'pergunta__titulo', 'texto'
-		))		
+		))
+		
+		usuarios_respostas = set([i[0] for i in dataset])
+		for funcionario in pesquisa.funcionarios.all():
+			if funcionario.nome_completo not in usuarios_respostas:
+				dataset.append((funcionario.nome_completo, '-', '-'))
 
 		return gerar_relatorio_csv(colunas, dataset, filename)
 

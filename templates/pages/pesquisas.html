@@ -39,12 +39,14 @@
 						<th scope="col">Data Encerramento</th>
 						<th scope="col">Anônima</th>
 						<th scope="col">Respondido</th>
-						<th scope="col" class="text-center">Ações</th>
+						{% if request.user.get_access == "admin" %}
+							<th scope="col" class="text-center">Ações</th>
+						{% endif %}
 					</tr>
 				</thead>
 				<tbody>
 					{% for pesquisa in pesquisas %}
-						<tr role="button" onclick="verPesquisa({{pesquisa.id}})">
+						<tr role="button" title="Clique para responder" onclick="responderPesquisa(event, {{pesquisa.respondido}}, {{pesquisa.id}})">
 							<th scope="row">{{forloop.counter}}</th>
 							<td>{{pesquisa.titulo}}</td>
 							<td>{{pesquisa.descricao|default_if_none:""|safe|truncatechars_html:50}}</td>
@@ -62,21 +64,21 @@
 								<td><i class="fa-duotone fa-circle-check text-success"></i></td>
 							{% endif %}
 
-							<th class="text-center">
-								<div class="d-flex justify-content-around">
-									<a class="p-1" role="button" title="Responder" {% if not pesquisa.respondido %} onclick="event.stopPropagation(); responderPesquisa({{pesquisa.id}})" {% else %} onclick="event.stopPropagation(); alert('Pesquisa já respondida!')" {% endif %}>
-										<i class="fa-solid fa-reply fa-lg text-body"></i>
-									</a>
-									{% if request.user.get_access == "admin" %}
-										<a class="p-1" role="button" title="Respostas" href="{% url 'visualizar-respostas' pesquisa.id %}">
-											<i class="fa-thin fa-input-text fa-lg text-body"></i>
+							{% if request.user.get_access == "admin" %}
+								<th class="text-center">
+									<div class="d-flex justify-content-around">
+										<a class="p-1" role="button" title="Editar" onclick="editarPesquisa(event, {{pesquisa.id}})">
+											<i class="fa-duotone fa-pen fa-lg text-body"></i>
+										</a>
+										<a class="p-1" role="button" title="Respostas" onclick="verRespostas(event, '{% url 'visualizar-respostas' pesquisa.id %}')">
+											<i class="fa-solid fa-chart-pie fa-lg text-body"></i>
 										</a>
 										<a class="p-1" role="button" title="Excluir" onclick="event.stopPropagation();" hx-post="{% url 'excluir-pesquisa' pesquisa.id %}" hx-trigger="click" hx-swap="none" hx-target="this" hx-on:htmx:after-request="location.reload()">
 											<i class="fa-thin fa-x text-danger"></i>
 										</a>
-									{% endif %}
-								</div>
-							</th>
+									</div>
+								</th>
+							{% endif %}
 						</tr>
 					{% endfor %}
 				</tbody>
@@ -147,7 +149,7 @@
 		const divAcoes = document.getElementById;
 		let indexOpcao = 1;
 
-		if (opcao.value !== 'TXT') {
+		if (opcao.value !== "TXT") {
 			divOpcao.innerHTML = `
 				<div class="form-floating mb-3">
 					<input type="hidden" name="opcoes[${index}]" id="perguntaOpcaoIndex">
@@ -188,7 +190,9 @@
 		};		
 	};
 
-	function verPesquisa(pesquisaId) {
+	function editarPesquisa(event, pesquisaId) {
+		event.stopPropagation();
+
 		$.ajax({
 			type: "GET",
 			url: `{% url 'visualizar-pesquisa' 0 %}`.replace("0", pesquisaId),
@@ -213,13 +217,12 @@
 				};
 
 				const selectElement = modal.find("#pesquisaEditarFuncionarios").get(0);
-				for (const option of selectElement.options) {
-					if (funcionarios.includes(parseInt(option.value))) {
-						option.selected = true;
-					} else {
-						option.selected = false;
-					}
-				};
+				const listagemFuncionarios = funcionarios.map(obj => obj.id);
+				[...selectElement.options].forEach(item => {
+					if (listagemFuncionarios.includes(parseInt(item.value))) {
+						item.selected = true;
+					};
+				});
 
 				modal.modal("show");
 			},
@@ -229,7 +232,19 @@
 		});
 	};
 
-	function responderPesquisa(pesquisaId) {
+	function verRespostas(event, url) {
+		event.stopPropagation();
+		window.location.href = url;
+	};
+
+	function responderPesquisa(event, respondido, pesquisaId) {
+		event.stopPropagation();
+
+		if (respondido) {
+			alert("Pesquisa já respondida!");
+			return;
+		};
+
 		$.ajax({
 			type: "GET",
 			url: `{% url 'visualizar-pesquisa' 0 %}`.replace("0", pesquisaId),
@@ -244,8 +259,14 @@
 				modal.find("#modalResponderPesquisaLabel").html(`Responder a Pesquisa ${pesquisa.titulo}`);
 	
 				// Clear existing navigation and content
-				$("#smartwizard .nav").empty();
-				$("#smartwizard .tab-content").empty();
+				modal.find(".modal-body").empty();
+
+				modal.find(".modal-body").append(`
+					<div id="smartwizard-${pesquisaId}">
+						<ul class="nav"></ul>
+						<div class="tab-content"></div>
+					</div>
+				`);				
 	
 				// Create navigation items and tab content for each question
 				perguntas.forEach((pergunta, index) => {
@@ -253,7 +274,7 @@
 					const navItem = document.createElement("li");
 					navItem.className = "nav-item";
 					navItem.innerHTML = `<a class="nav-link" href="#pergunta-${index + 1}"><div class="num">${index + 1}</div></a>`;
-					$("#smartwizard .nav").append(navItem);
+					$(`#smartwizard-${pesquisaId} .nav`).append(navItem);
 	
 					// Create step content
 					const stepContent = document.createElement("div");
@@ -316,11 +337,11 @@
 					stepContent.appendChild(helper);
 	
 					// Append step content to the tab content container
-					$("#smartwizard .tab-content").append(stepContent);
+					$(`#smartwizard-${pesquisaId} .tab-content`).append(stepContent);
 				});
 	
 				// Initialize SmartWizard with settings
-				$("#smartwizard").smartWizard({
+				$(`#smartwizard-${pesquisaId}`).smartWizard({
 					theme: "dots",
 					justified: true,
 					autoAdjustHeight: true,

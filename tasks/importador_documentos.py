@@ -8,17 +8,23 @@ import os
 import sys
 import django
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
 from datetime import datetime
+from pathlib import Path
 
 from django.core.mail import EmailMessage
 from django.db.models import Q
 
 from configuracoes.models import Variavel
 from funcionarios.models import Funcionario, TipoDocumento, Documento
+from funcionarios.utils import allowed_extensions
 from settings.settings import BASE_DIR, DEFAULT_FROM_EMAIL
 
 
@@ -75,113 +81,93 @@ def importar_documentos(nodes):
 	log_path = os.path.join(BASE_DIR, f'logs/tasks/{log_file}')
 	logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
 
-	allowed_extensions = ['pdf', 'png', 'jpg', 'jpeg', 'docx']
-
+	# Importação de pastas
 	if nodes:
 		for node in nodes:
-			try:
-				caminho_arquivo = os.path.normpath(node)
-				codigo = caminho_arquivo.split('\\')[-2].split('-')[0].strip()
-				nome_repartido = caminho_arquivo.split('\\')[-1].split('.')[0].split('_')
+			caminho = os.path.normpath(node)
+			nome_arquivo, extensao = caminho.split('\\')[-1].split('.')
 
-				extension = caminho_arquivo.split('\\')[-1].split('.')[-1]
-				if extension not in allowed_extensions:
-					raise InvalidExtension(node, allowed_extensions)
+			if extensao in allowed_extensions:
+				try:
+					codigo = caminho.split('\\')[-2].split('-')[0].strip()
+					nome_repartido = nome_arquivo.split('_')
 
-				with open(caminho_arquivo, 'rb') as f:
-					documento = f.read()
+					if codigo.isdigit() and len(codigo) == 3:
+						funcionario = None
+						tipo = TipoDocumento.objects.get(codigo=codigo)
+						data_documento = datetime.strptime(nome_repartido[0].strip(), '%Y-%m-%d') if len(nome_repartido) == 2 else datetime.now()
+					
+					elif codigo.isdigit() and len(codigo) == 6:
+						funcionario = Funcionario.objects.get(matricula=codigo)
 
-				if not documento or len(codigo) not in [3, 6]:
-					raise InvalidCodeOrDocument(node)
-				
-				if documento and len(codigo) == 6:
-					funcionario = Funcionario.objects.get(matricula=codigo)
-					tipo = TipoDocumento.objects.get(codigo=nome_repartido[0].strip())
-					caminho = f'{nome_repartido[1].strip()}.{extension}'
+						if len(nome_repartido) == 3:
+							tipo = TipoDocumento.objects.get(codigo=nome_repartido[1].strip())
+							data_documento = datetime.strptime(nome_repartido[0].strip(), '%Y-%m-%d')
+						else:
+							tipo = TipoDocumento.objects.get(codigo=nome_repartido[0].strip())
+							data_documento = datetime.now()
+					
+					else:
+						raise InvalidCodeOrDocument(nome_arquivo)
+					
+					if not Documento.objects.filter(caminho=caminho).exists():
+						Documento(tipo=tipo, data_documento=data_documento, funcionario=funcionario, caminho=caminho).save()
+						logging.info(f'SUCCESS::CREATE::{caminho}')
+					else:
+						logging.info(f'SUCCESS::NOT CREATE::{caminho}')
 
-					try:
-						data_documento = datetime.strptime(nome_repartido[2].strip(), '%d-%m-%Y')
-					except Exception:
-						data_documento = datetime.now()
+				except Exception as e:
+					logging.info(f'Raise exception in {nome_arquivo}: {e}')
+					continue
 
-				if documento and len(codigo) == 3:
-					funcionario = None
-					tipo = TipoDocumento.objects.get(codigo=codigo)
-					caminho = f'{nome_repartido[0].strip()}.{extension}'
-
-					try:
-						data_documento = datetime.strptime(nome_repartido[1].strip(), '%d-%m-%Y')
-					except Exception:
-						data_documento = datetime.now()
-
-				if not Documento.objects.filter(funcionario=funcionario, caminho=caminho, data_documento=data_documento, tipo=tipo).exists():
-					Documento.objects.create(caminho=caminho, documento=documento, data_documento=data_documento, tipo=tipo, funcionario=funcionario)
-					logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, nome: {caminho}, tipo: {tipo}, data: {data_documento}')
-				else:
-					Documento.objects.filter(funcionario=funcionario, caminho=caminho, data_documento=data_documento, tipo=tipo).update(documento=documento)
-					logging.info(f'SUCCESS::UPDATE::funcionario: {funcionario}, nome: {caminho}, tipo: {tipo}, data: {data_documento}')
-			
-			except Exception as e:
-				logging.info(f'Raise exception in {node}: {e}')
-				continue
-
+	# Importador total dos diretorios
 	else:
 		diretorios = [i.valor for i in Variavel.objects.filter(Q(chave='PATH_DOCS') | Q(chave='PATH_DOCS_EMP'))]
 
 		for pasta in diretorios:
 			for root, _, files in os.walk(pasta):
 				for file in files:
-					try:
-						extension = file.split('.')[-1]
-						if extension not in allowed_extensions:
-							raise InvalidExtension(file, allowed_extensions)
+					nome_arquivo, extensao = file.split('.')
+					caminho = os.path.join(root, file)
 
-						caminho_arquivo = os.path.join(root, file)
-						codigo = root.split('\\')[-1].split('-')[0].strip()
-						nome_repartido = file.split('.')[0].split('_')
+					if extensao in allowed_extensions:
+						try:						
+							codigo = root.split('\\')[-1].split('-')[0].strip()
+							nome_repartido = nome_arquivo.split('_')
 
-						with open(caminho_arquivo, 'rb') as f:
-							documento = f.read()
+							if codigo.isdigit() and len(codigo) == 3:
+								funcionario = None
+								tipo = TipoDocumento.objects.get(codigo=codigo)
+								data_documento = datetime.strptime(nome_repartido[0].strip(), '%Y-%m-%d') if len(nome_repartido) == 2 else datetime.now()
+							
+							elif codigo.isdigit() and len(codigo) == 6:
+								funcionario = Funcionario.objects.get(matricula=codigo)
 
-						if not documento or len(codigo) not in [3, 6]:
-							raise InvalidCodeOrDocument(file)
+								if len(nome_repartido) == 3:
+									tipo = TipoDocumento.objects.get(codigo=nome_repartido[1].strip())
+									data_documento = datetime.strptime(nome_repartido[0].strip(), '%Y-%m-%d')
+								else:
+									tipo = TipoDocumento.objects.get(codigo=nome_repartido[0].strip())
+									data_documento = datetime.now()
+							
+							else:
+								raise InvalidCodeOrDocument(file)
+							
+							if not Documento.objects.filter(caminho=caminho).exists():
+								Documento(tipo=tipo, data_documento=data_documento, funcionario=funcionario, caminho=caminho).save()
+								logging.info(f'SUCCESS::CREATE::{caminho}')
+							else:
+								logging.info(f'SUCCESS::NOT CREATE::{caminho}')
 
-						if documento and len(codigo) == 6:
-							funcionario = Funcionario.objects.get(matricula=codigo)
-							tipo = TipoDocumento.objects.get(codigo=nome_repartido[0].strip())
-							caminho = f'{nome_repartido[1].strip()}.{extension}'
-
-							try:
-								data_documento = datetime.strptime(nome_repartido[2].strip(), '%d-%m-%Y')
-							except Exception:
-								data_documento = datetime.now()
-
-						if documento and len(codigo) == 3:
-							funcionario = None
-							tipo = TipoDocumento.objects.get(codigo=codigo)
-							caminho = f'{nome_repartido[0].strip()}.{extension}'
-
-							try:
-								data_documento = datetime.strptime(nome_repartido[1].strip(), '%d-%m-%Y')
-							except Exception:
-								data_documento = datetime.now()
-
-						if not Documento.objects.filter(funcionario=funcionario, caminho=caminho, data_documento=data_documento, tipo=tipo).exists():
-							Documento.objects.create(caminho=caminho, documento=documento, data_documento=data_documento, tipo=tipo, funcionario=funcionario)
-							logging.info(f'SUCCESS::CREATE::funcionario: {funcionario}, nome: {caminho}, tipo: {tipo}, data: {data_documento}')
-						else:
-							Documento.objects.filter(funcionario=funcionario, caminho=caminho, data_documento=data_documento, tipo=tipo).update(documento=documento)
-							logging.info(f'SUCCESS::UPDATE::funcionario: {funcionario}, nome: {caminho}, tipo: {tipo}, data: {data_documento}')
-
-					except Exception as e:
-						logging.info(f'Raise exception in {file}: {e}')
-						continue
+						except Exception as e:
+							logging.info(f'Raise exception in {file}: {e}')
+							continue
 	
 	email = EmailMessage(
 		subject='Log de Importação (Crony)',
 		body='Email automático, por favor não responda!',
 		from_email=DEFAULT_FROM_EMAIL,
-		to=['ronilda@14ri.com.br',]
+		to=['gustavo@novadigitalizacao.com.br', 'ronilda@14ri.com.br']
 	)
 	email.attach_file(log_path)
 	email.send(fail_silently=False)

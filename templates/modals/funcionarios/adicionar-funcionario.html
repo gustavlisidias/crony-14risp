@@ -197,7 +197,7 @@
 					<div class="col">
 						<div class="form-floating mb-3">
 							<select class="form-select" id="funcionarioSetor" name="setor" required>
-								<option value selected hidden>Selecione um setor</option>
+								<option value selected hidden>Selecione um Setor</option>
 								{% for setor in setores %}
 									<option value="{{setor.id}}">{{setor.setor}}</option>
 								{% endfor %}
@@ -208,7 +208,7 @@
 					<div class="col">
 						<div class="form-floating mb-3">
 							<select class="form-select" id="funcionarioCargo" name="cargo" required>
-								<option value selected hidden>Selecione um cargo</option>
+								<option value selected hidden>Selecione um Cargo</option>
 								{% for cargo in cargos %}
 									<option value="{{cargo.id}}">{{cargo.cargo}}</option>
 								{% endfor %}
@@ -223,7 +223,7 @@
 					<div class="col">
 						<div class="form-floating mb-3">
 							<select class="form-select" id="funcionarioContrato" name="contrato" required>
-								<option value selected hidden>Selecione uma jornada</option>
+								<option value selected hidden>Selecione uma Jornada</option>
 								{% for contrato in contratos %}
 									<option value="{{contrato.id}}">{{contrato.titulo}} - {{contrato.descricao}}</option>
 								{% endfor %}
@@ -250,7 +250,7 @@
 					<div class="col">
 						<div class="form-floating mb-3">
 							<select class="form-select" id="funcionarioGerente" name="gerente">
-								<option value="" selected hidden>Selecione um Gerente</option>
+								<option value="" selected hidden>Selecione um Responsável</option>
 								<option value="">Nenhum Responsável</option>
 								{% for funcionario in funcionarios %}
 									{% if funcionario.usuario.is_gerente %}

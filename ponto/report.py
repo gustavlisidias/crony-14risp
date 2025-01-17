@@ -45,18 +45,18 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 				'debito': timedelta(seconds=0)
 			}
 
-			for _, dados in pontos.items():
-				for dado in dados:
-					saldos['total'] += dado['total']
-					saldos['saldo'] += dado['saldo']
+			for _, funcs in pontos.items():
+				for func, dados in funcs.items():
+					saldos['total'] += dados['total']
+					saldos['saldo'] += dados['saldo']
 
-					if dado['saldo'] < timedelta(0):
-						saldos['debito'] += dado['saldo']
+					if dados['saldo'] < timedelta(0):
+						saldos['debito'] += dados['saldo']
 					else:
-						saldos['credito'] += dado['saldo']
+						saldos['credito'] += dados['saldo']
 
-					if len(dado['pontos']) > nro_colunas:
-						nro_colunas = len(dado['pontos'])
+					if len(dados['pontos']) > nro_colunas:
+						nro_colunas = len(dados['pontos'])
 
 			filename = f'espelho_ponto_{funcionario.nome_completo.lower()}.pdf'
 			context = {
