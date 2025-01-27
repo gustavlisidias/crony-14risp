@@ -151,9 +151,9 @@
 								<!-- Comentários -->
 								<div class="lista-comentarios mt-3">
 									<ul class="list-group list-group-flush">
-										{% for comentario in post.comentarios.all %}
+										{% for comentario in post.comentarios.all reversed %}
 											<li class="list-group-item">
-												<p class="card-text mb-1">{{comentario.comentario}}</p>
+												<p class="card-text mb-1">{{comentario.comentario|safe}}</p>
 												<p class="card-text text-muted fs-7">{{comentario.funcionario}} comentou {{comentario.data_cadastro|naturaltime}}</p>
 												{% if request.user.get_access == "admin" or funcionario.id == comentario.funcionario.id %}
 													<i role="button" title="Editar comentario" id="btnEditarComentario" class="fa-thin fa-pen fa-xs text-body me-2" onclick="editarComentario({id: '{{comentario.id}}', texto: '{{comentario.comentario}}'})"></i>
@@ -168,7 +168,7 @@
 								<form method="POST" action="{% url 'comentar-post' post.id  'postagem' %}" class="mt-3" id="formAdicionarComentario">
 									{% csrf_token %}
 									<div class="mb-3">
-										<textarea name="comentario" class="form-control" placeholder="Adicione um comentário..." rows="3"></textarea>
+										<textarea name="comentario" class="form-control emojiarea" placeholder="Adicione um comentário..." rows="3"></textarea>
 									</div>
 									<button type="submit" class="btn btn-primary text-light float-end">Comentar</button>
 								</form>
@@ -254,7 +254,7 @@
 							{{celebracao.titulo}}
 						</div>
 						<div class="text mb-4" data-swiper-parallax="-100">
-							<p class="text-light text-center">{{celebracao.texto}}</p>
+							<p class="text-light text-center">{{celebracao.texto|safe}}</p>
 						</div>
 						<!-- Ações da Celebração -->
 						<div class="actions d-flex justify-content-around fixed-bottom d-none">
@@ -356,27 +356,6 @@
                 document.getElementById("btnVoltarInicio").classList.remove("d-none");
             };
         };
-
-		// Adicionando emojis para o texto de celebração
-		$("#celebracaoTexto").emojioneArea({
-			buttonTitle: "Use TAB para abrir os emojis",
-			search: false,
-			recentEmojis: false,
-			pickerPosition: "bottom",
-			tones: false,
-			shortnames: false,
-			shortcuts: false
-		});
-
-		$("#celebracaoComentario").emojioneArea({
-			buttonTitle: "Use TAB para abrir os emojis",
-			search: false,
-			recentEmojis: false,
-			pickerPosition: "bottom",
-			tones: false,
-			shortnames: false,
-			shortcuts: false
-		});
 
 		// Ajustando automaticamente o tamanho máximo do slide de celebrações
 		let newHeight = 0;

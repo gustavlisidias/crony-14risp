@@ -36,8 +36,15 @@ def abonar_feriados():
 	if feriados:
 		for feriado in feriados:
 			try:
-				with transaction.atomic():
-					for funcionario in feriado.funcionarios.all():
+				if feriado.regiao == Feriados.Regiao.NACIONAL:
+					funcionarios = Funcionario.objects.filter(data_demissao=None)
+				elif feriado.regiao == Feriados.Regiao.ESTADUAL:
+					funcionarios = Funcionario.objects.filter(data_demissao=None, estado=feriado.estado)
+				else:
+					funcionarios = Funcionario.objects.filter(data_demissao=None, estado=feriado.estado, cidade=feriado.cidade)
+					
+				with transaction.atomic():				
+					for funcionario in funcionarios:
 						ponto_funcionario = Ponto.objects.filter(funcionario=funcionario, data=feriado.data).exists()
 
 						jornada_funcionario = JornadaFuncionario.objects.filter(
@@ -63,7 +70,7 @@ def abonar_feriados():
 							data=hoje
 						).save()
 
-					logging.info(f'Feriado {feriado.titulo} rodou o saldo com sucesso para {len(feriado.funcionarios.all())} funcionários')
+					logging.info(f'Feriado {feriado.titulo} rodou o saldo com sucesso para {len(funcionarios)} funcionários')
 
 			except Exception as e:
 				logging.info(f'Ocorreu um erro ao abonar o feriado {feriado.titulo}: {e}')

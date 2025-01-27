@@ -253,6 +253,14 @@
 				const perguntas = data.perguntas;
 				const modal = $("#modalResponderPesquisa");
 				const action = `{% url 'responder-pesquisa' 0 %}`.replace("0", pesquisa.id);
+
+				const dataConvertida = new Date(pesquisa.encerramento);
+				const hoje = new Date();
+
+				if (dataConvertida < hoje.setHours(0, 0, 0, 0)) {
+					alert("Pesquisa já foi encerrada!");
+					return;
+				};
 	
 				// Set form action and modal title
 				modal.find("form").attr("action", action);

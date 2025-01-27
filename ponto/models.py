@@ -2,6 +2,9 @@ import re
 
 from django.db import models
 
+from cities_light.models import Region as Estado
+from cities_light.models import SubRegion as Cidade
+
 from funcionarios.models import Funcionario
 
 
@@ -91,14 +94,29 @@ class Saldos(models.Model):
 
 
 class Feriados(models.Model):
-	funcionarios = models.ManyToManyField(Funcionario, related_name='funcionarios_feriados', verbose_name='Funcionários')
+	class Regiao(models.TextChoices):
+		NACIONAL = 'NA', 'Nacional'
+		ESTADUAL = 'ES', 'Estadual'
+		MUNICIPAL = 'MU', 'Municipal'
+
 	titulo = models.CharField(max_length=256, verbose_name='Título')
-	data = models.DateField(verbose_name='Data')
-	status = models.BooleanField(default=False, verbose_name='Status')
+	data = models.DateField(verbose_name='Data Feriado')
+	regiao = models.CharField(max_length=2, choices=Regiao.choices, default='NA', verbose_name='Região')
+	estado = models.ForeignKey(Estado, on_delete=models.CASCADE, null=True, verbose_name='Estado')
+	cidade = models.ForeignKey(Cidade, on_delete=models.CASCADE, null=True, verbose_name='Cidade')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
-		return self.titulo
+		return f'{self.titulo} - {self.data}'
+	
+	def get_feriado_funcionario(self, funcionario):
+		if self.regiao == self.Regiao.NACIONAL:
+			return True
+		elif self.regiao == self.Regiao.ESTADUAL and funcionario.estado == self.estado:
+			return True
+		elif self.regiao == self.Regiao.MUNICIPAL and funcionario.estado == self.estado and funcionario.cidade == self.cidade:
+			return True
+		return False
 
 	class Meta:
 		verbose_name = 'Feriado'

@@ -169,12 +169,23 @@
 						url: `{% url "funcionarios-tags" %}`,
 						success: function (data) {
 							ckeditor_config.mention = data;
-							iniciarCKEditor();
 						},
 						error: function (error) {
 							alert(error.responseJSON ? error.responseJSON.mensagem : error);
-							iniciarCKEditor();
 						}
+					}).always(function () {
+						iniciarCKEditor();
+					});
+
+					$(".emojiarea").emojioneArea({
+						buttonTitle: "Use TAB para abrir os emojis",
+						buttonTitle: "Use TAB para abrir os emojis",
+						search: false,
+						recentEmojis: false,
+						tones: true,
+						saveEmojisAs: "image",
+						filtersPosition: "bottom",
+						pickerPosition: "bottom",
 					});
 				});
 			</script>

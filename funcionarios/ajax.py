@@ -179,36 +179,46 @@ def ExportarFuncionariosView(request):
 # Stream
 @login_required(login_url='entrar')
 def StreamDocumentoView(request, document, model, norm):
-	if model == 'doc':
-		query = Documento.objects.get(pk=document)
-	elif model == 'abono':
-		query = SolicitacaoAbono.objects.get(pk=document)
-	elif model == 'ferias':
-		query = DocumentosFerias.objects.get(pk=document).documento
-	else:
-		return HttpResponse(status=204)
-	
-	caminho = query.caminho if hasattr(query, 'caminho') else query.documento.path
-
-	if not os.path.exists(caminho):
-		return HttpResponse(status=204)
-	
 	try:
-		with open(caminho, 'rb') as documento:
-			if norm == 'download':
-				response = HttpResponse(documento, content_type='application/octet-stream')
-				response['Content-Disposition'] = f'attachment; filename="{os.path.basename(caminho)}"'
-				response['Content-Length'] = os.path.getsize(caminho)
-				return response
-			
-			elif norm == 'visualizar':
-				_, extensao = caminho.split('.')
-				if extensao in allowed_extensions and extensao in [k for k, _ in allowed_content_types.items()]:
-					response = HttpResponse(documento, content_type=allowed_content_types.get(extensao))
+		if model == 'doc':
+			caminho = Documento.objects.get(pk=document).caminho
+
+			with open(caminho, 'rb') as documento:
+				_, extensao = os.path.splitext(caminho)
+				extensao = extensao.lstrip('.')
+
+				if extensao in allowed_extensions:
+					content_type = allowed_content_types.get(extensao, 'application/octet-stream')
+					response = HttpResponse(documento, content_type=content_type)
+				
+					if norm == 'visualizar':				
+						response['Content-Disposition'] = f'inline; filename="{os.path.basename(caminho)}"'
+						return response
+					
+					elif norm == 'download':
+						response['Content-Disposition'] = f'attachment; filename="{os.path.basename(caminho)}"'
+						return response
+
+		elif model in ['abono', 'ferias']:
+			query = SolicitacaoAbono.objects.get(pk=document) if model == 'abono' else DocumentosFerias.objects.get(pk=document)
+			documento = query.documento
+			nome_documento, extensao = query.caminho.split('.')
+
+			if extensao in allowed_extensions:
+				content_type = allowed_content_types.get(extensao, 'application/octet-stream')
+				response = HttpResponse(documento, content_type=content_type)
+
+				if norm == 'visualizar':				
+					response['Content-Disposition'] = f'inline; filename="{nome_documento}"'
+					return response
+
+				elif norm == 'download':
+					response['Content-Disposition'] = f'attachment; filename="{nome_documento}"'
 					return response
 		
-		return HttpResponse(status=204)
-	 
+		else:
+			return HttpResponse(status=204)
+
 	except Exception:
 		return HttpResponse(status=204)
 

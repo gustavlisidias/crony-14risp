@@ -170,7 +170,7 @@
 
 										<td class="text-center">
 											{% if solicitacao.tipo != "Ajuste" and solicitacao.caminho %}
-												<a href="{% url 'stream-documento' solicitacao.id 'abono' 'visualizar' %}">
+												<a href="{% url 'stream-documento' solicitacao.id 'abono' 'visualizar' %}" target="_blank">
 													<i class="fa-duotone fa-download text-body"></i>
 												</a>
 											{% endif %}
@@ -562,13 +562,13 @@
 	};
 
 	function updateRegiao(regiao) {
-		if (regiao === "Estadual") {
+		if (regiao === "ES") {
 			document.getElementById("feriadoEstado").disabled = false;
 			document.getElementById("feriadoEstado").required = true;
 			document.getElementById("feriadoCidade").disabled = true;
 			document.getElementById("feriadoCidade").required = false;
 
-		} else if (regiao === "Municipal") {
+		} else if (regiao === "MU") {
 			document.getElementById("feriadoEstado").disabled = false;
 			document.getElementById("feriadoEstado").required = true;
 			document.getElementById("feriadoCidade").disabled = false;

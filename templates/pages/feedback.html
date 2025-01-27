@@ -346,16 +346,6 @@
 		for (const [key, value] of Object.entries(notas)) {
 			$(".meu-feedback").find(`#${key}${value}`).prop("checked", true);
 		};
-
-		$("#respostaTexto").emojioneArea({
-			buttonTitle: "Use TAB para abrir os emojis",
-			search: false,
-			recentEmojis: false,
-			pickerPosition: "bottom",
-			tones: false,
-			shortnames: false,
-			shortcuts: false
-		});
 	});
 </script>
 

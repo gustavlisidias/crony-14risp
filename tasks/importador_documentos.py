@@ -1,5 +1,4 @@
 # ruff: noqa: E402
-# ruff: noqa: F401
 import argparse
 import json
 import logging
@@ -84,11 +83,12 @@ def importar_documentos(nodes):
 	# Importação de pastas
 	if nodes:
 		for node in nodes:
-			caminho = os.path.normpath(node)
-			nome_arquivo, extensao = caminho.split('\\')[-1].split('.')
+			try:
+				caminho = os.path.normpath(node)
+				nome_arquivo, extensao = caminho.split('\\')[-1].split('.')
 
-			if extensao in allowed_extensions:
-				try:
+				if extensao in allowed_extensions:
+				
 					codigo = caminho.split('\\')[-2].split('-')[0].strip()
 					nome_repartido = nome_arquivo.split('_')
 
@@ -116,9 +116,9 @@ def importar_documentos(nodes):
 					else:
 						logging.info(f'SUCCESS::NOT CREATE::{caminho}')
 
-				except Exception as e:
-					logging.info(f'Raise exception in {nome_arquivo}: {e}')
-					continue
+			except Exception as e:
+				logging.info(f'Raise exception in {node}: {e}')
+				continue
 
 	# Importador total dos diretorios
 	else:
@@ -127,11 +127,12 @@ def importar_documentos(nodes):
 		for pasta in diretorios:
 			for root, _, files in os.walk(pasta):
 				for file in files:
-					nome_arquivo, extensao = file.split('.')
-					caminho = os.path.join(root, file)
+					try:
+						nome_arquivo, extensao = file.split('.')
+						caminho = os.path.join(root, file)
 
-					if extensao in allowed_extensions:
-						try:						
+						if extensao in allowed_extensions:
+												
 							codigo = root.split('\\')[-1].split('-')[0].strip()
 							nome_repartido = nome_arquivo.split('_')
 
@@ -159,15 +160,15 @@ def importar_documentos(nodes):
 							else:
 								logging.info(f'SUCCESS::NOT CREATE::{caminho}')
 
-						except Exception as e:
-							logging.info(f'Raise exception in {file}: {e}')
-							continue
+					except Exception as e:
+						logging.info(f'Raise exception in {file}: {e}')
+						continue
 	
 	email = EmailMessage(
 		subject='Log de Importação (Crony)',
 		body='Email automático, por favor não responda!',
 		from_email=DEFAULT_FROM_EMAIL,
-		to=['gustavo@novadigitalizacao.com.br', 'ronilda@14ri.com.br']
+		to=['ronilda@14ri.com.br',]
 	)
 	email.attach_file(log_path)
 	email.send(fail_silently=False)

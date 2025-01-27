@@ -146,7 +146,8 @@
 						<span class="ml-2 d-none d-lg-inline-block">{{funcionario}}</span>
 					</a>
 					<div class="dropdown-menu dropdown-menu-end">
-						<a class="dropdown-item" href="{% url 'perfil' %}"><i class="fa-thin fa-user text-body"></i> Perfil</a>
+						<a class="dropdown-item" href="{% url 'perfil' %}"><i class="fa-thin fa-user-pen text-body"></i> Editar</a>
+						<a class="dropdown-item" href="{% url 'editar-funcionario' funcionario.id %}"><i class="fa-thin fa-address-card"></i> Colaborador</a>
 						{% if request.user.get_access == "admin" %}
 							<a class="dropdown-item" href="{% url 'configuracoes' %}"><i class="fa-thin fa-gear text-body"></i> Configurações</a>
 							<a class="dropdown-item" href="/admin/" target="_blank" rel="noopener noreferrer"><i class="fa-thin fa-chart-candlestick text-body"></i> Painel</a>

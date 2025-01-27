@@ -58,7 +58,7 @@
 
 			<!-- Avaliações -->
 			<div class="list-group">
-				{% for avaliacao in avaliacoes %}
+				{% for avaliacao in avaliacoes reversed %}
 					<div class="list-group-item list-group-item-action list-avaliacoes" role="button" 
 						{% if avaliacao.status == 0 %} 
 							onclick="avaliarAtividade({atvid: '{{avaliacao.atvId}}', titulo: '{{avaliacao.titulo}}', descricao: '{{avaliacao.descricao|safe}}', funcionarios: {{avaliacao.funcionarios|safe}}})" 

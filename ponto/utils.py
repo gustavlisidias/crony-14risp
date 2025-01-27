@@ -121,8 +121,11 @@ def calcular_totais_e_saldos(funcionario_id, data, pontos, jornada, weekday, mot
 		double = False
 
 		if saldo > timedelta(0) and len(pontos) >= 2:
+			
+			feriados = Feriados.objects.filter(data=data)
+			is_holiday = feriados.first().get_feriado_funcionario(funcionario) if feriados.exists() else False
 
-			if weekday in [1, 7] or Feriados.objects.filter(data=data, funcionarios=funcionario).exists():
+			if weekday in [1, 7] or is_holiday:
 				hora_extra_feriado += saldo
 			
 			elif pontos[-1] > inicio_periodo_noturno or pontos[0] < final_periodo_norturno:

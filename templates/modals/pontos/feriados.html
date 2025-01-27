@@ -11,27 +11,17 @@
 					<input type="text" class="form-control" id="feriadoTitulo" name="titulo" placeholder required>
 					<label for="feriadoTitulo">Título *</label>
 				</div>
-				<div class="mb-3">
-					<label class="form-label" for="feriadoData">Data Feriado *</label>
-					<input type="date" class="form-control" name="data" id="feriadoData" required>
+				<div class="form-floating mb-3">
+					<input type="date" class="form-control" id="feriadoData" name="data" placeholder required>
+					<label for="feriadoData">Data Feriado *</label>
 				</div>
 				<div class="row mb-3">
 					<div class="col">
 						<div class="form-floating">
-							<select class="form-select" id="feriadoContrato" name="contrato">
-							  <option value="" selected>Todos</option>
-							  <option value="CLT">CLT</option>
-							  <option value="Estagio">Estágio</option>
-							</select>
-							<label for="feriadoContrato">Contrato *</label>
-						</div>
-					</div>
-					<div class="col">
-						<div class="form-floating">
-							<select class="form-select" id="feriadoRegiao" onchange="updateRegiao(this.value)">
-							  <option value="" selected>Nacional</option>
-							  <option value="Estadual">Estadual</option>
-							  <option value="Municipal">Municipal</option>
+							<select class="form-select" id="feriadoRegiao" name="regiao" onchange="updateRegiao(this.value)">
+							  <option value="NA" selected>Nacional</option>
+							  <option value="ES">Estadual</option>
+							  <option value="MU">Municipal</option>
 							</select>
 							<label for="feriadoRegiao">Região *</label>
 						</div>

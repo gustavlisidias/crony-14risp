@@ -19,7 +19,9 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-				<button type="submit" class="btn btn-secondary text-light" id="btnEditarAtividade">Salvar</button>
+				{% if request.user.get_access == "admin" %}
+					<button type="submit" class="btn btn-secondary text-light" id="btnEditarAtividade">Salvar</button>
+				{% endif %}
 			</div>
 		</form>
 	</div>

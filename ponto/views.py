@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
 from django.db.models import Min, Q, Max
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
@@ -50,8 +49,8 @@ def RegistrosPontoView(request):
 
 	data_ultimo_ponto = Ponto.objects.filter(funcionario__in=funcionarios).exclude(motivo='Férias').values_list('data', flat=True).distinct().order_by('-data').first()
 	data_ultimo_ponto = data_ultimo_ponto if data_ultimo_ponto else datetime.today()
-	filtros['final'] = request.GET.get('data_final') if request.GET.get('data_final') else data_ultimo_ponto.strftime('%Y-%m-%d')
-	filtros['inicio'] = request.GET.get('data_inicial') if request.GET.get('data_inicial') else (data_ultimo_ponto - delta).strftime('%Y-%m-%d')
+	filtros['final'] = request.GET.get('data_final', data_ultimo_ponto.strftime('%Y-%m-%d'))
+	filtros['inicio'] = request.GET.get('data_inicial', (data_ultimo_ponto - delta).strftime('%Y-%m-%d'))
 
 	# Pontos e score por dia
 	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), filtros['funcionarios'])
@@ -108,7 +107,7 @@ def RegistrosPontoView(request):
 
 	# Grafico
 	graph = {'plot': False}
-	if pontos and (len(request.GET.getlist('funcionarios')) == 1 or request.user.get_access == 'common'):
+	if pontos and scores and (len(request.GET.getlist('funcionarios')) == 1 or request.user.get_access == 'common'):
 		graph['plot'] = True
 		graph['notas'] = scores.get(filtros['funcionarios'].first().id)
 		graph['total'] = timedelta(seconds=0)
@@ -161,8 +160,8 @@ def RegistrosPontoFuncinarioView(request, func):
 	data_primeiro_ponto = pontos_funcionario.last() if pontos_funcionario else (datetime.today() - timedelta(days=29))
 
 	filtros = {'inicio': None, 'final': None, 'funcionarios': None}
-	filtros['final'] = request.GET.get('data_final') if request.GET.get('data_final') else data_ultimo_ponto.strftime('%Y-%m-%d')
-	filtros['inicio'] = request.GET.get('data_inicial') if request.GET.get('data_inicial') else data_primeiro_ponto.strftime('%Y-%m-%d')
+	filtros['final'] = request.GET.get('data_final', data_ultimo_ponto.strftime('%Y-%m-%d'))
+	filtros['inicio'] = request.GET.get('data_inicial', data_primeiro_ponto.strftime('%Y-%m-%d'))
 	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), funcionarios.filter(pk=colaborador.pk))
 
 	solicitacoes_ajuste = SolicitacaoPonto.objects.filter(funcionario=colaborador).values('data', 'motivo', 'status').annotate(inicio=Min('hora'), final=Max('hora')).values('data', 'motivo', 'status', 'inicio', 'final')
@@ -172,7 +171,7 @@ def RegistrosPontoFuncinarioView(request, func):
 
 	nro_colunas = 0
 	graph = {'notas': scores.get(colaborador.id), 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0)}
-	if pontos:
+	if pontos and scores:
 		for _, funcs in pontos.items():
 			for func, dados in funcs.items():
 				graph['total'] += dados['total']
@@ -283,44 +282,26 @@ def AdicionarFeriadoView(request):
 	try:
 		titulo = request.POST.get('titulo')
 		data_feriado = request.POST.get('data')
-		contrato = request.POST.get('contrato')
+		regiao = request.POST.get('regiao')
 		estado = request.POST.get('estado')
 		cidade = request.POST.get('cidade')
 
 		if not_none_not_empty(titulo, data_feriado):
-			funcionarios = JornadaFuncionario.objects.filter(funcionario__data_demissao=None, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem').values(
-				'funcionario__id', 'contrato__titulo', 'funcionario__estado__pk', 'funcionario__cidade__pk'
-			).distinct()
+			feriado = Feriados.objects.create(
+				titulo=titulo,
+				data=data_feriado,
+				regiao=regiao,
+				estado=Estado.objects.get(pk=int(estado)) if estado else None,
+				cidade=Cidade.objects.get(pk=int(cidade)) if cidade else None
+			)
 
-			if contrato:
-				funcionarios = funcionarios.filter(contrato__titulo__icontains=contrato.lower())
-			
-			if estado:
-				funcionarios = funcionarios.filter(funcionario__estado__pk=estado)
-
-			if cidade:
-				funcionarios = funcionarios.filter(funcionario__cidade__pk=cidade)
-
-			if len(funcionarios) == 0:
-				messages.warning(request, 'Feriado não foi adicionado! Não foram encontrados funcionários na modalidade selecionada!')
-				return redirect('pontos')
-
-			with transaction.atomic():
-				feriado = Feriados.objects.create(
-					titulo=titulo,
-					data=data_feriado
-				)
-				
-				feriado.funcionarios.set([i['funcionario__id'] for i in funcionarios])
-				feriado.save()
-
-				create_log(
-					object_model=Feriados,
-					object_id=feriado.id,
-					user=request.user,
-					message='Novo feriado criado',
-					action=1
-				)
+			create_log(
+				object_model=Feriados,
+				object_id=feriado.id,
+				user=request.user,
+				message='Novo feriado criado',
+				action=1
+			)
 
 			messages.success(request, 'Feriado adicionado com sucesso!')
 

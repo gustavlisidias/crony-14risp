@@ -36,7 +36,7 @@
 			<ul class="nav nav-tabs" id="nav-usuario" role="tablist">
 				<li class="nav-item" role="presentation">
 					<button class="nav-link active" id="tab-perfil" data-bs-toggle="tab" data-bs-target="#pane-perfil" type="button" role="tab">
-						Perfil
+						Colaborador
 					</button>
 				</li>
 				<!-- <li class="nav-item" role="presentation">
@@ -46,12 +46,12 @@
 				</li> -->
 				<li class="nav-item" role="presentation">
 					<button class="nav-link" id="tab-ajustes" data-bs-toggle="tab" data-bs-target="#pane-ajustes" type="button" role="tab">
-						Horários
+						Contrato & Horários
 					</button>
 				</li>
 				<li class="nav-item" role="presentation">
 					<button class="nav-link" id="tab-ferias" data-bs-toggle="tab" data-bs-target="#pane-ferias" type="button" role="tab">
-						Férias
+						Histórico Férias
 					</button>
 				</li>
 			</ul>
@@ -89,10 +89,10 @@
 													<a type="button" data-bs-toggle="modal" data-bs-target="#modalAtividades" title="Ver atividades">
 														<i class="fa-thin fa-calendar-lines fa-xl text-primary me-2"></i>
 													</a>
-													<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar colaborador">
-														<i class="fa-thin fa-pen-to-square fa-xl text-primary me-2"></i>
-													</a>
 													{% if request.user.get_access != "common" %}
+														<a type="button" data-bs-toggle="modal" data-bs-target="#modalEditarFuncionario" title="Editar colaborador">
+															<i class="fa-thin fa-pen-to-square fa-xl text-primary me-2"></i>
+														</a>
 														<a type="button" data-bs-toggle="modal" data-bs-target="#modalObservacoesFuncionario" title="Adicionar anotações">
 															<i class="fa-thin fa-address-card fa-xl text-primary me-2"></i>
 														</a>
