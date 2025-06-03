@@ -9,19 +9,16 @@ from django.utils.text import slugify
 from datetime import datetime
 
 from funcionarios.models import Funcionario
-from notifications.models import Notification
 from pesquisa.models import Pesquisa, Pergunta, Resposta, TextoPerguntas
+from web.decorators import base_context_required
 from web.report import gerar_relatorio_csv
 from web.utils import not_none_not_empty, add_coins
 
 
 # Page
-@login_required(login_url='entrar')
-def PesquisaView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-
+@base_context_required
+def PesquisaView(request, context):
+	funcionario = context['funcionario']
 	tipos = [{'key': i[0], 'value': i[1]} for i in Pergunta.Tipo.choices]
 
 	if request.user.get_access == "admin":
@@ -69,30 +66,24 @@ def PesquisaView(request):
 
 		return redirect('pesquisa')
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
-
+	context.update({
 		'tipos': tipos,
 		'pesquisas': pesquisas,
-	}
+	})
+
 	return render(request, 'pages/pesquisas.html', context)
 
 
 # Page
-@login_required(login_url='entrar')
-def VisualizarRespostasView(request, pesqid):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-
+@base_context_required
+def VisualizarRespostasView(request, context, pesqid):
 	hoje = datetime.now().replace(tzinfo=pytz.utc)
+	funcionario = context['funcionario']	
 	pesquisa = Pesquisa.objects.get(pk=pesqid)
 	pesquisa.perguntas = Pergunta.objects.filter(pesquisa=pesquisa)
 	pesquisa.respostas = Resposta.objects.filter(pergunta__pesquisa=pesquisa)
 
-	dados = []
+	dados = list()
 	for pergunta in pesquisa.perguntas:
 		resposta_textos = [resposta.texto for resposta in pesquisa.respostas if resposta.pergunta.id == pergunta.id]
 		count = [resposta_textos.count(texto) for texto in set(resposta_textos)]
@@ -117,15 +108,12 @@ def VisualizarRespostasView(request, pesqid):
 
 		return gerar_relatorio_csv(colunas, dataset, filename)
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
-
+	context.update({
 		'pesquisa': pesquisa,
 		'vencido': pesquisa.data_encerramento < hoje.date(),
 		'dados': dados
-	}
+	})
+
 	return render(request, 'pages/pesquisas-resposta.html', context)
 
 
@@ -166,7 +154,7 @@ def ResponderPesquisaView(request, pesqid):
 					funcionario=funcionario
 				).save()
 		
-		add_coins(funcionario, 150)
+		add_coins(funcionario, 150, 'Resposta de pesquisa')
 		messages.success(request, 'Respostas enviadas com sucesso!')
 
 	except Exception as e:

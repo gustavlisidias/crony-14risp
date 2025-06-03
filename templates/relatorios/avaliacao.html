@@ -44,10 +44,14 @@
 			body {
 				font-family: "Lato", sans-serif;
 				font-weight: 400;
-				font-size: 11px;
+				font-size: 10px;
 				font-style: normal;
 				letter-spacing: 0.2px;
 				color: #202020;
+			}
+
+			.table.table-sm {
+				margin-bottom: 6rem;
 			}
 		</style>
 	</head>
@@ -66,56 +70,62 @@
 
 			<hr>
 
-			<h3 class="text-center">{{perguntas.first.pergunta.titulo}}</h3>
-			{{perguntas.first.pergunta.texto|safe}}
-
 			<div class="my-4">
+				<p class="m-0 p-0">Período de Avaliação: {{avaliacao.inicio|date:"d/m/Y"}} até {{avaliacao.final|date:"d/m/Y"}}</p>
+				<br>
 				<p class="m-0 p-0">Total Respostas: {{dados.total_respostas}}</p>
 				<p class="m-0 p-0">Total Participantes: {{dados.total_participantes_ativos}}/{{dados.total_participantes}}</p>
 				<p class="m-0 p-0">Total Perguntas: {{dados.total_perguntas}}</p>
+				<br>
+				<p class="m-0 p-0">Score de Assiduidade: {{dados.score|floatformat:02}}</p>
+				<p class="m-0 p-0">Nota de Corte para <i>{{avaliacao.avaliado.get_perfil.time.titulo}}</i>: {{dados.corte}}</p>
 			</div>
 
-			<h4>Notas calculadas<br>CRITERIO (peso) X NIVEL</h4>
+			<!-- Tabela com Médias -->
+			<h3 class="fw-bold text-center">MÉDIA DE NOTAS POR NÍVEL</h3>
 
-			<table class="table table-sm table-bordered mb-4">
-				<caption>Atenção: Em todas as avaliações, cada critério e cada nível possuem um peso. Esses pesos são determinados pelo setor de Recursos Humanos em conjunto com os responsáveis por sua avaliação. Além disso, seu score de assiduidade é atribuido ao cálculo da média final.</caption>
-				<thead>
-					<tr>
-						<th scope="col" class="bg-body text-start">Critério</th>
-						<th scope="col" class="bg-body text-center">Auto</th>
-						<th scope="col" class="bg-body text-center">Par</th>
-						<th scope="col" class="bg-body text-center">Gestor</th>
-						<th scope="col" class="bg-body-secondary text-center">Total por Critério</th>
-					</tr>
-				</thead>
-				<tbody class="table-group-divider">
-					{% for criterio, niveis in dados.tabela.items %}
-						<tr>
-							<th scope="col" class="text-start">{{ criterio }}</th>
-							<td class="text-center">{{ niveis.0|floatformat:02 }}</td>
-							<td class="text-center">{{ niveis.1|floatformat:02 }}</td>
-							<td class="text-center">{{ niveis.2|floatformat:02 }}</td>
-							<td class="bg-body-secondary text-center fw-bold">{{niveis|soma_dict}}</td>
-						</tr>
-					{% endfor %}
-				</tbody>
-				<tfoot>
-					<tr>
-						<th class="bg-body-secondary text-start">Total por Nível</th>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.0|floatformat:02|default:"0"}}</td>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.1|floatformat:02|default:"0"}}</td>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer.2|floatformat:02|default:"0"}}</td>
-						<td class="bg-body-secondary text-center fw-bold">{{dados.tabela_footer|soma_dict}}</td>
-					</tr>
-				</tfoot>
-			</table>
+			<div class="d-flex justify-content-center mb-3">
+				<div class="w-75 text-center">
+					<table class="table">
+						<caption>Atenção: Em todas as avaliações, cada critério e cada nível possuem um peso. Esses pesos são determinados pelo setor de Recursos Humanos em conjunto com os responsáveis por sua avaliação. Além disso, seu score de assiduidade é atribuido ao cálculo da média final.</caption>
+						<thead>
+							<tr>
+								<th scope="col"></th>
+								<th scope="col">Auto</th>
+								<th scope="col">Par</th>
+								<th scope="col">Gestor</th>
+								<th scope="col"></th>
+							</tr>
+						</thead>
+						<tbody class="table-group-divider">
+							{% for criterio, nivel in grafico.items %}
+								<tr>
+									<th scope="row">{{ criterio }}</th>
+									<td>{{ nivel.auto|floatformat:2 }}</td>
+									<td>{{ nivel.par|floatformat:2 }}</td>
+									<td>{{ nivel.gestor|floatformat:2 }}</td>
+									<td class="text-center fw-bold">{{ dados.media_por_criterio|item_from_dict:criterio|floatformat:2 }}</td>
+								</tr>
+							{% endfor %}
+							<!-- Linha extra para Média por Nível -->
+							<tr class="fw-bold">
+								<th scope="row"></th>
+								<td>{{ dados.media_por_nivel.auto|floatformat:2 }}</td>
+								<td>{{ dados.media_por_nivel.par|floatformat:2 }}</td>
+								<td>{{ dados.media_por_nivel.gestor|floatformat:2 }}</td>
+								<td class="text-center"></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
 
-			<div class="text-center mb-4">
+			<div class="text-center mb-5">
 				<h2>MÉDIA FINAL</h2>
 				<h2>{{dados.nota_final|floatformat:02}}</h2>
 			</div>
 
-			<table class="table table-sm table-bordered mb-5">
+			<table class="table table-sm table-bordered">
 				<caption>Conceito de pontuação dentro da plataforma.</caption>
 				<thead>
 					<tr>

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
@@ -23,18 +24,19 @@ from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
 from funcionarios.models import Funcionario
 from funcionarios.utils import converter_documento
-from notifications.models import Notification
+from notifications.signals import notify
 from ponto.renderers import RenderToPDF
+from web.decorators import base_context_required
 from web.utils import not_none_not_empty, add_coins
+from web.views import ADMIN_USER
 
 
 # Page
-@login_required(login_url='entrar')
-def AgendaView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	colaboradores = funcionarios
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def AgendaView(request, context):
+	funcionario = context['funcionario']
+	# colaboradores = funcionarios
+
 	atividades = Atividade.objects.all().order_by('inicio')
 	tipos = TipoAtividade.objects.all()
 
@@ -64,15 +66,13 @@ def AgendaView(request):
 		'recorrente': i.recorrencia.id if i.recorrencia else None
 	} for i in atividades]
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
+		# 'colaboradores': colaboradores,
 		'atividades': atividades,
 		'listagem': listagem,
-		'tipos': tipos,
-		'colaboradores': colaboradores
-	}
+		'tipos': tipos
+	})
+
 	return render(request, 'pages/agenda.html', context)
 
 
@@ -145,7 +145,7 @@ def AdicionarAtividadeView(request):
 				atividade.funcionarios.set(usuarios)
 				atividade.save()
 
-			add_coins(Funcionario.objects.get(usuario=request.user), 10)
+			# add_coins(Funcionario.objects.get(usuario=request.user), 10, 'Criação de atividade')
 			messages.success(request, 'Atividade criada com sucesso!')
 
 		except Exception as e:
@@ -158,14 +158,13 @@ def AdicionarAtividadeView(request):
 
 
 # Page
-@login_required(login_url='entrar')
-def FeriasView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def FeriasView(request, context):
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
 
 	ferias = ferias_funcionarios(funcionarios)
-	statuses = [{'key': i[0], 'value': i[1]} for i in SolicitacaoFerias.Status.choices]
+	statuses = [{'key': i[0], 'value': i[1]} for i in SolicitacaoFerias.Status.choices if i[0] != 0]
 
 	# Filtro de solicitações por role
 	if funcionario.usuario.get_access == 'common':
@@ -188,8 +187,6 @@ def FeriasView(request):
 		observacao = request.POST.get('observacao')
 		arquivos = request.FILES.getlist('arquivo')
 
-		admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
-
 		if not_none_not_empty(inicio_ferias, inicio_periodo, final_periodo, observacao):
 			if Atividade.objects.filter(tipo=TipoAtividade.objects.get(slug='ferias'), autor=funcionario, data_finalizacao=None).exists():
 				messages.warning(request, 'Você já possui férias em aberto!')
@@ -202,7 +199,7 @@ def FeriasView(request):
 			with transaction.atomic():
 				solicitacao = SolicitacaoFerias.objects.create(
 					funcionario=funcionario,
-					aprovador=funcionario.gerente or admin,
+					aprovador=funcionario.gerente or ADMIN_USER,
 					abono=abono,
 					decimo=decimo,
 					inicio_periodo=inicio_periodo,
@@ -225,8 +222,22 @@ def FeriasView(request):
 							documento=documento,
 							caminho=f'{nome}.pdf',
 						).save()
+
+				notify.send(
+					sender=solicitacao.funcionario.usuario,
+					recipient=solicitacao.aprovador.usuario,
+					verb=f'Você possui uma nova solicitação de férias de {solicitacao.funcionario}',
+				)
+
+				send_mail(
+					'Crony - Solicitação de Férias',
+					f'Você possui uma nova solicitação de férias de {solicitacao.funcionario}',
+					'avisos@novadigitalizacao.com.br',
+					[solicitacao.aprovador.email],
+					fail_silently=False,
+				)
 				
-				add_coins(funcionario, 5)
+				add_coins(funcionario, 5, 'Solicitação de férias')
 				messages.success(request, 'Solicitação enviada com sucesso!')
 		
 		elif not_none_not_empty(request.POST.get('pdf')):
@@ -241,7 +252,7 @@ def FeriasView(request):
 			return RenderToPDF(request, 'relatorios/ferias.html', context, filename).weasyprint()
 		
 		elif not_none_not_empty(request.POST.get('csv')):
-			dataset = []
+			dataset = list()
 			for funcionario, dados in ferias.items():
 				for info in dados:
 					dataset.append({
@@ -269,29 +280,27 @@ def FeriasView(request):
 		
 		return redirect('ferias')
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
 		'ferias': ferias,
 		'statuses': statuses,
 		'minhas_ferias': ferias.get(funcionario, []),
 		'solicitacoes': solicitacoes.order_by('-status'),
-	}
+	})
+
 	return render(request, 'pages/ferias.html', context)
 
 
 # Page
-@login_required(login_url='entrar')
-def DesempenhoView(request):
+@base_context_required
+def DesempenhoView(request, context):
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
+
 	# Filtros disponíveis na página
 	tipos_filtrados = request.GET.getlist('tipos')
 	status_filtrados = request.GET.getlist('status')
 	funcionarios_filtrados = request.GET.getlist('funcionarios')
 
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
 	tipos = TipoAtividade.objects.exclude(avaliativo=False)
 	atividades = Atividade.objects.exclude(data_finalizacao=None).exclude(tipo__avaliativo=False)
 
@@ -309,7 +318,7 @@ def DesempenhoView(request):
 	if funcionarios_filtrados:
 		atividades = atividades.filter(funcionarios__in=[int(i) for i in funcionarios_filtrados]).distinct()
 
-	avaliacoes = []
+	avaliacoes = list()
 	for atividade in atividades:
 		dicionario = {
 			'atvId': atividade.id,
@@ -353,13 +362,12 @@ def DesempenhoView(request):
 	if tipos_filtrados:
 		avaliacoes = list(filter(lambda d: d['tipoId'] in [int(i) for i in tipos_filtrados], avaliacoes))
 
-	context = {
+	context.update({
 		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
 		'tipos': tipos,
 		'avaliacoes': avaliacoes,
-	}
+	})
+
 	return render(request, 'pages/desempenho.html', context)
 
 
@@ -387,7 +395,7 @@ def AdicionarAvaliacaoView(request, atvid):
 				).save()
 
 				for funcionario in atividade.funcionarios.all():
-					add_coins(funcionario, 100)
+					add_coins(funcionario, 100, 'Receber avaliacação')
 
 			messages.success(request, 'Avaliação foi criada com sucesso!')
 

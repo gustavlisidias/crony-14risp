@@ -65,6 +65,28 @@
 {% block javascript %}
 <script>
 	document.addEventListener("DOMContentLoaded", function () {
+		const gerarCertificado = {{curso.certificado}};
+		const cursoConcluido = {{concluido}};
+		const extraButtons = [];
+
+		extraButtons.push($(`<button class="btn btn-info text-light ms-1" id="btnConcluirWizard" type="button">Concluir</button>`));
+
+		if (gerarCertificado && !cursoConcluido) {
+			extraButtons.push($(`
+				<form method="POST" id="formGerarCertificado" style="display: none">
+					{% csrf_token %}
+					<button class="btn btn-info text-light ms-1" id="btnCertificado" name="certificado" value="on" type="submit">Certificado</button>
+				</form>
+			`))
+		} else if (gerarCertificado && cursoConcluido) {
+			extraButtons.push($(`
+				<form method="POST" id="formGerarCertificado" style="display: contents">
+					{% csrf_token %}
+					<button class="btn btn-info text-light ms-1" id="btnCertificado" name="certificado" value="on" type="submit">Certificado</button>
+				</form>
+			`))
+		};		
+
 		$("#smartwizard").smartWizard({
 			theme: "dots",
 			justified: true,
@@ -77,7 +99,7 @@
 				position: "bottom",
 				showNextButton: true,
 				showPreviousButton: true,
-				extraHtml: [$(`<button class="btn btn-info text-light ms-1" id="btnConcluirWizard" type="button"> Concluir </button>`)]
+				extraHtml: extraButtons,
 			},
 			transition: {
 				animation: "fade",
@@ -86,16 +108,17 @@
 		});
 
 		$("#btnConcluirWizard").on("click", function () {
+			const cursoId = {{curso.id}};
 			const etapaId = parseInt($("#smartwizard .active").attr("href").replace("#", "").split("-").slice(-1)[0]);
 
 			$.ajax({
 				type: "POST",
-				url: `{% url "concluir-etapa" 0 %}`.replace("0", etapaId),
+				url: `/cursos/concluir/curso/${cursoId}/etapa/${etapaId}`,
 				beforeSend: function (xhr) {
 					xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
 				},
 				success: function (data, textStatus, xhr) {
-					alert(data.message);
+					if (data.status) $("#formGerarCertificado").css({ "display" : "contents" });
 
 					if (xhr.status === 200) {
 						const el = $("#smartwizard .active").attr("href").replace("#", "");
@@ -104,6 +127,8 @@
 						</div>`);
 						$("#smartwizard .tab-content").height("100%");
 					};
+
+					alert(data.message);
 				},
 				error: function (data) {
 					alert(data.message);

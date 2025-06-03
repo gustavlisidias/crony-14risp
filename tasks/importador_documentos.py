@@ -164,11 +164,12 @@ def importar_documentos(nodes):
 						logging.info(f'Raise exception in {file}: {e}')
 						continue
 	
+	destinatarios = [i.email for i in Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True)]
 	email = EmailMessage(
 		subject='Log de Importação (Crony)',
 		body='Email automático, por favor não responda!',
 		from_email=DEFAULT_FROM_EMAIL,
-		to=['ronilda@14ri.com.br',]
+		to=destinatarios
 	)
 	email.attach_file(log_path)
 	email.send(fail_silently=False)

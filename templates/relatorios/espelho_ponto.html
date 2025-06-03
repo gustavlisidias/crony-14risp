@@ -33,6 +33,10 @@
 				color: #202020;
 			}
 
+			table td, table th {
+				white-space: nowrap;
+			}
+
 			table tbody tr td span {
 				color: red;
 			}
@@ -45,7 +49,6 @@
 
 	<body>
 		<div class="container-fluid">
-
 			<div class="d-flex justify-content-between align-items-center my-2">
 				<div class="ps-2"><img class="img img-fluid" src="{% static 'images/logo-text.png' %}" style="width: 100px; height: 37px"></div>
 				<div class="flex-fill">
@@ -89,7 +92,7 @@
 				</div>
 			</div>
 
-			<table class="table table-sm table-bordered">
+			<table class="table table-sm table-bordered align-middle">
 				<thead>
 					<tr>
 						<th class="bg-body">Dia</th>
@@ -101,14 +104,18 @@
 							{% endif %}
 						{% endfor %}
 						<th class="bg-body">Saldo</th>
-						<th class="bg-body">H.E Total</th>
-						<th class="bg-body">Banco de Horas</th>
+
+						{% if funcionario.get_contrato.tipo != "est" %}
+							<th class="bg-body">H.E Total</th>
+							<th class="bg-body">Banco de Horas</th>
+						{% endif %}
+
 						<th class="bg-body">Observação</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% for data, funcionarios in pontos.items %}
-						{% for funcionario, dados in funcionarios.items %}
+						{% for func, dados in funcionarios.items %}
 							<tr>
 								<th scope="row">{{data|date:"D"}}, {{data|date:"d/m"}}</th>
 								{% for nro in nro_colunas %}
@@ -117,13 +124,17 @@
 								<td class="{% if "-" in dados.saldo|timedelta %} text-danger {% elif dados.saldo|timedelta == "00h 00m" %} text-dark-emphasis {% else %} text-success {% endif %}">
 									{{dados.saldo|timedelta}}
 								</td>
-								<td class="text-dark-emphasis">
-									{{dados.hora_extra|timedelta}}
-								</td>
-								<td class="text-dark-emphasis fw-bold">
-									{{dados.banco|timedelta}}
-								</td>
-								<td>{{dados.motivo|default_if_none:""}}</td>
+
+								{% if funcionario.get_contrato.tipo != "est" %}
+									<td class="text-dark-emphasis">
+										{{dados.hora_extra|timedelta}}
+									</td>
+									<td class="text-dark-emphasis fw-bold">
+										{{dados.banco|timedelta}}
+									</td>
+								{% endif %}
+
+								<td>{{dados.motivo|truncatechars:90|default_if_none:""}}</td>
 							</tr>
 						{% endfor %}
 					{% endfor %}

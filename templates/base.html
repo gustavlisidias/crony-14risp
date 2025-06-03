@@ -43,8 +43,6 @@
 		<script src="{% static 'django_ckeditor_5/dist/bundle.js' %}"></script>
 		<script src="{% static 'django_ckeditor_5/dist/translations/pt-br.js' %}"></script>
 		<!-- DataTables -->
-		<script src="{% static 'datatables/pdfmake.min.js' %}"></script>
-		<script src="{% static 'datatables/vfs_fonts.js' %}"></script>
 		<script src="{% static 'datatables/datatables.min.js' %}"></script>
 		<!-- ChoicesJS -->
 		<script src="{% static 'choices/choices.min.js' %}"></script>
@@ -58,27 +56,18 @@
 		<script src="{% static 'main/fuse.js' %}"></script>
 		{% endcompress %}
 
-		<!-- Customizações -->
+		<!-- Customizações CSS -->
 		{% block header %} {% endblock header %}
-
-		<script type="text/javascript">
-			var request_user = "{{ funcionario.nome_completo|escapejs }}"; 
-			var request_user_id = {% if request.user.is_authenticated %}{{ funcionario.id }}{% else %}0{% endif %};
-		</script>
 
 		<link rel="stylesheet" href="{% static 'main/main.css' %}?{% now 'U' %}">
 		<link rel="stylesheet" href="{% static 'main/chat.css' %}?{% now 'U' %}">
 	</head>
 
 	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-		{% if request.user.is_authenticated %}
-			<!-- Preloder -->
-			<div id="overlay" class="overlay">
-				<div id="loading" class="loading"></div>
-			</div>
-
+		{% if request.user.is_authenticated %}			
+			{% include "includes/overlay.html" %}
+			{% include "modals/chat/mensagem-massa.html" %}
 			{% include "includes/chat.html" %}
-
 			<div class="container-fluid">
 				<div class="row flex-nowrap">
 					{% include "includes/sidebar.html" %}
@@ -93,9 +82,25 @@
 		{% endif %}
 
 		<script type="text/javascript" src="{% static 'main/main.js' %}?{% now 'U' %}"></script>
-		<script type="text/javascript" src="{% static 'main/chat.js' %}?{% now 'U' %}" defer></script>
 		
 		{% if request.user.is_authenticated %}
+			<script type="text/javascript" src="{% static 'main/chat.js' %}?{% now 'U' %}" defer></script>
+
+			<script>
+				const request_user = "{{ funcionario.nome_completo|escapejs }}"; 
+				const request_user_id = {{ funcionario.id }};
+				
+				const hideOverlay = () => {
+					setTimeout(() => {
+						document.getElementById("overlay").style.display = "none"; 
+					}, 500);
+				};
+
+				const showOverlay = () => {
+					document.getElementById("overlay").style.display = "block";
+				};
+			</script>
+
 			<script defer>
 				function updateSelectCidades(estado) {
 					$.ajax({
@@ -118,29 +123,19 @@
 					});
 				};
 
-				document.getElementById("overlay").style.display = "block";
-
-				document.querySelectorAll(".menu a").forEach(item => {
-					item.addEventListener("click", function() {
-						document.getElementById("overlay").style.display = "block";
-					});
-				});
-
-				const hideOverlay = () => {
-					setTimeout(() => {
-						document.getElementById("overlay").style.display = "none"; 
-					}, 700);
-				};
+				showOverlay();			
 
 				window.addEventListener("pageshow", event => {
-					if (event.persisted) {
-						hideOverlay();
-					}
+					hideOverlay();
 				});
 
 				document.addEventListener("DOMContentLoaded", function() {
-					hideOverlay();
-
+					document.querySelectorAll(".menu a").forEach(item => {
+						item.addEventListener("click", function() {
+							showOverlay();
+						});
+					});	
+					
 					document.getElementById("btnSwitchTheme").addEventListener("click", () => {
 						if (document.documentElement.getAttribute("data-bs-theme") == "dark") {
 							document.documentElement.setAttribute("data-bs-theme", "light");
@@ -154,9 +149,6 @@
 							url: `{% url "alterar-tema" %}`,					
 							beforeSend: function (xhr) {
 								xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
-							},
-							success: function (response) {
-								console.log("tema alterado");
 							},
 							error: function (error) {
 								console.log(error.responseJSON ? error.responseJSON.mensagem : error);
@@ -189,7 +181,19 @@
 					});
 				});
 			</script>
+		{% else %}
+			<script>
+				function mostrarSenha() {
+					document.getElementById("entrarSenha").type = 'text';
+				};
+				
+				function esconderSenha() {
+					document.getElementById("entrarSenha").type = 'password';
+				};
+			</script>
 		{% endif %}
+		
+		<!-- Customizações JS -->
 		{% block javascript %} {% endblock javascript %}
 	</body>
 

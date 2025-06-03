@@ -140,11 +140,6 @@ def replace(value, args):
 
 
 @register.filter
-def query_to_list(query, key):
-	return list(query.values_list(key, flat=True))
-
-
-@register.filter
 def even(value):
 	return True if (value % 2) == 0 else False
 
@@ -152,6 +147,11 @@ def even(value):
 @register.filter
 def is_today(value):
 	return True if datetime.datetime.strptime(value, '%Y-%m-%d').date() == datetime.date.today() else False
+
+
+@register.filter
+def overdue(value):
+	return value <= datetime.date.today()
 
 
 @register.filter

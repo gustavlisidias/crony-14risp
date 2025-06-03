@@ -244,15 +244,12 @@
 					<div class="col">
 						<div class="form-floating mb-3">
 							<select class="form-select" id="funcionarioGerente" name="gerente">
-								{% if colaborador.gerente %}
-									<option value="{{colaborador.gerente.id}}" selected hidden>{{colaborador.gerente.nome_completo}}</option>
-									<option value="">Nenhum Responsável</option>
-								{% else %}
-									<option value="" selected>Nenhum Responsável</option>
-								{% endif %}								
-								{% for colaborador in funcionarios %}
-									{% if funcionario.usuario.is_gerente %}
-										<option value="{{colaborador.id}}">{{colaborador.nome_completo}}</option>
+								{% for item in funcionarios %}
+									{% if forloop.first %}
+										<option value="" {% if not item == colaborador.gerente %} selected {% endif %}>Nenhum Responsável</option>
+									{% endif %}
+									{% if item.usuario.is_gerente %}
+										<option value="{{item.id}}" {% if item == colaborador.gerente %} selected {% endif %}>{{item.nome_completo}}</option>
 									{% endif %}
 								{% endfor %}
 							</select>

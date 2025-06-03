@@ -14,7 +14,7 @@
 		<div class="card-header bg-primary text-light border-bottom border-light">
 			Configurações
 		</div>
-		<div class="card-body" style="min-height: 50vh">
+		<div class="card-body">
 			<div class="d-flex align-items-start">
 				<div class="nav flex-column nav-pills me-4 w-25" id="pills-tab" role="tablist" aria-orientation="vertical">
 					<button class="nav-link text-start active" id="pills-documentos-tab" data-bs-toggle="pill" data-bs-target="#pills-documentos" type="button" role="tab" aria-controls="pills-documentos" aria-selected="true">Geral</button>
@@ -42,9 +42,16 @@
 								<label for="geralInscricao">Inscrição Estadual</label>
 								<input type="text" class="form-control" id="geralInscricao" name="insc_estadual" {% for variavel in variaveis %}{% if variavel.chave == "INSC_ESTADUAL" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
 							</div>
+
+							<h6 class="mt-5">EMAILS PARA RELATÓRIOS</h6>
+							<hr>
 							<div class="form-group mb-3">
-								<label for="geralEmail">Email de Indentificação</label>
-								<input type="text" class="form-control" id="geralEmail" name="email" {% for variavel in variaveis %}{% if variavel.chave == "EMAIL" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+								<label for="geralEmailDocumentos">Email(s) Relatório Documentos</label>
+								<input type="text" class="form-control" id="geralEmailDocumentos" name="email_docs" {% for variavel in variaveis %}{% if variavel.chave == "EMAIL_DOCS" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
+							</div>
+							<div class="form-group mb-3">
+								<label for="geralEmailAfetivograma">Email(s) Relatório Afetivograma</label>
+								<input type="text" class="form-control" id="geralEmailAfetivograma" name="email_afet" {% for variavel in variaveis %}{% if variavel.chave == "EMAIL_AFET" %}value="{{variavel.valor}}"{% endif %}{% endfor %}>
 							</div>
 
 							<h6 class="mt-5">DIRETÓRIOS</h6>
@@ -139,7 +146,7 @@
 								<div class="col-4">
 									<h6>SETORES</h6>
 									<input type="text" class="form-control mb-2" id="novoSetor">
-									<button type="button" class="btn btn-tertiary text-light" id="btnAdicionarSetor">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarSetor">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-setores">
@@ -160,7 +167,7 @@
 								<div class="col-4">
 									<h6>CARGOS</h6>
 									<input type="text" class="form-control mb-2" id="novoCargo">
-									<button type="button" class="btn btn-tertiary text-light" id="btnAdicionarCargo">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarCargo">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-cargos">
@@ -184,7 +191,7 @@
 										<input type="color" value="#000000" class="form-control form-control-color mb-2 me-2 w-25 px-2 py-1" id="novoCorAtividade">
 										<input type="text" class="form-control mb-2" id="novoTipoAtividade">
 									</div>
-									<button type="button" class="btn btn-tertiary text-light" id="btnAdicionarAtividade">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarAtividade">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-atividades">
@@ -212,7 +219,7 @@
 										<input type="text" class="form-control mb-2 me-2 w-25" id="novoCodigoDocumento" placeholder="000">
 										<input type="text" class="form-control mb-2" id="novoDocumento">
 									</div>
-									<button type="button" class="btn btn-tertiary text-light" id="btnAdicionarDocumento">Adicionar</button>
+									<button type="button" class="btn btn-info text-light" id="btnAdicionarDocumento">Adicionar</button>
 								</div>
 								<div class="col-8" style="max-height: 20rem; overflow-y: auto;">
 									<ul class="list-group list-group-flush list-documentos">

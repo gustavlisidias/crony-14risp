@@ -4,16 +4,18 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from datetime import datetime, timedelta
 
 from chat.models import Sala, Mensagem, Arquivo
-from funcionarios.models import Funcionario
+from funcionarios.models import Funcionario, Perfil
 from web.utils import not_none_not_empty
 
 
+# Ajax
 @login_required(login_url='entrar')
 def ChatUsersView(request):
 	if not request.method == 'GET':
@@ -27,6 +29,7 @@ def ChatUsersView(request):
 				'id': i.id,
 				'nome_completo': i.nome_completo,
 				'is_auth': i.usuario.is_authenticated,
+				'status': i.get_perfil.status,
 				'setor': i.setor.setor
 			})
 
@@ -47,7 +50,8 @@ def ChatUsersView(request):
 			'usuarios_recentes': [{
 				'id': i.id,
 				'nome_completo': i.nome_completo,
-				'is_auth': i.usuario.is_authenticated
+				'is_auth': i.usuario.is_authenticated,
+				'status': i.get_perfil.status,
 			} for i in usuarios_recentes],
 			'grupos': grupos
 		}
@@ -57,6 +61,7 @@ def ChatUsersView(request):
 		return JsonResponse({'message': f'Erro ao consultar funcionários: {e}'}, status=400)
 
 
+# Websocket
 @login_required(login_url='entrar')
 def ChatView(request, index, tipo):	
 	try:
@@ -88,12 +93,14 @@ def ChatView(request, index, tipo):
 		socket = f'{request.get_host()}/ws/chat/room/{sala.uuid}'
 
 		# Recupero as mensagens e arquivos associadas à sala
-		mensagens = []
+		mensagens = list()
 		for mensagem in Arquivo.objects.filter(sala=sala).order_by('data_cadastro'):
 			mensagens.append({
 				'remetente': mensagem.remetente.nome_completo,
 				'data_cadastro': mensagem.data_cadastro,
 				'mensagem': mensagem.arquivo.url,
+				'text_respondido': mensagem.text_respondido,
+				'nome_respondido': mensagem.nome_respondido,
 				'tipo': 'arq'
 			})
 
@@ -102,6 +109,8 @@ def ChatView(request, index, tipo):
 				'remetente': mensagem.remetente.nome_completo,
 				'data_cadastro': mensagem.data_cadastro,
 				'mensagem': mensagem.mensagem,
+				'text_respondido': mensagem.text_respondido,
+				'nome_respondido': mensagem.nome_respondido,
 				'tipo': 'msg'
 			})
 
@@ -134,6 +143,7 @@ def ChatView(request, index, tipo):
 		return JsonResponse({'message': f'Erro ao consultar mensagens: {e}'}, status=400)
 
 
+# Modal
 @login_required(login_url='entrar')
 def MesagemMassaView(request):
 	if not request.method == 'POST':
@@ -173,3 +183,22 @@ def MesagemMassaView(request):
 		messages.error(request, 'Preencha todos os campos obrigatórios!')
 
 	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+
+# Ajax
+@csrf_exempt
+@login_required(login_url='entrar')
+def AlterarStatusChatView(request, func):
+	try:
+		funcionario = Funcionario.objects.get(pk=func)
+
+		if request.method == 'GET':
+			return JsonResponse({'status': funcionario.get_perfil.status}, safe=False, status=200)
+
+		if request.method == 'POST':
+			novo_status = int(request.POST.get('status'))
+			Perfil.objects.filter(funcionario=funcionario).update(status=novo_status)
+			return JsonResponse({'status': novo_status}, safe=False, status=200)
+
+	except Exception as e:
+		return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)

@@ -57,6 +57,11 @@ def get_foto(funcionario):
 
 
 @database_sync_to_async
+def get_status(funcionario):
+	return funcionario.get_perfil.status
+
+
+@database_sync_to_async
 def get_pendencias(remetente_id):
 	pendencias = set()
 
@@ -74,13 +79,13 @@ def get_pendencias(remetente_id):
 
 
 @database_sync_to_async
-def criar_mensagem(sala, remetente, mensagem, lido):
-	Mensagem(sala=sala, remetente=remetente, mensagem=mensagem, lido=lido).save()
+def criar_mensagem(sala, remetente, mensagem, lido, mensagem_resposta, mensagem_resposta_username):
+	Mensagem(sala=sala, remetente=remetente, mensagem=mensagem, lido=lido, text_respondido=mensagem_resposta, nome_respondido=mensagem_resposta_username).save()
 
 
 @database_sync_to_async
-def criar_arquivo(sala, remetente, arquivo, lido):
-	Arquivo(sala=sala, remetente=remetente, arquivo=arquivo, lido=lido).save()
+def criar_arquivo(sala, remetente, arquivo, lido, mensagem_resposta, mensagem_resposta_username):
+	Arquivo(sala=sala, remetente=remetente, arquivo=arquivo, lido=lido, text_respondido=mensagem_resposta, nome_respondido=mensagem_resposta_username).save()
 
 
 @database_sync_to_async
@@ -131,7 +136,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 			await self.channel_layer.group_add(self.room_name, self.channel_name)
 
-			await criar_log(f'Conexão estabelecida na sala {self.room_name}, total de {len(self.room_connections[self.room_name])} usuários')
+			# await criar_log(f'Conexão estabelecida na sala {self.room_name}, total de {len(self.room_connections[self.room_name])} usuários')
 			
 		except Exception as e:
 			await self.send(text_data=json.dumps({'reason': e}))
@@ -143,10 +148,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 			self.room_connections[self.room_name].discard(self.employee)
 			await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
-		await criar_log(f'Desconexão de {self.employee} em {self.room_name}')
+		# await criar_log(f'Desconexão de {self.employee} em {self.room_name}')
 
 	async def receive(self, text_data):
 		remetente = await get_funcionario(pk=int(json.loads(text_data)['remetente']))
+		mensagem_resposta = json.loads(text_data)['messageReply']
+		mensagem_resposta_username = json.loads(text_data)['messageReplyUsername']
 
 		if 'arquivo' in json.loads(text_data):
 			arquivo = json.loads(text_data)['arquivo']
@@ -157,7 +164,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 			arquivo_modelo = ContentFile(dados_binarios, name=nome)
 			lido = await get_visualizado(self.sala, self.room_connections[self.room_name])
 
-			await criar_arquivo(sala=self.sala, remetente=remetente, arquivo=arquivo_modelo, lido=lido)
+			await criar_arquivo(sala=self.sala, remetente=remetente, arquivo=arquivo_modelo, lido=lido, mensagem_resposta=mensagem_resposta, mensagem_resposta_username=mensagem_resposta_username)
 
 			imagem = await get_foto(remetente)
 			await self.channel_layer.group_send(
@@ -168,16 +175,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
 					'formato': formato.replace('data:', ''),
 					'remetente': remetente.nome_completo,
 					'remetente_id': remetente.id,
-					'imagem': imagem
+					'imagem': imagem,
+					'mensagem_resposta': mensagem_resposta,
+					'mensagem_resposta_username': mensagem_resposta_username
 			})
 
-			await criar_log(f'O usuário {remetente.nome_completo} enviou o arquivo: {nome}')
+			# await criar_log(f'O usuário {remetente.nome_completo} enviou o arquivo: {nome}')
 
 		else:
 			message = json.loads(text_data)['message']
 			lido = await get_visualizado(self.sala, self.room_connections[self.room_name])
 
-			await criar_mensagem(sala=self.sala, remetente=remetente, mensagem=message, lido=lido)
+			await criar_mensagem(sala=self.sala, remetente=remetente, mensagem=message, lido=lido, mensagem_resposta=mensagem_resposta, mensagem_resposta_username=mensagem_resposta_username)
 
 			imagem = await get_foto(remetente)
 			await self.channel_layer.group_send(
@@ -186,17 +195,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
 					'message': message,
 					'remetente': remetente.nome_completo,
 					'remetente_id': remetente.id,
-					'imagem': imagem
+					'imagem': imagem,
+					'mensagem_resposta': mensagem_resposta,
+					'mensagem_resposta_username': mensagem_resposta_username
 			})
 
-			await criar_log(f'O usuário {remetente.nome_completo} enviou a mensagem: {message}')
+			# await criar_log(f'O usuário {remetente.nome_completo} enviou a mensagem: {message}')
 
 	async def chat_message(self, event):
 		await self.send(text_data=json.dumps({
 			'message': event['message'],
 			'remetente': event['remetente'],
 			'remetente_id': event['remetente_id'],
-			'imagem': event['imagem']
+			'imagem': event['imagem'],
+			'mensagem_resposta': event['mensagem_resposta'],
+			'mensagem_resposta_username': event['mensagem_resposta_username']
 		}))
 
 	async def chat_arquivo(self, event):
@@ -206,14 +219,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 			'formato': event['formato'],
 			'remetente': event['remetente'],
 			'remetente_id': event['remetente_id'],
-			'imagem': event['imagem']
+			'imagem': event['imagem'],
+			'mensagem_resposta': event['mensagem_resposta'],
+			'mensagem_resposta_username': event['mensagem_resposta_username']
 		}))
 
 
 class ChatNotificationConsumer(AsyncWebsocketConsumer):
 	employee = None
 	room_name = 'global_chat_notifications'
-	room_connections = defaultdict(set)
+	room_connections = dict()
 
 	async def connect(self):
 		await self.accept()
@@ -238,12 +253,25 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
 		
 		try:
 			await self.channel_layer.group_add(self.room_name, self.channel_name)
+			status = await get_status(funcionario)
 
-			self.room_connections[self.room_name].add(self.employee)
+			if self.room_name not in self.room_connections:
+				self.room_connections[self.room_name] = list()
+			
+			connection_employee = {'userId': self.employee, 'userName': funcionario.nome_completo, 'statusId': status}
+			is_connected = self.employee in [i['userId'] for i in self.room_connections[self.room_name]]
+
+			if not is_connected:
+				self.room_connections[self.room_name].append(connection_employee)
+			else:
+				for conn in self.room_connections[self.room_name]:
+					if conn['userId'] == self.employee:
+						conn.update({'statusId': status})
+
 			await self.channel_layer.group_send(
 				self.room_name, {
 					'type': 'chat.connections',
-					'users': list(self.room_connections[self.room_name])
+					'users': self.room_connections[self.room_name]
 			})
 
 			pendencias = await get_pendencias(self.employee)
@@ -255,7 +283,7 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
 						'pendings': list(pendencias),
 				})
 
-			await criar_log(f'Conexão estabelecida na sala {self.room_name}, total de {len(self.room_connections[self.room_name])} usuários')
+			# await criar_log(f'Conexão estabelecida na sala {self.room_name}, total de {len(self.room_connections[self.room_name])} usuários')
 
 		except Exception as e:
 			await self.send(text_data=json.dumps({'reason': e}))
@@ -265,17 +293,20 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
 	async def disconnect(self, close_code):
 		if self.user.is_authenticated:
 
-			self.room_connections[self.room_name].discard(self.employee)
+			for conn in self.room_connections[self.room_name]:
+				if conn['userId'] == self.employee:
+					self.room_connections[self.room_name].remove(conn)
+
 			await self.channel_layer.group_send(
 				self.room_name, {
 					'type': 'chat.connections',
-					'users': list(self.room_connections[self.room_name])
+					'users': self.room_connections[self.room_name]
 			})
 
 			await self.channel_layer.group_discard(self.room_name, self.channel_name)
 			await self.close()
 
-		await criar_log(f'Conexão encerrada na sala {self.room_name}, total de {len(self.room_connections[self.room_name])} usuários')
+		# await criar_log(f'Conexão encerrada na sala {self.room_name}, total de {len(self.room_connections[self.room_name])} usuários')
 
 	async def receive(self, text_data):
 		if json.loads(text_data)['tipo'] == 'user':
@@ -294,7 +325,7 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
 					'notificar': notificar
 			})
 
-			await criar_log(f'O usuário {remetente.nome_completo} enviou uma nova mensagem para {destinatario.nome_completo}')
+			# await criar_log(f'O usuário {remetente.nome_completo} enviou uma nova mensagem para {destinatario.nome_completo}')
 
 		else:
 			remetente = await get_funcionario(pk=int(json.loads(text_data)['remetente']))
@@ -311,7 +342,7 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
 					'notificar': True
 			})
 
-			await criar_log(f'O usuário {remetente.nome_completo} enviou uma nova mensagem no grupo {sala.nome}')
+			# await criar_log(f'O usuário {remetente.nome_completo} enviou uma nova mensagem no grupo {sala.nome}')
 
 	async def chat_connections(self, event):
 		await self.send(text_data=json.dumps({
@@ -332,4 +363,3 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
 			'destinatario_id': event['destinatario_id'],
 			'notificar': event['notificar']
 		}))
-		

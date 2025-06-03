@@ -1,58 +1,81 @@
 import pytz
+import os
+import json
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from collections import defaultdict
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
+from django.core.mail import send_mail
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render, get_object_or_404
-from django.utils import timezone
+from django.utils.safestring import mark_safe
 
-from agenda.models import Atividade, TipoAtividade
+from agenda.models import Atividade
+from avaliacoes.models import Avaliacao, Resposta as RespostaAvaliacao
 from cursos.models import ProgressoEtapa
-from configuracoes.models import Variavel
-from funcionarios.models import Funcionario, Perfil
+from funcionarios.models import Funcionario, Perfil, JornadaFuncionario
 from pesquisa.models import Pesquisa, Resposta
-from ponto.models import Ponto
+from ponto.models import Ponto, Fechamento
 from notifications.models import Notification
 from notifications.signals import notify
+from settings.settings import MEDIA_ROOT
+from web.decorators import base_context_required
 from web.models import Comentario, Humor, Postagem, Ouvidoria, MensagemOuvidoria, Celebracao, Moeda
 from web.utils import not_none_not_empty, add_coins
 
 
+ADMIN_USER = Funcionario.objects.get(pk=3)
+
+
 # Page
-@login_required(login_url='entrar')
-def InicioView(request):
-	maximo_publicacao = 2
-	contador_publicacao = int(request.GET.get('page')) + maximo_publicacao if request.GET.get('page') else maximo_publicacao
-	hoje = timezone.localdate().strftime('%Y-%m-%d')
+@base_context_required
+def InicioView(request, context):
+	hoje = date.today()
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
 
+	# Geral
 	posts = Postagem.objects.all().order_by('-data_cadastro')
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
 	comunicado = Notification.objects.filter(recipient=request.user, unread=True, level='communication').order_by('id').first()
-	celebracoes = Celebracao.objects.filter(data_celebracao=hoje, funcionario__in=[funcionario.id]).order_by('id')
+	celebracoes = Celebracao.objects.filter(data_celebracao__range=[hoje - timedelta(days=2), hoje], funcionario__in=[funcionario.id]).order_by('id')
 
-	tipos = TipoAtividade.objects.all()
+	# Informações para o sidebar direito
 	atividades = Atividade.objects.filter(funcionarios=funcionario, data_finalizacao=None).values('titulo', 'inicio', 'final').order_by('inicio')
-	humor = Humor.objects.filter(funcionario=funcionario, data_cadastro__date=hoje)
 	perfil = Perfil.objects.get(funcionario=funcionario)
 	ponto = Ponto.objects.filter(funcionario=funcionario).order_by('data', 'hora').last()
-	moedas = sum([i.pontuacao for i in Moeda.objects.filter(funcionario=funcionario, fechado=False)])
+	moedas = sum([i.pontuacao for i in Moeda.objects.filter(funcionario=funcionario, data_cadastro__date__month=hoje.month, data_cadastro__date__year=hoje.year)])
 
+	# Coleta de informações sobre humor
+	humor = Humor.objects.filter(funcionario=funcionario, data_cadastro__date=hoje)
+	weekday = 1 if hoje.weekday() + 2 == 8 else hoje.weekday() + 2
+	final_jornada = datetime.combine(hoje, JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None, dia=weekday).order_by('hora').last().hora)
+
+	# Pendências do colaborador
 	pesquisas_pendentes = False
 	for pesquisa in Pesquisa.objects.filter(funcionarios=funcionario, data_encerramento__gte=datetime.now().replace(tzinfo=pytz.utc)):
 		if not Resposta.objects.filter(funcionario=funcionario, pergunta__pesquisa=pesquisa):
 			pesquisas_pendentes = True
 
+	avaliacoes_pendentes = False
+	for av in Avaliacao.objects.filter(avaliadores=funcionario):
+		if not RespostaAvaliacao.objects.filter(referencia__avaliacao=av, funcionario=funcionario).exists():
+			avaliacoes_pendentes = True
+	
 	pendencias = {
 		'pesquisas': pesquisas_pendentes,
 		'perfil': not_none_not_empty(funcionario.nome_mae, funcionario.nome_pai, funcionario.rg, funcionario.data_expedicao, funcionario.rua, funcionario.numero, funcionario.cep) is False,
-		'cursos': ProgressoEtapa.objects.filter(funcionario=funcionario, data_conclusao=None).exists()
+		'cursos': ProgressoEtapa.objects.filter(funcionario=funcionario, data_conclusao=None).exists(),
+		'avaliacoes': avaliacoes_pendentes,
+		'humor': final_jornada - timedelta(hours=1) <= datetime.now() <= final_jornada + timedelta(hours=1) and not humor.exists()
 	}
+
+	# Configuração da paginação
+	maximo_publicacao = 3
+	contador_publicacao = int(request.GET.get('page', 0)) + maximo_publicacao
 
 	if len(posts) <= maximo_publicacao or contador_publicacao > len(posts):
 		paginacao = {'status': False, 'count': len(posts)}
@@ -69,19 +92,31 @@ def InicioView(request):
 	if request.method == 'POST':
 		if not_none_not_empty(request.POST.get('mood')) and not humor:
 			try:
-				admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
+				observacao = request.POST.get('mood_observacao')
 				humor_choice = [i for i in Humor.Status.choices if i[0] == request.POST.get('mood')][0]
-				Humor(humor=int(humor_choice[0]), funcionario=funcionario).save()
-				add_coins(funcionario, 10)
+
+				Humor(humor=str(humor_choice[0]), funcionario=funcionario, observacao=observacao).save()
+				add_coins(funcionario, 10, 'Resposta afetivograma')
 				
-				if int(humor_choice[0]) < 3:
+				descricao = observacao if not_none_not_empty(observacao) else f'Atenção ao {funcionario.nome_completo}, está com o humor {humor_choice[1]}!'
+
+				if int(humor_choice[0]) <= 2:
 					notify.send(
-					sender=funcionario.usuario,
-					recipient=admin.usuario,
-					verb='Foi enviado um humor negativo',
-					description=f'Atenção ao {funcionario.nome_completo}, está com o humor {humor_choice[1]}!'
-				)
-					
+						sender=funcionario.usuario,
+						recipient=ADMIN_USER.usuario,
+						verb='Foi enviado um humor negativo',
+						description=descricao
+					)
+				
+				if int(humor_choice[0]) == 1:
+					send_mail(
+						'Foi enviado um humor negativo',
+						descricao,
+						'avisos@novadigitalizacao.com.br',
+						['anderson@novadigitalizacao.com.br'],
+						fail_silently=False,
+					)
+				
 				messages.success(request, 'Obrigado por nos enviar seu humor!')
 
 			except Exception as e:
@@ -89,22 +124,20 @@ def InicioView(request):
 
 			return redirect('inicio')
 
-	context = {
+	context.update({
 		'paginacao': paginacao,
 		'posts': posts,
 		'funcionarios': funcionarios,
 		'funcionario': funcionario,
-		'notificacoes': notificacoes,
 		'comunicado': comunicado,
 		'celebracoes': celebracoes,
-		'tipos': tipos,
 		'atividades': atividades,
-		'humor': True if humor else False,
 		'perfil': perfil,
 		'ponto': datetime.combine(ponto.data, ponto.hora) if ponto else None,
 		'pendencias': pendencias,
 		'moedas': moedas
-	}
+	})
+	
 	return render(request, 'pages/inicio.html', context)
 
 
@@ -131,8 +164,7 @@ def AdicionarPostView(request):
 						verb='Você foi marcado em uma nova postagem!'
 					)
 
-
-			add_coins(funcionario, 5)
+			add_coins(funcionario, 5, 'Criar postagem')
 			messages.success(request, 'Postagem criada com sucesso!')
 
 		except Exception as e:
@@ -197,8 +229,7 @@ def EditarPostView(request, post):
 
 	if not_none_not_empty(titulo, texto):
 		try:
-			funcionario = Funcionario.objects.get(usuario=request.user)
-			postagem = Postagem.objects.get(pk=post, funcionario=funcionario)
+			postagem = Postagem.objects.get(pk=post)
 			postagem.titulo = titulo
 			postagem.texto = texto
 			postagem.save()
@@ -230,8 +261,7 @@ def ExcluirPostView(request, post):
 		return redirect('inicio')
 
 	try:
-		funcionario = Funcionario.objects.get(usuario=request.user)
-		Postagem.objects.get(pk=post, funcionario=funcionario).delete()
+		Postagem.objects.get(pk=post).delete()
 		messages.success(request, 'Postagem excluida com sucesso!')
 
 	except Exception as e:
@@ -263,7 +293,7 @@ def ComentarPostView(request, post, modelo):
 	if not_none_not_empty(comentario):
 		try:
 			Comentario(content_type=content_type, object_id=obj.id, funcionario=funcionario, comentario=comentario).save()
-			add_coins(funcionario, value)
+			add_coins(funcionario, value, 'Comentar postagem ou publicação')
 
 			if request.user != obj.funcionario.usuario:
 				notify.send(
@@ -324,11 +354,10 @@ def ExcluirComentarioView(request, comment):
 
 
 # Page
-@login_required(login_url='entrar')
-def OuvidoriaView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def OuvidoriaView(request, context):
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
 
 	tickets = Ouvidoria.objects.all()
 
@@ -336,13 +365,12 @@ def OuvidoriaView(request):
 		funcionarios = funcionarios.filter(pk=funcionario.pk)
 		tickets = tickets.filter(funcionario=funcionario)
 
-	context = {
+	context.update({
 		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
 		'tickets': tickets,
 		'categorias': [{'id': i[0], 'title': i[1]} for i in Ouvidoria.Categoria.choices]
-	}
+	})
+
 	return render(request, 'pages/ouvidoria.html', context)
 
 
@@ -357,9 +385,11 @@ def AdicionarOuvidoriaView(request):
 		with transaction.atomic():
 			categoria = [i for i in Ouvidoria.Categoria.choices if i[0] == int(request.POST.get('categoria'))][0]
 			funcionario = Funcionario.objects.get(usuario=request.user)
+			ouvidor = Funcionario.objects.filter(data_demissao=None, usuario__is_ouvidor=True).first()
+
 			ouvidoria = Ouvidoria.objects.create(
 				funcionario=funcionario,
-				responsavel=Funcionario.objects.filter(data_demissao=None, usuario__is_ouvidor=True).first(),
+				responsavel=ouvidor,
 				categoria=categoria[0],
 				assunto=request.POST.get('assunto'),
 				descricao=request.POST.get('descricao'),
@@ -372,12 +402,11 @@ def AdicionarOuvidoriaView(request):
 				mensagem=request.POST.get('descricao')
 			).save()
 
-			add_coins(funcionario, 30)
-
-			admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
+			add_coins(funcionario, 30, 'Enviar ouvidoria')
+			
 			notify.send(
 				sender=request.user,
-				recipient=admin.usuario,
+				recipient=ouvidor.usuario,
 				verb=f'Uma manifestação foi aberta {ouvidoria.assunto} ({categoria[1]})',
 			)
 
@@ -390,42 +419,57 @@ def AdicionarOuvidoriaView(request):
 
 
 # Page
-@login_required(login_url='entrar')
-def ScoreView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def RankingView(request, context):
+	hoje = date.today()
+	moedas_abertas = Moeda.objects.filter(funcionario__visivel=True, data_cadastro__date__month=hoje.month, data_cadastro__date__year=hoje.year).order_by('-pontuacao')
+	moedas_fechadas = Moeda.objects.filter(funcionario__visivel=True).exclude(pk__in=[i.pk for i in moedas_abertas]).order_by('-pontuacao')
 
-	anomes = int(datetime.today().strftime('%Y%m'))
-	pontuacoes_atuais = Moeda.objects.filter(anomes=anomes, fechado=False).order_by('-pontuacao')
-	pontuacoes_fechadas = Moeda.objects.filter(fechado=True).exclude(anomes=anomes).order_by('-anomes', '-pontuacao')
+	score_abertas, score_fechadas = defaultdict(lambda: defaultdict(int)), defaultdict(lambda: defaultdict(int))
+	for moeda in moedas_abertas:
+		referencia = moeda.data_cadastro.strftime('%Y%m')
+		score_abertas[moeda.funcionario][referencia] += moeda.pontuacao
+	
+	for moeda in moedas_fechadas:
+		referencia = moeda.data_cadastro.strftime('%Y%m')
+		score_fechadas[moeda.funcionario][referencia] += moeda.pontuacao
 
-	top = []
-	if len(pontuacoes_atuais) >= 3:
-		top.append(pontuacoes_atuais[:3])
+	lista_score_abertas = sorted(
+        [{'funcionario': func, 'referencia': ref, 'pontuacao': pontos}
+         for func, refs in score_abertas.items() for ref, pontos in refs.items()],
+        key=lambda x: x['pontuacao'], reverse=True
+    )
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
-		'pontuacoes_atuais': pontuacoes_atuais,
-		'pontuacoes_fechadas': pontuacoes_fechadas,
+	lista_score_fechadas = sorted(
+        [{'funcionario': func, 'referencia': ref, 'pontuacao': pontos}
+         for func, refs in score_fechadas.items() for ref, pontos in refs.items()],
+        key=lambda x: (x['referencia'], x['pontuacao']), reverse=True
+    )
+
+	top = list()
+	if len(lista_score_abertas) >= 3:
+		top.append(lista_score_abertas[:3])
+
+	context.update({
+		'pontuacoes_atuais': lista_score_abertas,
+		'pontuacoes_fechadas': lista_score_fechadas,
 		'top': top,
-	}
-	return render(request, 'pages/score.html', context)
+	})
+
+	return render(request, 'pages/ranking.html', context)
 
 
 # Modal
 @login_required(login_url='entrar')
-def AdicionarMoedaView(request, func, anomes):
+def AdicionarMoedaView(request, fecid):
 	if not request.method == 'POST':
 		messages.warning(request, 'Método não permitido!')
 		return redirect('pontos')
 	
 	try:
-		moeda = Moeda.objects.filter(funcionario__id=func, anomes=anomes, fechado=True).order_by('-id').first()
-		moeda.pontuacao += int(request.POST.get('quantidade'))
-		moeda.save()
+		fechamento = Fechamento.objects.get(pk=fecid)
+		fechamento.moedas += int(request.POST.get('quantidade'))
+		fechamento.save()
 		messages.success(request, 'Moedas inseridas com sucesso')
 
 	except Exception as e:

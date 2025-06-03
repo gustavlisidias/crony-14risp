@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 
 from agenda.models import Ferias
+from configuracoes.models import Variavel
 from funcionarios.models import HistoricoFuncionario
 from web.utils import add_years, parse_employee
 
@@ -28,16 +29,17 @@ def ferias_funcionarios(funcionarios):
 	if not funcionarios:
 		return None
 	
-	ferias_por_funcionario = {}
+	ferias_por_funcionario = dict()
 
 	for funcionario in funcionarios:
 
 		if funcionario not in ferias_por_funcionario:
-			ferias_por_funcionario[funcionario] = []
+			ferias_por_funcionario[funcionario] = list()
 
 		data_inicio_ferias = funcionario.data_contratacao if funcionario.data_inicio_ferias is None else funcionario.data_inicio_ferias
+		permitir_ferias_estagio = Variavel.objects.get(chave='PERM_FERIAS_EST').valor == 'True'
 
-		if funcionario.get_contrato.tipo == 'est':
+		if funcionario.get_contrato.tipo == 'est' and permitir_ferias_estagio:
 			# Funcionario Estágio tem direito a 15 dias após 6 meses trabalhados
 			# Empresa tem mais 6 meses para liberar as ferias, porém não pode ultrapassar o limite de 1 ano consecutivos de trabalho do funcionario
 

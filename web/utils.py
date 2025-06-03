@@ -1,4 +1,3 @@
-
 from django.apps import apps
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE, DELETION
 from django.contrib.contenttypes.models import ContentType
@@ -30,19 +29,17 @@ def add_years(d, years):
 		return d + (date(d.year + years, 1, 1) - date(d.year, 1, 1))
 	  
 
-def add_coins(funcionario, value):
+def add_coins(funcionario, value, motivo):
 	model = apps.get_model('web', 'Moeda')
 
 	try:
-		moeda = model.objects.get(fechado=False, funcionario=funcionario, data_cadastro__month=timezone.now().month)
-		moeda.pontuacao += value
-		moeda.save()
+		moeda = model.objects.create(funcionario=funcionario, pontuacao=value, motivo=motivo)
 
 		create_log(
 			object_model=model,
 			object_id=moeda.id,
 			user=moeda.funcionario.usuario,
-			message=f'Moeda adicionada (+{value})',
+			message=f'Moeda adicionada (+{value}) - {motivo}',
 			action=1
 		)
 

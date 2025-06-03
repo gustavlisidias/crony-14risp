@@ -17,6 +17,7 @@ from web.utils import not_none_not_empty
 class Setor(models.Model):
 	setor = models.CharField(max_length=60, null=False, blank=False, verbose_name='Setor')
 	slug = models.SlugField(default='', editable=False, null=True, blank=True, max_length=120)
+	responsavel = models.ForeignKey('Funcionario', on_delete=models.SET_NULL, null=True, related_name='responsavel_setor_set', verbose_name='Responsável')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def save(self, *args, **kwargs):
@@ -63,8 +64,8 @@ class Funcionario(models.Model):
 		UNIAO = 'U', 'União Estável'
 
 	usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, verbose_name='Usuário')
-	matricula = models.CharField(max_length=32, null=False, blank=False, unique=True, verbose_name='Matrícula')
-	nome_completo = models.CharField(max_length=256, null=False, blank=False, verbose_name='Nome Completo')
+	matricula = models.CharField(max_length=32, null=True, blank=True, unique=True, verbose_name='Matrícula')
+	nome_completo = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome Completo')
 	nome_social = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome Social')
 	nome_mae = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome da Mãe')
 	nome_pai = models.CharField(max_length=256, null=True, blank=True, verbose_name='Nome do Pai')
@@ -73,43 +74,55 @@ class Funcionario(models.Model):
 	contato = models.CharField(max_length=16, null=True, blank=True, verbose_name='Contato')
 	contato_sec = models.CharField(max_length=16, null=True, blank=True, verbose_name='Contato Secundário')
 	resp_contato_sec = models.CharField(max_length=64, null=True, blank=True, verbose_name='Responsável Contato Secundário')
-	cpf = models.CharField(max_length=16, null=False, blank=False, verbose_name='CPF')
+	cpf = models.CharField(max_length=16, null=True, blank=True, verbose_name='CPF')
 	rg = models.CharField(max_length=16, null=True, blank=True, verbose_name='RG')
 	sexo = models.CharField(max_length=1, choices=Sexo.choices, default=Sexo.MASCULINO, verbose_name='Sexo')
-	estado_civil = models.CharField(max_length=1, choices=Estados.choices, null=True, blank=True, verbose_name='Estado Civil')
-	estado = models.ForeignKey(Estado, on_delete=models.CASCADE, verbose_name='Estado')
-	cidade = models.ForeignKey(Cidade, on_delete=models.CASCADE, verbose_name='Cidade')
+	estado_civil = models.CharField(max_length=1, choices=Estados.choices, default=Estados.SOLTEIRO, verbose_name='Estado Civil')
+	estado = models.ForeignKey(Estado, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Estado')
+	cidade = models.ForeignKey(Cidade, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Cidade')
 	rua = models.CharField(max_length=256, null=True, blank=True, verbose_name='Rua')
 	numero = models.CharField(max_length=16, null=True, blank=True, verbose_name='Número')
 	complemento = models.CharField(max_length=256, null=True, blank=True, verbose_name='Complemento')
 	cep = models.CharField(max_length=16, null=True, blank=True, verbose_name='CEP')
-	setor = models.ForeignKey(Setor, on_delete=models.CASCADE, null=False, blank=False, verbose_name='Setor')
-	cargo = models.ForeignKey(Cargo, on_delete=models.CASCADE, null=False, blank=False, verbose_name='Cargo')
+	setor = models.ForeignKey(Setor, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Setor')
+	cargo = models.ForeignKey(Cargo, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Cargo')
 	gerente = models.ForeignKey('Funcionario', null=True, blank=True, on_delete=models.SET_NULL, verbose_name='Responsável')
 	salario = models.FloatField(null=True, blank=True, verbose_name='Salário')
 	data_expedicao = models.DateField(null=True, blank=True, verbose_name='Data Expedição RG')
-	data_nascimento = models.DateField(null=False, blank=False, verbose_name='Data Nascimento')
-	data_contratacao = models.DateField(null=False, blank=False, verbose_name='Data Contratação')
+	data_nascimento = models.DateField(null=True, blank=True, verbose_name='Data Nascimento')
+	data_contratacao = models.DateField(null=True, blank=True, verbose_name='Data Contratação')
 	data_demissao = models.DateField(null=True, blank=True, verbose_name='Data Rescisão')
 	data_inicio_ferias = models.DateField(null=True, blank=True, verbose_name='Data Início Férias')
-	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
-	observacoes = CKEditor5Field('Observacoes', config_name='extends')
-	conta_banco = models.CharField(max_length=120, null=True, blank=True, verbose_name='Conta Bancária')
+	observacoes = CKEditor5Field('Observacoes', null=True, blank=True, config_name='extends')
+	conta_banco = models.CharField(max_length=120, null=True, blank=True, unique=True, verbose_name='Conta Bancária')
 	visivel = models.BooleanField(default=True, verbose_name='Visível')
+	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def save(self, *args, **kwargs):
 		if self.nome_completo:
 			self.nome_completo = self.nome_completo.title()
+		
 		if self.nome_social:
 			self.nome_social = self.nome_social.title()
+		
 		if self.nome_mae:
 			self.nome_mae = self.nome_mae.title()
+		
 		if self.nome_pai:
 			self.nome_pai = self.nome_pai.title()
+		
 		if self.rua:
 			self.rua = self.rua.title()
+		
 		if self.complemento:
 			self.complemento = self.complemento.title()
+		
+		if self.contato.strip().startswith('(__)') or self.contato.strip() == '':
+			self.contato = None
+
+		if self.contato_sec.strip().startswith('(__)') or self.contato_sec.strip() == '':
+			self.contato_sec = None
+		
 		super().save(*args, **kwargs)
 
 	def __str__(self):
@@ -216,23 +229,15 @@ class JornadaFuncionario(models.Model):
 
 class Score(models.Model):
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
-	pontuacao = models.FloatField(default=5, verbose_name='Pontuação')
-	fechado = models.BooleanField(default=False, verbose_name='Fechado')
-	anomes = models.PositiveIntegerField(editable=False, verbose_name='Referência Ano Mês')
+	pontuacao = models.FloatField(default=0, verbose_name='Pontuação')
 	data_cadastro = models.DateTimeField(auto_now=True, verbose_name='Data de Cadastro')
 
-	def save(self, *args, **kwargs):
-		if not self.data_cadastro:
-			self.data_cadastro = datetime.now().replace(tzinfo=pytz.utc)
-		self.anomes = int(self.data_cadastro.strftime('%Y%m'))
-		super().save(*args, **kwargs)
-
 	def __str__(self):
-		return f'{self.funcionario.nome_completo} - {self.pontuacao}'
+		return f'{self.funcionario} - {self.pontuacao}'
 
 	class Meta:
-		verbose_name = 'Score Funcionário'
-		verbose_name_plural = 'Score por Funcionário'
+		verbose_name = 'Pontuação de Assiduidade'
+		verbose_name_plural = 'Pontuações de Assiduidade'
 
 
 class TipoDocumento(models.Model):
@@ -281,6 +286,11 @@ class Documento(models.Model):
 
 
 class Perfil(models.Model):
+	class StatusChat(models.IntegerChoices):
+		DISPONIVEL = 1, 'Disponível'
+		AUSENTE = 2, 'Ausente'
+		OCUPADO = 3, 'Ocupado'
+	
 	def upload(instance, filename):
 		caminho = 'fotos/{matricula}/{filename}'.format(matricula=(instance.funcionario.matricula), filename=re.sub('[^A-Za-z0-9.]+', '', filename))
 		return caminho
@@ -289,6 +299,7 @@ class Perfil(models.Model):
 	foto = models.ImageField(upload_to=upload, null=True, blank=True, verbose_name='Foto')
 	bio = models.TextField(verbose_name='Biografia', null=True, blank=True)
 	tema = models.CharField(max_length=10, editable=False, default='light', verbose_name='Tema')
+	status = models.IntegerField(choices=StatusChat.choices, default=StatusChat.DISPONIVEL)
 	data_edicao = models.DateTimeField(auto_now=True, verbose_name='Data de Edição')
 
 	def __str__(self):

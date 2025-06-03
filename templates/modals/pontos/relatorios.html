@@ -9,12 +9,34 @@
 			<div class="modal-body">
 				<div class="form-floating mb-3">
 					<select class="form-select" id="relatorioTipo" name="tipo">
-						<option value="0" selected>Espelho de Ponto</option>
-						<option value="1">Abonos</option>
-						<option value="2">Ajustes</option>
-						<option value="3">Alterações</option>
+						<option value="1" selected>Espelho de Ponto</option>
+						<option value="2">Pontos (com Falta)</option>
+						<option value="3">Abonos</option>
+						<option value="4">Ajustes</option>
 					</select>
-					<label for="relatorioTipo">Tipo</label>
+					<label for="relatorioTipo">Tipo *</label>
+				</div>
+				<div class="row mb-3">
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="relatorioInicio" name="relatorio_inicio" placeholder required>
+							<label for="relatorioInicio">Data Inicial *</label>
+						</div>
+					</div>
+					<div class="col">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="relatorioFinal" name="relatorio_final" placeholder required>
+							<label for="relatorioFinal">Data Final *</label>
+						</div>
+					</div>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="relatorioFuncionario" name="funcionarios" multiple style="height: 12rem;">
+						{% for funcionario in funcionarios %}
+							<option value="{{funcionario.id}}">{{funcionario}}</option>
+						{% endfor %}
+					</select>
+					<label for="relatorioFuncionario">Colaboradores</label>
 				</div>
 				<div class="form-floating mb-3">
 					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 12rem;">
@@ -23,24 +45,6 @@
 						{% endfor %}
 					</select>
 					<label for="fechamentoContrato">Contrato</label>
-				</div>
-				<div class="row mb-3">
-					<div class="col">
-						<label for="relatorioInicio" class="form-label">Início</label>
-						<input class="form-control" type="date" id="relatorioInicio" name="relatorio_inicio">
-					</div>
-					<div class="col">
-						<label for="relatorioFinal" class="form-label">Final</label>
-						<input class="form-control" type="date" id="relatorioFinal" name="relatorio_final">
-					</div>
-				</div>
-				<div class="form-floating mb-3">
-					<select class="form-select" size="5" id="relatorioFuncionario" name="funcionarios" multiple style="height: 12rem;">
-						{% for funcionario in funcionarios %}
-							<option value="{{funcionario.id}}" selected>{{funcionario}}</option>
-						{% endfor %}
-					</select>
-					<label for="relatorioFuncionario">Colaboradores</label>
 				</div>
 			</div>
 			<div class="modal-footer">

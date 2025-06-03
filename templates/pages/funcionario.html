@@ -496,7 +496,9 @@
 										<th scope="col">Inicio</th>
 										<th scope="col">Fim</th>
 										<th scope="col">Ativo</th>
-										<th scope="col">Ações</th>
+										{% if request.user.get_access == "admin" %}
+											<th scope="col">Ações</th>
+										{% endif %}
 									</tr>
 								</thead>
 								<tbody>
@@ -514,11 +516,13 @@
 												<td><i class="fa-duotone fa-circle-check fa-lg text-success"></i></td>
 											{% endif %}
 
-											<td>
-												<a role="button" title="Excluir jornada" onclick="excluirHistoricoJornada({{historico.index}})">
-													<i class="fa-duotone fa-solid fa-trash fa-lg"></i>
-												</a>
-											</td>
+											{% if request.user.get_access == "admin" %}
+												<td>
+													<a role="button" title="Excluir jornada" onclick="excluirHistoricoJornada({{historico.index}})">
+														<i class="fa-duotone fa-solid fa-trash fa-lg"></i>
+													</a>
+												</td>
+											{% endif %}
 										</tr>
 									{% endfor %}
 								</tbody>

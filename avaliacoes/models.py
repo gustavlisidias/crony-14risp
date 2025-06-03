@@ -24,7 +24,10 @@ class Avaliacao(models.Model):
 		super().save(*args, **kwargs)
 
 	def __str__(self):
-		return self.titulo
+		if self.avaliado:
+			return f'{self.titulo} de {self.avaliado.nome_completo}'
+		else:
+			return f'{self.titulo}'
 
 	class Meta:
 		verbose_name = 'Avaliação'
@@ -58,7 +61,7 @@ class Pergunta(models.Model):
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
-		return f'{self.titulo} (Peso de {self.peso})'
+		return self.titulo
 
 	class Meta:
 		verbose_name = 'Pergunta'
@@ -71,11 +74,11 @@ class PerguntaAvaliacao(models.Model):
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
-		return f'{self.pergunta} de {self.avaliacao}'
+		return f'{self.avaliacao} - {self.pergunta.titulo}'
 
 	class Meta:
-		verbose_name = 'Pergunta x Avaliação'
-		verbose_name_plural = 'Perguntas x Avaliação'
+		verbose_name = 'Pergunta por Avaliação'
+		verbose_name_plural = 'Perguntas por Avaliação'
 
 
 class Resposta(models.Model):

@@ -2,6 +2,7 @@ import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -20,11 +21,11 @@ from agenda.models import (
 )
 from agenda.utils import ferias_funcionarios
 from configuracoes.models import Variavel
-from funcionarios.models import Funcionario, Documento, TipoDocumento
+from funcionarios.models import Funcionario, Documento, TipoDocumento, Setor
 from notifications.signals import notify
 from ponto.models import Ponto, Saldos
 from ponto.utils import filtrar_abonos, total_saldo
-from web.utils import not_none_not_empty, add_coins
+from web.utils import not_none_not_empty, add_coins  # noqa: F401
 
 
 class InvalidPeriodVacation(Exception):
@@ -101,9 +102,9 @@ def EditarEventoView(request):
 						recorrencia.data_finalizacao = timezone.localtime(timezone.now()) if finalizado else None
 						recorrencia.save()
 
-				if finalizado:
-					for funcionario in atividade.funcionarios.all():
-						add_coins(funcionario, 20)
+				# if finalizado:
+				# 	for funcionario in atividade.funcionarios.all():
+				# 		add_coins(funcionario, 20, 'Finalização de atividade')
 
 				if finalizado and atividade.tipo.slug == 'ferias':
 					# Ao finalizar a atividade, a férias é consumada
@@ -207,57 +208,105 @@ def ProcurarDocumentosFeriasView(request, solic):
 def AlterarSolicitacaoFeriasView(request, solic):
 	if request.method != 'POST':
 		messages.warning(request, 'Método não permitido!')
-		return JsonResponse({'message': 'forbidden'}, status=404)
+		return redirect('ferias')
 
 	try:
 		status = int(request.POST.get('novo_stauts'))
 		solicitacao = SolicitacaoFerias.objects.get(pk=solic)
 
-		if status == SolicitacaoFerias.Status.APROVADO:
-			with transaction.atomic():
-				# Aprovar a solicitação
-				solicitacao.status = True
+		if solicitacao.aprovador.usuario != request.user and request.user.get_access != 'admin':
+			messages.warning(request, 'Você não tem permissão para alterar o status')
+			return redirect('ferias')
+
+		with transaction.atomic():
+			if status == SolicitacaoFerias.Status.APROVADO:
+				# Se não possui mais fluxo, vai para aprovação final
+				if solicitacao.aprovador == Setor.objects.get(setor='Recursos Humanos').responsavel:
+					# Alterar status para aprovado
+					solicitacao.status = status
+					solicitacao.save()
+					
+					# Enviar documentos de férias para a documentação do funcionario
+					documentos = DocumentosFerias.objects.filter(solicitacao=solicitacao)
+					if documentos:
+						for documento in documentos:					
+							# Salvo os documentos na pasta do funcionario
+							pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
+							os.makedirs(pasta, exist_ok=True)
+
+							data_documento = timezone.localdate()
+							tipo = TipoDocumento.objects.get(slug='ferias')
+							caminho = os.path.join(pasta, f'{data_documento.strftime("%Y-%m-%d")}_{tipo.codigo}_{documento.caminho}')
+
+							with open(caminho, 'wb') as f:
+								f.write(documento.documento)
+
+							Documento.objects.create(
+								funcionario=solicitacao.funcionario,
+								tipo=tipo,
+								caminho=caminho,
+								data_documento=data_documento,
+							)
+
+					# Criar agenda de férias
+					atividade = Atividade.objects.create(
+						titulo=f'Férias {solicitacao.funcionario}',
+						descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio_ferias.strftime('%d/%m/%Y')} até {solicitacao.final_ferias.strftime('%d/%m/%Y')}<br>Observações: {solicitacao.observacao}",
+						tipo=TipoAtividade.objects.get(slug='ferias'),
+						inicio=make_aware(datetime.combine(solicitacao.inicio_ferias, datetime.min.time())),
+						final=make_aware(datetime.combine(solicitacao.final_ferias, datetime.min.time())),
+						autor=solicitacao.funcionario,
+						solic_ferias=solicitacao
+					)
+					atividade.funcionarios.set([solicitacao.funcionario.id])
+
+					notify.send(
+						sender=request.user,
+						recipient=Setor.objects.get(setor='Financeiro').responsavel.usuario,
+						verb=f'As férias de {solicitacao.funcionario} foram aprovadas. Alinhar pendencias e demandas com o setor de Recursos Humanos.',
+					)
+
+					send_mail(
+						'Crony - Aprovação de Férias',
+						f'As férias de {solicitacao.funcionario} foram aprovadas. Alinhar pendencias e demandas com o setor de Recursos Humanos.',
+						'avisos@novadigitalizacao.com.br',
+						[Setor.objects.get(setor='Financeiro').responsavel.email],
+						fail_silently=False,
+					)
+
+					messages.success(request, 'Solicitação de férias aprovada com sucesso!')
+				
+				else:
+					aprovador_anterior = solicitacao.aprovador
+					aprovador_atual = Funcionario.objects.get(usuario=request.user)
+					aprovador_novo = solicitacao.aprovador.gerente or Setor.objects.get(setor='Recursos Humanos').responsavel
+
+					# Alterar status para pendente e passar para proximo aprovador
+					solicitacao.status = SolicitacaoFerias.Status.PENDENTE
+					solicitacao.aprovador = aprovador_novo
+					solicitacao.save()
+
+					notify.send(
+						sender=aprovador_atual.usuario,
+						recipient=aprovador_novo.usuario,
+						verb=f'Você possui uma nova solicitação de férias de {solicitacao.funcionario}. Aprovada anteriormente por {aprovador_atual} (RU) - {aprovador_anterior} (AP).',
+					)
+
+					send_mail(
+						'Crony - Solicitação de Férias',
+						f'Você possui uma nova solicitação de férias de {solicitacao.funcionario}. Aprovada anteriormente por {aprovador_atual} (RU) - {aprovador_anterior} (AP).',
+						'avisos@novadigitalizacao.com.br',
+						[aprovador_novo.email],
+						fail_silently=False,
+					)
+
+					messages.success(request, 'Solicitação de férias aprovada com sucesso. Enviada para próximo aprovador.')
+				
+			else:
+				# Alterar status
+				solicitacao.status = status
 				solicitacao.save()
-
-				# Enviar documentos de férias para a documentação do funcionario
-				documentos = DocumentosFerias.objects.filter(solicitacao=solicitacao)
-				if documentos:
-					for documento in documentos:					
-						# Salvo os documentos na pasta do funcionario
-						pasta = Path(Variavel.objects.get(chave='PATH_DOCS_EMP').valor, f'{solicitacao.funcionario.matricula} - {solicitacao.funcionario.nome_completo}')
-						os.makedirs(pasta, exist_ok=True)
-
-						data_documento = timezone.localdate()
-						tipo = TipoDocumento.objects.get(slug='ferias')
-						caminho = os.path.join(pasta, f'{data_documento.strftime("%Y-%m-%d")}_{tipo.codigo}_{documento.caminho}')
-
-						with open(caminho, 'wb') as f:
-							f.write(documento.documento)
-
-						Documento.objects.create(
-							funcionario=solicitacao.funcionario,
-							tipo=tipo,
-							caminho=caminho,
-							data_documento=data_documento,
-						)
-
-				# Criar agenda de férias
-				atividade = Atividade.objects.create(
-					titulo=f'Férias {solicitacao.funcionario}',
-					descricao=f"Férias do funcinário {solicitacao.funcionario} do período de {solicitacao.inicio_ferias.strftime('%d/%m/%Y')} até {solicitacao.final_ferias.strftime('%d/%m/%Y')}<br>Observações: {solicitacao.observacao}",
-					tipo=TipoAtividade.objects.get(slug='ferias'),
-					inicio=make_aware(datetime.combine(solicitacao.inicio_ferias, datetime.min.time())),
-					final=make_aware(datetime.combine(solicitacao.final_ferias, datetime.min.time())),
-					autor=solicitacao.funcionario,
-					solic_ferias=solicitacao
-				)
-				atividade.funcionarios.set([solicitacao.funcionario.id])
-
-				messages.success(request, 'Solicitação de férias aprovada com sucesso!')
-		else:
-			solicitacao = SolicitacaoFerias.objects.get(pk=solic)
-			solicitacao.status = status
-			solicitacao.save()
+				messages.success(request, 'Solicitação de férias alterada com sucesso!')
 
 		notify.send(
 			sender=request.user,
@@ -266,6 +315,6 @@ def AlterarSolicitacaoFeriasView(request, solic):
 		)
 
 	except Exception as e:
-		messages.error(request, f'Solicitação de férias não foi aprovada! {e}')
+		messages.error(request, f'Solicitação de férias não foi alterada! {e}')
 
 	return redirect('ferias')

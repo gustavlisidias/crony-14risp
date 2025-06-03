@@ -123,9 +123,7 @@
 				const nivelAcesso = "{{request.user.get_access}}";
 				const userListado = info.event.extendedProps.users.some(user => user.id === "{{request.user.id}}");
 
-				if (
-					(tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)
-				) {
+				if ((tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)) {
 					alert("Você não tem permissão para alterar este evento!");
 				} else {
 					$.ajax({
@@ -204,9 +202,7 @@
 				const nivelAcesso = "{{request.user.get_access}}";
 				const userListado = info.event.extendedProps.users.some(user => user.id === "{{request.user.id}}");
 
-				if (
-					(tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)
-				) {
+				if ((tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)) {
 					alert("Você não tem permissão para alterar este evento!");
 				} else {
 					$.ajax({
@@ -316,12 +312,16 @@
 					$("#modalEvento #atividadeRecorrencias").parent().parent().addClass("d-none")
 				};
 
-				if (
-					(tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)
-				) {
+				if ((tipoEvento == "Férias" || tipoEvento == "Sala Reunião") && (nivelAcesso != "admin" && !userListado)) {
 					$("#modalEvento #btnEditarAtividade").css("display", "none");
+					$("#modalEvento .ck-editor").hide();
+					$("#modalEvento [for='atividadeEditDescricao']").hide();
+					$("#modalEvento #atividadeUsuarios").parent().hide();
 				} else {
 					$("#modalEvento #btnEditarAtividade").css("display", "block");
+					$("#modalEvento .ck-editor").show();
+					$("#modalEvento [for='atividadeEditDescricao']").show();
+					$("#modalEvento #atividadeUsuarios").parent().show();
 				};
 
 				$("#modalEvento").modal("show");

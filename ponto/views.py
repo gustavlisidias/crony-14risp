@@ -1,31 +1,37 @@
+import math
+import json
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Min, Q, Max
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
-from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import make_aware
 
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, time
 
 from cities_light.models import Region as Estado
 from cities_light.models import SubRegion as Cidade
 from configuracoes.models import Contrato, Variavel
-from funcionarios.models import Funcionario, JornadaFuncionario, Score
+from funcionarios.models import Funcionario, JornadaFuncionario
 from funcionarios.utils import converter_documento
-from ponto.models import Ponto, SolicitacaoAbono, SolicitacaoPonto, Feriados, Saldos
+from notifications.signals import notify
+from ponto.models import Ponto, SolicitacaoAbono, SolicitacaoPonto, Feriados, Saldos, Fechamento
 from ponto.report import gerar_pdf_ponto
 from ponto.utils import pontos_por_dia
-from notifications.models import Notification
-from web.models import Moeda
-from web.utils import not_none_not_empty, create_log, add_coins
+from web.decorators import base_context_required, record_time  # noqa: F401
+from web.utils import not_none_not_empty, create_log
+from web.views import ADMIN_USER
 
 
-@login_required(login_url='entrar')
-def RegistrosPontoView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+# Page
+# @record_time
+@base_context_required
+def RegistrosPontoView(request, context):
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
 
 	estados = Estado.objects.all().order_by('name')
 	cidades = Cidade.objects.all().order_by('name')
@@ -47,13 +53,10 @@ def RegistrosPontoView(request):
 		filtros['funcionarios'] = funcionarios.filter(pk=funcionario.pk)
 		delta = timedelta(days=6)
 
-	data_ultimo_ponto = Ponto.objects.filter(funcionario__in=funcionarios).exclude(motivo='Férias').values_list('data', flat=True).distinct().order_by('-data').first()
+	data_ultimo_ponto = Ponto.objects.filter(funcionario__in=funcionarios, encerrado=False).exclude(motivo='Férias').values_list('data', flat=True).distinct().order_by('-data').first()
 	data_ultimo_ponto = data_ultimo_ponto if data_ultimo_ponto else datetime.today()
 	filtros['final'] = request.GET.get('data_final', data_ultimo_ponto.strftime('%Y-%m-%d'))
 	filtros['inicio'] = request.GET.get('data_inicial', (data_ultimo_ponto - delta).strftime('%Y-%m-%d'))
-
-	# Pontos e score por dia
-	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), filtros['funcionarios'])
 
 	# Abonos e Solicitações de Ajuste de Ponto
 	solicitacoes_ajuste = SolicitacaoPonto.objects.filter(funcionario__in=funcionarios, status=False).values('funcionario__usuario__id', 'funcionario__nome_completo', 'aprovador__usuario__id' ,'aprovador__nome_completo', 'data', 'motivo').annotate(id=Min('id')).order_by('data').distinct()
@@ -74,10 +77,10 @@ def RegistrosPontoView(request):
 	solicitacoes = sorted(solicitacoes, key=lambda x: x['data'])
 
 	# Fechamentos de Ponto
-	fechamentos_dict = {}
-	for i in Ponto.objects.filter(encerrado=True).exclude(data_fechamento=None).values('data_fechamento', 'data', 'funcionario__id', 'funcionario__nome_completo').distinct():
+	fechamentos_dict = dict()
+	for i in Ponto.objects.exclude(data_fechamento=None).values('data_fechamento', 'data', 'funcionario__id', 'funcionario__nome_completo').distinct():
 		if i['data_fechamento'] not in fechamentos_dict:
-			fechamentos_dict[i['data_fechamento']] = {'de': None, 'ate': None, 'funcionarios': []}
+			fechamentos_dict[i['data_fechamento']] = {'de': None, 'ate': None, 'funcionarios': list()}
 		
 		if not fechamentos_dict[i['data_fechamento']]['de'] or i['data'] < fechamentos_dict[i['data_fechamento']]['de']:
 			fechamentos_dict[i['data_fechamento']]['de'] = i['data']
@@ -85,43 +88,44 @@ def RegistrosPontoView(request):
 		if not fechamentos_dict[i['data_fechamento']]['ate'] or i['data'] > fechamentos_dict[i['data_fechamento']]['ate']:
 			fechamentos_dict[i['data_fechamento']]['ate'] = i['data']
 		
-		ele = {
+		func = {
 			'funcionario__id': i['funcionario__id'],
 			'funcionario__nome_completo': i['funcionario__nome_completo']
 		}
 
-		if ele not in fechamentos_dict[i['data_fechamento']]['funcionarios']:
-			fechamentos_dict[i['data_fechamento']]['funcionarios'].append(ele)
+		if func not in fechamentos_dict[i['data_fechamento']]['funcionarios']:
+			fechamentos_dict[i['data_fechamento']]['funcionarios'].append(func)
 	
-	fechamentos = [
+	fechamentos = sorted([
 		{'data_fechamento': data_fechamento, 'de': dados['de'], 'ate': dados['ate'], 'funcionarios': dados['funcionarios']}
 		for data_fechamento, dados in fechamentos_dict.items()
-	]
+	], key=lambda x: x['de'], reverse=True)
 
-	# Scores Mensais
-	anomes = int(f'{date.today().year}{date.today().month:02}')
-	moedas = Moeda.objects.filter(fechado=True, anomes__lt=anomes, funcionario__visivel=True).values('funcionario__id', 'pontuacao', 'anomes')
-	pontuacoes = Score.objects.filter(fechado=True, anomes__lt=anomes, funcionario__visivel=True).order_by('-data_cadastro__date', '-pontuacao')
-	for score in pontuacoes:
-		score.moedas = sum([q['pontuacao'] for q in moedas if q['funcionario__id'] == score.funcionario.id and q['anomes'] == score.anomes])
+	# Fechamento de Scores + Moedas Mensais
+	pontuacoes = Fechamento.objects.filter(funcionario__visivel=True).order_by('-referencia', '-pontuacao', '-moedas')
+	for i in pontuacoes:
+		i.nota_final = (i.pontuacao * 0.7) + ((math.log(i.moedas, 5)) * 0.3)
 
-	# Grafico
-	graph = {'plot': False}
-	if pontos and scores and (len(request.GET.getlist('funcionarios')) == 1 or request.user.get_access == 'common'):
-		graph['plot'] = True
-		graph['notas'] = scores.get(filtros['funcionarios'].first().id)
-		graph['total'] = timedelta(seconds=0)
-		graph['saldo'] = timedelta(seconds=0)
+	# Pontos, score por dia -> Grafico
+	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), filtros['funcionarios'])
+	graph = {'plot': False, 'notas': list(), 'total': timedelta(), 'saldo': timedelta(), 'banco': timedelta()}
+	if len(request.GET.getlist('funcionarios')) == 1 or request.user.get_access == 'common':
+		colaborador_id = filtros['funcionarios'].first().id
+		if pontos and scores:
+			data_ultimo_registro = max(pontos.keys(), key=lambda x: x)
 
-		for _, funcs in pontos.items():
-			for func, dados in funcs.items():
-				graph['total'] += dados['total']
-				graph['saldo'] += dados['saldo']
+			graph['plot'] = True
+			graph['notas'] = scores.get(colaborador_id)
+			graph['banco'] = pontos.get(data_ultimo_registro).get(colaborador_id).get('banco')
+
+			for _, funcs in pontos.items():
+				for __, dados in funcs.items():
+					graph['total'] += dados['total']
+					graph['saldo'] += dados['saldo']
 	
-	context = {
+	context.update({
 		'funcionarios': funcionarios,
 		'funcionario': funcionario,
-		'notificacoes': notificacoes,
 
 		'estados': estados,
 		'cidades': cidades,
@@ -136,42 +140,45 @@ def RegistrosPontoView(request):
 		'fechamentos': fechamentos,
 		'pontuacoes': pontuacoes,
 		'graph': graph
-	}
+	})
 
 	return render(request, 'pages/ponto.html', context)
 
 
 # Page
-@login_required(login_url='entrar')
-def RegistrosPontoFuncinarioView(request, func):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def RegistrosPontoFuncinarioView(request, context, func):
+	funcionarios = context['funcionarios']
+	colaborador = Funcionario.objects.get(pk=func)
 
-	colaborador = funcionarios.get(pk=func)
-
-	jornada = []
+	jornada = list()
 	for i in JornadaFuncionario.objects.filter(funcionario=colaborador, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem'):
 		if i.dia == 2:
 			jornada.append(i.hora)
 	
-	pontos_funcionario = Ponto.objects.filter(funcionario=colaborador).values_list('data', flat=True).order_by('-data')
+	# pontos_funcionario = Ponto.objects.filter(funcionario=colaborador, encerrado=False).exclude(motivo='Férias').values_list('data', flat=True).order_by('-data')
+	pontos_funcionario = Ponto.objects.filter(funcionario=colaborador).exclude(motivo='Férias').values_list('data', flat=True).order_by('-data')
 	data_ultimo_ponto = pontos_funcionario.first() if pontos_funcionario else datetime.today()
 	data_primeiro_ponto = pontos_funcionario.last() if pontos_funcionario else (datetime.today() - timedelta(days=29))
 
 	filtros = {'inicio': None, 'final': None, 'funcionarios': None}
 	filtros['final'] = request.GET.get('data_final', data_ultimo_ponto.strftime('%Y-%m-%d'))
 	filtros['inicio'] = request.GET.get('data_inicial', data_primeiro_ponto.strftime('%Y-%m-%d'))
-	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), funcionarios.filter(pk=colaborador.pk))
 
 	solicitacoes_ajuste = SolicitacaoPonto.objects.filter(funcionario=colaborador).values('data', 'motivo', 'status').annotate(inicio=Min('hora'), final=Max('hora')).values('data', 'motivo', 'status', 'inicio', 'final')
 	solicitacoes_abono = SolicitacaoAbono.objects.filter(funcionario=colaborador)
 	solicitacoes = [{'data': i['data'], 'motivo': i['motivo'], 'status': i['status'], 'categoria': 'Ajuste', 'inicio': datetime.combine(i['data'], i['inicio']), 'final': datetime.combine(i['data'], i['final'])} for i in solicitacoes_ajuste]
 	solicitacoes.extend([{'data': i.inicio.date, 'motivo': i.motivo, 'status': i.status, 'categoria': i.get_tipo, 'inicio': i.inicio, 'final': i.final } for i in solicitacoes_abono])
 
-	nro_colunas = 0
-	graph = {'notas': scores.get(colaborador.id), 'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0)}
+	pontos, scores = pontos_por_dia(datetime.strptime(filtros['inicio'], '%Y-%m-%d'), datetime.strptime(filtros['final'], '%Y-%m-%d'), funcionarios.filter(pk=colaborador.pk))
+	graph, nro_colunas = {'plot': False, 'notas': list(), 'total': timedelta(), 'saldo': timedelta(), 'banco': timedelta()}, 0
 	if pontos and scores:
+		data_ultimo_registro = max(pontos.keys(), key=lambda x: x)
+		
+		graph['plot'] = True
+		graph['notas'] = scores.get(colaborador.id)
+		graph['banco'] = pontos.get(data_ultimo_registro).get(colaborador.id).get('banco')
+
 		for _, funcs in pontos.items():
 			for func, dados in funcs.items():
 				graph['total'] += dados['total']
@@ -180,10 +187,7 @@ def RegistrosPontoFuncinarioView(request, func):
 				if len(dados['pontos']) > nro_colunas:
 					nro_colunas = len(dados['pontos'])
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
 		'colaborador': colaborador,
 		'jornada': jornada,
 		'filtros': filtros,
@@ -191,8 +195,79 @@ def RegistrosPontoFuncinarioView(request, func):
 		'graph': graph,
 		'nro_colunas': range(nro_colunas),
 		'solicitacoes': solicitacoes
-	}
+	})
+
 	return render(request, 'pages/ponto-funcionario.html', context)
+
+
+# Modal
+@login_required(login_url='entrar')
+def EditarPontoView(request, data, func):
+	if not request.method == 'POST':
+		messages.warning(request, 'Método não permitido!')
+		return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+	funcionario = Funcionario.objects.get(pk=func)
+	autor = Funcionario.objects.get(usuario=request.user)
+	data = datetime.strptime(data, '%Y-%m-%d').date()
+	novos_pontos = request.POST.getlist('hora')
+	motivo = request.POST.get('motivo')
+
+	if not_none_not_empty(funcionario, data, novos_pontos):
+		try:
+			if request.user.get_access == 'admin':
+				with transaction.atomic():
+					Ponto.objects.filter(funcionario=funcionario, data=data).delete()
+					for hora in novos_pontos:
+						novo_ponto = Ponto.objects.create(funcionario=funcionario, hora=hora, data=data, autor_modificacao=autor)
+
+						create_log(
+							object_model=Ponto,
+							object_id=novo_ponto.id,
+							user=request.user,
+							message='Ponto ajustado',
+							action=1
+						)
+
+				messages.success(request, 'Ponto alterado!')
+
+			else:
+				if SolicitacaoPonto.objects.filter(data=data, funcionario=funcionario, status=False).exists():
+					messages.error(request, 'Já foi aberta uma solicitação para este dia. Exclua ou edite a solicitação pendente!')
+					return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+				
+				for hora in novos_pontos:
+					solicitacao = SolicitacaoPonto.objects.create(
+						funcionario=funcionario,
+						aprovador=funcionario.gerente or ADMIN_USER,
+						data=data,
+						hora=hora,
+						motivo=motivo,
+					)
+
+					create_log(
+						object_model=SolicitacaoPonto,
+						object_id=solicitacao.id,
+						user=request.user,
+						message='Solicitacao de ponto criada',
+						action=1
+					)
+				
+				notify.send(
+					sender=funcionario.usuario,
+					recipient=funcionario.gerente.usuario if funcionario.gerente else ADMIN_USER.usuario,
+					verb='Solicitação de ponto recebida',
+				)
+
+				messages.success(request, 'Solicitação enviada!')
+
+		except Exception as e:
+			messages.error(request, e)
+
+	else:
+		messages.error(request, 'Preencha todos os campos obrigatórios!')
+
+	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
 # Modal
@@ -203,9 +278,8 @@ def SolicitarAbonoView(request):
 		return redirect('pontos')
 
 	funcionario = Funcionario.objects.get(pk=int(request.POST.get('colaborador'))) if not_none_not_empty(request.POST.get('colaborador')) else Funcionario.objects.get(usuario=request.user)
-	admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 
-	solicitacao = request.POST.get('solicitacao')
+	categoria = request.POST.get('categoria')
 	inicio = request.POST.get('inicio')
 	final = request.POST.get('final')
 	tipo = request.POST.get('tipo')
@@ -219,40 +293,31 @@ def SolicitarAbonoView(request):
 			messages.error(request, 'Os documentos devem ser do tipo JPG, PNG, GIF ou PDF!')
 			return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-	if not_none_not_empty(solicitacao, tipo, motivo):
-		if solicitacao == 'tempo':
-			dia = datetime.strptime(request.POST.get('data'), '%Y-%m-%d').date()
-			weekday = 1 if dia.weekday() + 2 == 8 else dia.weekday() + 2
-
-			pontos_dia = Ponto.objects.filter(funcionario=funcionario, data=dia, alterado=False).order_by('hora')
-			jornada_dia = JornadaFuncionario.objects.filter(funcionario=funcionario, dia=weekday, final_vigencia=None).order_by('ordem')
-
-			if pontos_dia:
-				inicio = make_aware(datetime.combine(dia, pontos_dia.last().hora))
-			else:
-				inicio = make_aware(datetime.combine(dia, jornada_dia.first().hora))
-			
-			final = make_aware(datetime.combine(dia, jornada_dia.last().hora))
-		else:
-			inicio = make_aware(datetime.strptime(inicio, '%Y-%m-%dT%H:%M'))
-			final = make_aware(datetime.strptime(final, '%Y-%m-%dT%H:%M'))
-		
+	if not_none_not_empty(categoria, tipo, motivo):		
 		try:
-			solicitacao = SolicitacaoAbono.objects.create(
+			solicitacao = SolicitacaoAbono(
 				funcionario=funcionario,
-				inicio=inicio,
-				final=final,
 				tipo=tipo,
+				categoria=categoria,
 				motivo=motivo,
 				documento=documento,
 				caminho=f'{nome}.pdf' if nome else None,
 			)
 
-			solicitacao.aprovador = funcionario.gerente or admin
+			if categoria == 'P':
+				solicitacao.inicio = make_aware(datetime.strptime(inicio, '%Y-%m-%dT%H:%M'))
+				solicitacao.final = make_aware(datetime.strptime(final, '%Y-%m-%dT%H:%M'))
+
+				if solicitacao.inicio > solicitacao.final:
+					messages.error(request, 'A data inicial não pode ser maior que a data final!')
+					return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+			else:
+				solicitacao.inicio = make_aware(datetime.strptime(request.POST.get('data'), '%Y-%m-%d'))
+				solicitacao.final = None
+
+			solicitacao.aprovador = funcionario.gerente or ADMIN_USER
 			solicitacao.save()
-
-			add_coins(funcionario, 5)
-
+			
 			create_log(
 				object_model=SolicitacaoAbono,
 				object_id=solicitacao.id,
@@ -269,7 +334,7 @@ def SolicitarAbonoView(request):
 	else:
 		messages.error(request, 'Preencha todos os campos obrigatórios!')
 
-	return redirect('pontos')
+	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
 # Modal
@@ -311,7 +376,7 @@ def AdicionarFeriadoView(request):
 	except Exception as e:
 		messages.error(request, e)
 
-	return redirect('pontos')
+	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
 # Modal
@@ -322,22 +387,50 @@ def AdicionarSaldoView(request):
 		return redirect('pontos')
 
 	try:
-		data = request.POST.get('data')
-		funcionario = Funcionario.objects.get(pk=int(request.POST.get('funcionario')))
-		intervalo = request.POST.get('intervalo').strip().split(':') # 00:00:00 ou -00:00:00
+		data = datetime.strptime(request.POST.get('data_saldo'), '%Y-%m-%d').date() if request.POST.get('data_saldo') else None
+		funcionario = Funcionario.objects.get(pk=int(request.POST.get('funcionario_saldo')))
+		intervalo = request.POST.get('total_saldo').strip().split(':') # 00:00:00 ou -00:00:00
+		adicionar_desconto = request.POST.get('folha') == 'on'
+		saldo_banco = request.POST.get('banco') == 'on'
 
-		minutos = int(intervalo[1])
-		segundos = int(intervalo[2])
-		if '-' in intervalo[0]:
-			horas = abs(int(intervalo[0])) * 60 * 60
-			minutos = minutos * 60
-			segundos = (segundos + minutos + horas) * -1
-			saldo = timedelta(seconds=segundos)
-		else:
-			horas = abs(int(intervalo[0]))
-			saldo = timedelta(hours=horas, minutes=minutos, seconds=segundos)
+		if not data:
+			messages.warning(request, 'Preencha todos os campos obrigatórios!')
+			return redirect('pontos')
+		
+		if adicionar_desconto and saldo_banco:
+			messages.warning(request, 'Você deve selecionar apenas 1 opção: "Desconto em Folha da Pagamento" ou "Saldo em Banco"!')
+			return redirect('pontos')
 
-		if not_none_not_empty(data):
+		with transaction.atomic():
+			if not Ponto.objects.filter(funcionario=funcionario, data=data).exists():
+				Ponto(
+					funcionario=funcionario,
+					data=data,
+					hora=time(),
+					autor_modificacao=Funcionario.objects.get(usuario=request.user)
+				).save()
+
+			saldo = timedelta(hours=abs(int(intervalo[0])), minutes=int(intervalo[1]), seconds=int(intervalo[2]))
+
+			if '-' in intervalo[0]:
+				saldo *= -1
+
+			if adicionar_desconto:
+				for i in Ponto.objects.filter(funcionario=funcionario, data=data):
+					i.motivo = f'Desconto de 20% em Folha de Pagamento. Adicionado saldo de {intervalo[0]}h{intervalo[1]}min.'
+					i.save()
+				
+				if data.weekday() in [5, 6]:
+					saldo = saldo / 2
+				else:
+					saldo = saldo / 1.5
+
+			if saldo_banco:
+				if data.weekday() in [5, 6]:
+					saldo = saldo / 2
+				else:
+					saldo = saldo / 1.5
+
 			saldo = Saldos.objects.create(
 				funcionario=funcionario,
 				data=data,
@@ -354,13 +447,10 @@ def AdicionarSaldoView(request):
 			
 			messages.success(request, 'Saldo adicionado com sucesso!')
 
-		else:
-			messages.warning(request, 'Preencha todos os campos obrigatórios!')
-
 	except Exception as e:
 		messages.error(request, e)
 
-	return redirect('pontos')
+	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
 # Modal
@@ -403,51 +493,56 @@ def ExcluirFechamentoView(request):
 	except Exception as e:
 		messages.error(request, e)
 
-	return redirect('pontos')
+	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
 
-# Page
-@login_required(login_url='entrar')
+# CMD - CURL
+@csrf_exempt
 def RegistrarPontoExternoView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	ponto = Ponto.objects.filter(funcionario=funcionario).order_by('id').last()
+	if request.method != 'POST':
+		return JsonResponse({'status': 'error', 'message': 'Método não permitido'}, status=405)
 
-	if request.POST:
-		conf_permissao = Variavel.objects.filter(chave='REGISTRO_EXTERNO').first()
-		conf_matriculas = Variavel.objects.filter(chave='MATRICULAS_EXTERNAS').first()
+	try:
+		funcionario = Funcionario.objects.get(matricula=request.GET.get('matricula'))
 
-		permitir = conf_permissao.valor == 'True' if conf_permissao else False
-		matriculas = [i.strip() for i in conf_matriculas.valor.split(',')] if conf_matriculas else []
-		funcionario = Funcionario.objects.get(usuario=request.user)
-		
+		conf_permissao = Variavel.objects.get(chave='REGISTRO_EXTERNO').valor
+		conf_matriculas = Variavel.objects.get(chave='MATRICULAS_EXTERNAS').valor
+
+		permitir = conf_permissao == 'True'
+		matriculas = [i.strip() for i in conf_matriculas.split(',')]
+
+		body = request.body.decode('utf-8-sig')
+		response = json.loads(body)
+
 		if permitir and funcionario.matricula in matriculas:
-			ponto = Ponto.objects.create(
-				funcionario=funcionario,
-				data=timezone.localdate(),
-				hora=timezone.localtime(),
-				autor_modificacao=funcionario
-			)
+			registros_ponto = list()
 
-			create_log(
-				object_model=Ponto,
-				object_id=ponto.id,
-				user=funcionario.usuario,
-				message='Ponto cadastrado',
-				action=1
-			)
+			if not isinstance(response, list):
+				registros_ponto.append(response)
+			else:
+				registros_ponto = response
 
-			messages.success(request, 'Ponto registrado com sucesso!')
+			for registro in registros_ponto:
+				ponto = Ponto.objects.create(
+					funcionario=funcionario,
+					data=datetime.strptime(registro.get('data'), '%d/%m/%Y'),
+					hora=registro.get('hora'),
+					motivo='Importação de registro externo',
+					autor_modificacao=funcionario
+				)
+
+				create_log(
+					object_model=Ponto,
+					object_id=ponto.id,
+					user=funcionario.usuario,
+					message='Ponto externo cadastrado',
+					action=1
+				)
+			
+			return JsonResponse({'status': 'success', 'message': f'Foram salvos {len(registros_ponto)} registro(s).'})
 		
 		else:
-			messages.error(request, 'Ponto não registrado! Este usuário não está liberado para registros externos.')
+			return JsonResponse({'status': 'error', 'message': 'Sua matrícula não está liberada para registros externos. Fale com o setor de Recursos Humanos.'}, status=400)
 
-		return redirect('registrar-externo')
-
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'ponto': datetime.combine(ponto.data, ponto.hora) if ponto else None,
-	}
-
-	return render(request, 'pages/ponto-externo.html', context)
+	except Exception as e:
+		return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

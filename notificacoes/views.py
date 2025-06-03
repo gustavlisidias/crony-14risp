@@ -7,14 +7,15 @@ from django.shortcuts import render, redirect
 from agenda.models import Atividade, TipoAtividade
 from funcionarios.models import Funcionario
 from notifications.models import Notification
+from web.decorators import base_context_required
 from web.utils import not_none_not_empty
 
 
 # Page
-@login_required(login_url='entrar')
-def NotificacoesView(request):
-	funcionarios = Funcionario.objects.all()
-	funcionario = funcionarios.get(usuario=request.user)
+@base_context_required
+def NotificacoesView(request, context):
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
 
 	if request.user.get_access == 'common':
 		users = [request.user.id]
@@ -25,7 +26,7 @@ def NotificacoesView(request):
 
 	comunicados = Notification.objects.filter(recipient__id__in=users).values('id', 'level', 'verb', 'description', 'unread', 'timestamp', 'recipient__id', 'actor_object_id')
 	nomes = [{'nome': i.nome_completo, 'user_id': i.usuario.id} for i in funcionarios]
-	listagem = []
+	listagem = list()
 
 	for comunicado in comunicados:
 		remetente = [i['nome'] for i in nomes if i['user_id'] == int(comunicado['actor_object_id'])]
@@ -42,11 +43,10 @@ def NotificacoesView(request):
 			'timestamp': comunicado['timestamp'].strftime('%d/%m/%Y'),
 		})
 
-	context = {
-		'funcionarios': funcionarios.filter(data_demissao=None).order_by('nome_completo'),
-		'funcionario': funcionario,
+	context.update({
 		'listagem': listagem,
-	}
+	})
+
 	return render(request, 'pages/notificacoes.html', context)
 
 
@@ -63,10 +63,12 @@ def EditarNotificacaoView(request, notid):
 
 	try:
 		notificacao = Notification.objects.get(pk=notid)
+
 		Notification.objects.filter(verb=notificacao.verb, description=notificacao.description, level=notificacao.level, actor_object_id=notificacao.actor_object_id).update(
 			verb=request.POST.get('titulo'),
 			description=request.POST.get('descricao')
 		)
+		
 		messages.success(request, 'Notificação alterada com sucesso!')
 
 	except Exception as e:
@@ -97,7 +99,7 @@ def AdicionarNotificacaoView(request):
 			atividade = Atividade.objects.create(
 				titulo=assunto,
 				descricao=descricao,
-				tipo=TipoAtividade.objects.get(slug='comunicado'),
+				tipo=TipoAtividade.objects.get(slug='evento'),
 				inicio=request.POST.get('inicio'),
 				final=request.POST.get('final'),
 				autor=Funcionario.objects.get(usuario=request.user)
@@ -113,6 +115,7 @@ def AdicionarNotificacaoView(request):
 					verb=assunto,
 					description=descricao,
 				).save()
+
 				messages.success(request, 'Notificação criada com sucesso!')
 
 			else:
@@ -123,6 +126,7 @@ def AdicionarNotificacaoView(request):
 					description=descricao,
 					level='communication'
 				).save()
+
 				messages.success(request, 'Comunicado criado com sucesso!')
 
 	return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))

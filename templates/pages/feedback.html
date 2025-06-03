@@ -48,21 +48,21 @@
 						{% endif %}
 					</ul>
 				</div>
-				{% if request.user.get_access == "admin" %}
-					<div>
-						<div class="btn-group">
+				<div>
+					<div class="btn-group">
+						{% if funcionario.usuario.get_access != "common" or funcionario.is_analista %}
 							<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalEnviarFeedback">
 								Enviar
 							</button>
-							<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitarFeedback">
-								Solicitar
-							</button>
-							<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitacoesFeedback">
-								Recebidas
-							</button>
-						</div>
+						{% endif %}
+						<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitarFeedback">
+							Solicitar
+						</button>
+						<button class="btn btn-secondary text-light" data-bs-toggle="modal" data-bs-target="#modalSolicitacoesFeedback">
+							Pedidos
+						</button>
 					</div>
-				{% endif %}
+				</div>
 			</div>
 
 			<div class="tab-content" id="tab-feedback">

@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
-from django.db.models import Count, Q, Max
+from django.db.models import Count, Q
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -42,20 +42,19 @@ from funcionarios.utils import obter_arvore, cadastro_funcionario, atualizar_per
 from ponto.models import Ponto
 from ponto.renderers import RenderToPDF
 from ponto.utils import pontos_por_dia
-from notifications.models import Notification
 from settings.settings import BASE_DIR
+from web.decorators import base_context_required
 from web.models import Humor
 from web.utils import not_none_not_empty, add_coins
+from web.views import ADMIN_USER
 
 
 # Page
-@login_required(login_url='entrar')
-def FuncionariosView(request):
+@base_context_required
+def FuncionariosView(request, context):
 	funcionarios = Funcionario.objects.all().order_by('-data_demissao', 'nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
 
-	if request.user.get_access != "admin":
+	if request.user.get_access != 'admin':
 		funcionarios = funcionarios.filter(data_demissao=None)
 
 	setores = Setor.objects.all().order_by('setor')
@@ -65,17 +64,16 @@ def FuncionariosView(request):
 	contratos = Contrato.objects.all().order_by('titulo')
 	civis = [{'id': i[0], 'nome': i[1]} for i in Funcionario.Estados.choices]
 
-	context = {
+	context.update({
 		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
 		'setores': setores,
 		'cargos': cargos,
 		'estados': estados,
 		'cidades': cidades,
 		'contratos': contratos,
 		'civis': civis
-	}
+	})
+
 	return render(request, 'pages/funcionarios.html', context)
 
 
@@ -96,23 +94,20 @@ def AdicionarFuncionarioView(request):
 
 
 # Page
-@login_required(login_url='entrar')
-def EditarFuncionarioView(request, func):
-	funcionarios = Funcionario.objects.filter().order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	colaborador = funcionarios.get(pk=func)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def EditarFuncionarioView(request, context, func):
+	funcionarios = context['funcionarios']
+	funcionario = context['funcionario']
+	colaborador = Funcionario.objects.get(pk=func)
 
 	if request.user.get_access == 'common' and funcionario.usuario != request.user:
 		messages.warning(request, 'Você não possui acesso para realizar essa ação!')
 		return redirect('funcionarios')
 	
-	filtro_data_inicial = request.GET.get('data_inicial') if not_none_not_empty(request.GET.get('data_inicial')) else '2000-01-01' # (timezone.localdate() - timedelta(days=10)).strftime('%Y-%m-%d')
-	filtro_data_final = request.GET.get('data_final') if not_none_not_empty(request.GET.get('data_final')) else timezone.localdate().strftime('%Y-%m-%d')
+	filtro_data_inicial = request.GET.get('data_inicial', '2018-01-01')
+	filtro_data_final = request.GET.get('data_final', timezone.localdate().strftime('%Y-%m-%d'))
 	filtro_nome = request.GET.get('nome')
 	filtro_tipo = request.GET.getlist('tipo')
-
-	Documento.objects.filter(funcionario=funcionario).update(lido=True)
 
 	setores = Setor.objects.all().order_by('setor')
 	cargos = Cargo.objects.all().order_by('cargo')
@@ -142,8 +137,8 @@ def EditarFuncionarioView(request, func):
 	avaliacoes = Avaliacao.objects.filter(atividade__funcionarios__in=[colaborador])
 	if avaliacoes:
 		avaliacao = {
-			'desempenho': round(sum(i.desempenho for i in avaliacoes) / len(avaliacoes)), 
-			'potencial': round(sum(i.potencial for i in avaliacoes) / len(avaliacoes)), 
+			'desempenho': round(sum(i.desempenho for i in avaliacoes) / len(avaliacoes)),
+			'potencial': round(sum(i.potencial for i in avaliacoes) / len(avaliacoes)),
 		}
 	else:
 		avaliacao = {'desempenho': None, 'potencial': None}
@@ -158,15 +153,15 @@ def EditarFuncionarioView(request, func):
 		for item in humor:
 			item['humor'] = dict(Humor.Status.choices)[item['humor']]
 	
-	jornada = {}
+	jornada = dict()
 	for item in jornadas.filter(final_vigencia=None):
 		if item.dia not in jornada:
-			jornada[item.dia] = []
+			jornada[item.dia] = list()
 		jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
 
-	historico_jornadas = []
+	historico_jornadas = list()
 	for item in jornadas:
-		descricao = ' - '.join([i.hora.strftime("%H:%M") for i in jornadas if item.agrupador == i.agrupador and i.dia == 2])
+		descricao = ' - '.join([i.hora.strftime('%H:%M') for i in jornadas if item.agrupador == i.agrupador and i.dia == 2])
 		historico = {
 			'index': item.agrupador,
 			'inicio_vigencia': item.inicio_vigencia,
@@ -185,21 +180,28 @@ def EditarFuncionarioView(request, func):
 	else:
 		pontos, scores = None, None
 	
-	graph = {'total': timedelta(seconds=0), 'saldo': timedelta(seconds=0), 'debito': timedelta(seconds=0), 'credito': timedelta(seconds=0), 'scores': {}}
-	if scores and pontos:
+	graph = {'plot': False, 'notas': list(), 'total': timedelta(), 'saldo': timedelta(), 'banco': timedelta(), 'debito': timedelta(), 'credito': timedelta(), 'scores': dict()}
+	if pontos and scores:
+		data_ultimo_registro = max(pontos.keys(), key=lambda x: x)
+
+		graph['plot'] = True
+		graph['notas'] = scores.get(colaborador.id)
+		graph['banco'] = pontos.get(data_ultimo_registro).get(colaborador.id).get('banco')
 		graph['scores'] = scores.get(colaborador.id)
+		
 		for _, funcs in pontos.items():
-			for func, dados in funcs.items():
+			for __, dados in funcs.items():
 				graph['total'] += dados['total']
 				graph['saldo'] += dados['saldo']
 
-				if dados['saldo'] < timedelta(0):
+				if dados['saldo'] < timedelta():
 					graph['debito'] += dados['saldo']
 				else:
 					graph['credito'] += dados['saldo']
-		
-		# Arrumar posteriormente
-		graph['banco'] = graph['saldo']
+
+	if request.method == 'GET':
+		if funcionario == colaborador:
+			Documento.objects.filter(funcionario=funcionario).update(lido=True)
 
 	if request.method == 'POST':
 		if request.user.get_access == 'common':
@@ -216,6 +218,7 @@ def EditarFuncionarioView(request, func):
 			agrupador = jornadas.last().agrupador + 1 if jornadas else 1
 			contrato = Contrato.objects.get(pk=request.POST.get('contrato'))
 			nova_jornada = Jornada.objects.filter(contrato=contrato).order_by('contrato__id', 'dia', 'ordem')
+			alterar_matricula = colaborador.get_contrato.tipo == 'est' and contrato.tipo == 'ind'
 
 			if not jornadas or colaborador.get_contrato != contrato:
 				if jornadas:
@@ -234,15 +237,17 @@ def EditarFuncionarioView(request, func):
 						agrupador=agrupador
 					)
 				
-				if (not colaborador.get_contrato.tipo.startswith('ind')) and contrato.tipo.startswith('ind'):
-					add_coins(colaborador, 350)
+				if alterar_matricula:
+					add_coins(colaborador, 350, 'Promoção CLT')
 
-					ultima_matricula = nova_jornada.exclude(funcionario=colaborador).order_by('funcionario__matricula').aggregate(ultimo=Max('funcionario__matricula'))['ultimo']
+					max_matricula = max(JornadaFuncionario.objects.filter(contrato__tipo=contrato, final_vigencia=None).values_list('funcionario__matricula', flat=True).distinct())
 
-					if ultima_matricula:
-						max_matricula = f"{(int(ultima_matricula) + 1):06d}"
-						colaborador.matricula = max_matricula
-						colaborador.save()
+					if not max_matricula:
+						max_matricula = Funcionario.objects.latest('id').matricula
+
+					max_matricula = f'{(int(max_matricula) + 1):06d}'
+					colaborador.matricula = max_matricula
+					colaborador.save()
 
 				messages.success(request, 'Horários alterados conforme novo contrato!')
 				
@@ -265,14 +270,10 @@ def EditarFuncionarioView(request, func):
 
 				messages.success(request, 'Horários atualizados com sucesso!')
 			
-			# Resetar score do funcionario
+			# Salvar score do funcionario
 			if pontos:
-				for obj in Score.objects.filter(funcionario=colaborador, fechado=False):
-					obj.fechado = True
-					obj.pontuacao = list(scores.values())[0][0]
-					obj.save()
-					
-				Score(funcionario=colaborador).save()
+				pontuacao = scores.get(colaborador.id)['media']
+				Score(funcionario=colaborador, pontuacao=pontuacao).save()
 		
 		# Exportar histórico do funcionário
 		elif not_none_not_empty(request.POST.get('historico')):
@@ -334,11 +335,8 @@ def EditarFuncionarioView(request, func):
 
 		return redirect('editar-funcionario', colaborador.id)
 	
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
+	context.update({
 		'colaborador': colaborador,
-		'notificacoes': notificacoes,
 
 		'setores': setores,
 		'cargos': cargos,
@@ -364,15 +362,15 @@ def EditarFuncionarioView(request, func):
 		'estavel': estavel,
 
 		'filtros': {'inicio': filtro_data_inicial, 'final': filtro_data_final, 'nome': filtro_nome, 'tipo': filtro_tipo },
-	}
+	})
+
 	return render(request, 'pages/funcionario.html', context)
 
 
 # Page
-@login_required(login_url='entrar')
-def PerfilFuncionarioView(request):
-	funcionario = Funcionario.objects.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def PerfilFuncionarioView(request, context):
+	funcionario = context['funcionario']
 	perfil = Perfil.objects.get(funcionario=funcionario)
 
 	estados = Estado.objects.all().order_by('name')
@@ -380,17 +378,13 @@ def PerfilFuncionarioView(request):
 	civis = [{'key': i[0], 'value': i[1]} for i in Funcionario.Estados.choices]
 	historico = HistoricoFuncionario.objects.filter(funcionario=funcionario).values('cargo__cargo', 'setor__setor').distinct()
 
-	jornada = {}
+	jornada = dict()
 	for item in JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem'):
 		if item.dia not in jornada:
-			jornada[item.dia] = []
+			jornada[item.dia] = list()
 		jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
 
 	if request.method == 'POST':
-		if request.user.get_access == 'common':
-			messages.warning(request, 'Você não possui acesso para realizar essa ação!')
-			return redirect('perfil')
-
 		if not_none_not_empty(request.POST.get('remover')):
 			perfil.foto = None
 			perfil.save()
@@ -399,35 +393,30 @@ def PerfilFuncionarioView(request):
 		
 		if request.FILES.get('foto'):
 			perfil.foto = request.FILES.get('foto')
-			add_coins(funcionario, 50)
 			
 		perfil.bio = request.POST.get('bio')
 		perfil.save()
 
 		atualizar_perfil_funcionario(request, funcionario)
 
-		add_coins(funcionario, 5)
-
-		admin = Funcionario.objects.filter(data_demissao=None, matricula__in=[i.strip() for i in Variavel.objects.get(chave='RESP_USERS').valor.split(',')]).first()
 		notify.send(
 			sender=request.user,
-			recipient=admin.usuario,
+			recipient=ADMIN_USER.usuario,
 			verb=f'Perfil do funcionário {funcionario.nome_completo} foi alterado!'
 		)
 
 		messages.success(request, 'Perfil alterado com sucesso!')
 		return redirect('perfil')
 
-	context = {
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
 		'perfil': perfil,
 		'jornada': jornada,
 		'estados': estados,
 		'cidades': cidades,
 		'civis': civis,
 		'historico': historico
-	}
+	})
+
 	return render(request, 'pages/perfil.html', context)
 
 
@@ -455,20 +444,14 @@ def AlterarSenhaView(request):
 	
 
 # Page
-@login_required(login_url='entrar')
-def DocumentosView(request):
-	if request.user.get_access == 'common':
-		messages.warning(request, 'Você não possui acesso para realizar essa ação!')
-		return redirect('inicio')
-
-	filtro_data_inicial = request.GET.get('data_inicial') if not_none_not_empty(request.GET.get('data_inicial')) else '2018-01-01' # (timezone.localdate() - timedelta(days=360)).strftime('%Y-%m-%d')
-	filtro_data_final = request.GET.get('data_final') if not_none_not_empty(request.GET.get('data_final')) else timezone.localdate().strftime('%Y-%m-%d')
+@base_context_required
+def DocumentosView(request, context):
+	filtro_data_inicial = request.GET.get('data_inicial', '2018-01-01')
+	filtro_data_final = request.GET.get('data_final', timezone.localdate().strftime('%Y-%m-%d'))
 	filtro_nome = request.GET.get('nome')
 	filtro_tipo = request.GET.getlist('tipo')
 
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+	funcionario = context['funcionario']
 
 	if funcionario.is_financeiro:
 		tipos = TipoDocumento.objects.filter(Q(visibilidade=TipoDocumento.Visoes.GERAL) | Q(visibilidade=TipoDocumento.Visoes.FINA))
@@ -485,28 +468,25 @@ def DocumentosView(request):
 	if not_none_not_empty(filtro_tipo):
 		documentos = documentos.filter(tipo__in=[int(i) for i in filtro_tipo])
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
 		'documentos': documentos,
 		'tipos': tipos,
 		'filtros': {'inicio': filtro_data_inicial, 'final': filtro_data_final, 'nome': filtro_nome, 'tipo': filtro_tipo },
-	}
+	})
+
 	return render(request, 'pages/documentos.html', context)
 	
 
 # Page
-@login_required(login_url='entrar')
-def FeedbackView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def FeedbackView(request, context):
+	funcionario = context['funcionario']
 
 	solicitacoes = SolicitacaoFeedback.objects.filter(destinatario__usuario=request.user).order_by('-data_cadastro')
 	feedbacks = Feedback.objects.all().order_by('-data_cadastro')
 	feedbacks_enviados = feedbacks.filter(remetente=funcionario)
 	feedbacks_recebidos = feedbacks.filter(destinatario=funcionario)
+	
 	modelos = [{'key': i[0], 'value': i[1]} for i in Feedback.Modelos.choices]
 
 	for feedback in feedbacks:
@@ -544,17 +524,15 @@ def FeedbackView(request):
 	except Exception:
 		notas = {'comprometimento': 0, 'conhecimento': 0, 'produtividade': 0, 'comportamento': 0}
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
 		'solicitacoes': solicitacoes,
 		'feedbacks': feedbacks,
 		'feedbacks_enviados': feedbacks_enviados,
 		'feedbacks_recebidos': feedbacks_recebidos,
 		'modelos': modelos,
 		'notas': notas
-	}
+	})
+
 	return render(request, 'pages/feedback.html', context)
 
 
@@ -660,9 +638,10 @@ def ResponderFeedbackView(request, feed):
 
 
 # Modal
+@login_required(login_url='entrar')
 def ImportarDocumentosView(request):
 	caminhos = [i.valor for i in Variavel.objects.filter(Q(chave='PATH_DOCS') | Q(chave='PATH_DOCS_EMP'))]
-	arvores, nodes = [], []
+	arvores, nodes = list(), list()
 
 	try:
 		for caminho in caminhos:

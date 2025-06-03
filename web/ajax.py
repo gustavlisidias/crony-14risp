@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, get_object_or_404
 
@@ -9,6 +10,7 @@ from web.models import Curtida, Postagem, Ouvidoria, MensagemOuvidoria, Celebrac
 from web.utils import not_none_not_empty, add_coins
 
 
+@login_required(login_url='entrar')
 def CurtirPostView(request, post, modelo):
 	if request.method != 'POST':
 		return JsonResponse({'mensagem': 'Método não permitido.'}, status=400)
@@ -29,15 +31,16 @@ def CurtirPostView(request, post, modelo):
 	try:
 		curtida = Curtida.objects.get(content_type=content_type, object_id=obj.id, funcionario=funcionario)
 		curtida.delete()
-		add_coins(funcionario, -1 * value)
+		add_coins(funcionario, -1 * value, 'Descurtir postagem ou celebração')
 		return JsonResponse({'mensagem': 'disliked'}, status=200)
 	
 	except Curtida.DoesNotExist:
 		Curtida.objects.create(content_type=content_type, object_id=obj.id, funcionario=funcionario)
-		add_coins(funcionario, value)
+		add_coins(funcionario, value, 'Curtir postagem ou celebração')
 		return JsonResponse({'mensagem': 'liked'}, status=200)
 	
 
+@login_required(login_url='entrar')
 def VisualizarReacoesView(request, post, modelo):
 	if not request.method == 'GET':
 		return JsonResponse({'mensagem': 'Método não permitido.'}, status=400)
@@ -59,6 +62,7 @@ def VisualizarReacoesView(request, post, modelo):
 		return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
 	
 
+@login_required(login_url='entrar')
 def VisualizarComentariosView(request, post, modelo):	
 	if modelo == 'postagem':
 		model = Postagem
@@ -94,6 +98,7 @@ def VisualizarComentariosView(request, post, modelo):
 			return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
 
 
+@login_required(login_url='entrar')
 def ProcurarCidadesView(request, estado):
 	if not request.method == 'GET':
 		return JsonResponse({'mensagem': 'Método não permitido.'}, status=400)
@@ -110,6 +115,7 @@ def ProcurarCidadesView(request, estado):
 		return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
 	
 
+@login_required(login_url='entrar')
 def FuncionariosTagsView(request):
 	if not request.method == 'GET':
 		return JsonResponse({'mensagem': 'Método não permitido.'}, status=400)
@@ -130,12 +136,13 @@ def FuncionariosTagsView(request):
 		return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
 
 
+@login_required(login_url='entrar')
 def EditarOuvidoriaView(request, ticket):
 	ouvidoria = Ouvidoria.objects.get(pk=ticket)
 	mensagens = MensagemOuvidoria.objects.filter(ticket=ouvidoria)
 
 	if request.method == 'POST':
-		if request.user != ouvidoria.funcionario.usuario or request.user != ouvidoria.responsavel.usuario:
+		if not (request.user == ouvidoria.funcionario.usuario or request.user == ouvidoria.responsavel.usuario):
 			messages.warning(request, 'Você não possui permissão para realizar essa ação!')
 			return redirect('ouvidoria')
 			
@@ -170,6 +177,7 @@ def EditarOuvidoriaView(request, ticket):
 			return JsonResponse({'mensagem': f'Ocorreu um erro: {str(e)}'}, status=500)
 
 
+@login_required(login_url='entrar')
 def AlterarTemaView(request):
 	if not request.method == 'POST':
 		return JsonResponse({'mensagem': 'Método não permitido.'}, status=400)
@@ -177,12 +185,7 @@ def AlterarTemaView(request):
 	try:
 		funcionario = Funcionario.objects.get(usuario=request.user)
 		perfil = Perfil.objects.get(funcionario=funcionario)
-
-		if perfil.tema == 'light':
-			perfil.tema = 'dark'
-		else:
-			perfil.tema = 'light'
-
+		perfil.tema = 'dark' if perfil.tema == 'light' else 'light'
 		perfil.save()
 
 		return JsonResponse({'mensagem': 'sucesso'}, safe=False, status=200)

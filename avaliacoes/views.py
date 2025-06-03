@@ -11,17 +11,15 @@ from slugify import slugify
 from avaliacoes.models import Avaliacao, Nivel, Pergunta, PerguntaAvaliacao, Resposta
 from avaliacoes.utils import dados_avaliacao
 from funcionarios.models import Funcionario
-from notifications.models import Notification
 from ponto.renderers import RenderToPDF
+from web.decorators import base_context_required
 from web.utils import not_none_not_empty
 
 
 # Page
-@login_required(login_url='entrar')
-def AvaliacaoView(request):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def AvaliacaoView(request, context):
+	funcionario = context['funcionario']
 
 	if request.user.get_access == 'admin':
 		avaliacoes = Avaliacao.objects.all()
@@ -29,6 +27,12 @@ def AvaliacaoView(request):
 		avaliacoes = Avaliacao.objects.filter(Q(avaliadores__gerente=funcionario) | Q(avaliadores=funcionario)).distinct()
 	else:
 		avaliacoes = Avaliacao.objects.filter(avaliadores=funcionario)
+	
+	for avaliacao in avaliacoes:
+		if funcionario in avaliacao.avaliadores.all():
+			avaliacao.respondido = Resposta.objects.filter(funcionario=funcionario, referencia__avaliacao=avaliacao).exists()
+		else:
+			avaliacao.respondido = False
 
 	niveis = [{'key': i[0], 'value': i[1]} for i in Nivel.Tipo.choices]
 	perguntas = Pergunta.objects.all()
@@ -59,7 +63,7 @@ def AvaliacaoView(request):
 					).save()
 
 				# Se selecionei perguntas já prontas, guardo o id delas
-				perguntas_avaliacao = []
+				perguntas_avaliacao = list()
 				if not_none_not_empty(request.POST.get('perguntas')):
 					for i in request.POST.getlist('perguntas'):
 						pergunta = Pergunta.objects.get(pk=int(i))
@@ -91,37 +95,25 @@ def AvaliacaoView(request):
 
 		return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
-
+	context.update({
 		'avaliacoes': avaliacoes,
 		'niveis': niveis,
 		'perguntas': perguntas
-	}
+	})
+
 	return render(request, 'pages/avaliacao.html', context)
 
 
 # Page
-@login_required(login_url='entrar')
-def AvaliacaoDetalhesView(request, avaid):
-	funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
-	funcionario = funcionarios.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
+@base_context_required
+def AvaliacaoDetalhesView(request, context, avaid):
+	funcionario = context['funcionario']
 
 	avaliacao = Avaliacao.objects.get(pk=avaid)
 	perguntas = [i.pergunta for i in PerguntaAvaliacao.objects.filter(avaliacao=avaliacao)]
+	respostas = Resposta.objects.filter(referencia__avaliacao=avaliacao)
 
-	if request.user.get_access != 'common':
-		respostas = Resposta.objects.filter(referencia__avaliacao=avaliacao)
-	else:
-		respostas = Resposta.objects.filter(referencia__avaliacao=avaliacao, funcionario=funcionario)
-
-	if respostas:
-		dados = dados_avaliacao(avaliacao, perguntas, respostas)
-	else:
-		dados = None
+	dados, grafico = dados_avaliacao(avaliacao, perguntas, respostas)
 
 	if not_none_not_empty(request.GET.get('exportar')):
 		filename = f'avaliacao_{slugify(avaliacao.avaliado.nome_completo.lower())}.pdf'
@@ -129,7 +121,8 @@ def AvaliacaoDetalhesView(request, avaid):
 			'autor': Funcionario.objects.get(usuario=request.user),
 			'avaliacao': avaliacao,
 			'perguntas': perguntas,
-			'dados': dados
+			'dados': dados,
+			'grafico': grafico
 		}
 		return RenderToPDF(request, 'relatorios/avaliacao.html', context, filename).weasyprint()
 
@@ -178,21 +171,21 @@ def AvaliacaoDetalhesView(request, avaid):
 
 			return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-	context = {
-		'funcionarios': funcionarios,
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
-
+	context.update({
 		'avaliacao': avaliacao,
 		'perguntas': perguntas,
 		'respostas': respostas,
 		'respondido': funcionario in [i.funcionario for i in respostas],
 		'comentarios': True in [not_none_not_empty(i.observacao) for i in respostas],
-		'dados': dados
-	}
+
+		'dados': dados,
+		'grafico': grafico
+	})
+
 	return render(request, 'pages/avaliacao-detalhes.html', context)
 
 
+# Modal
 @login_required(login_url='entrar')
 def DuplicarAvaliacaoView(request, avaid):
 	if request.user.get_access == 'common':

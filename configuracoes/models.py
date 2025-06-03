@@ -85,6 +85,7 @@ class Contrato(models.Model):
 		TELETRABALHO = 'tel', 'Teletrabalho'
 		INTERMITENTE = 'int', 'Intermitente'
 		AUTONOMO = 'pj', 'Autônomo'
+		SOCIO = 'soc', 'Sócio e Diretoria'
 
 	titulo = models.CharField(max_length=60, null=False, blank=False, verbose_name='Contrato')
 	descricao = models.CharField(max_length=60, null=False, blank=False, verbose_name='Descrição da Jornada')
@@ -150,7 +151,7 @@ class Jornada(models.Model):
 
 class Variavel(models.Model):
 	chave = models.CharField(max_length=256, verbose_name='Chave')
-	valor = models.CharField(max_length=512, verbose_name='Valor')
+	valor = models.CharField(max_length=512, verbose_name='Valor', help_text='Como uma variável Python. Por exemplo, se boolean igual à True ou False.')
 
 	def __str__(self):
 		return f'{self.chave}: {self.valor}'

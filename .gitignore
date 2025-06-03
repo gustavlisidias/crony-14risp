@@ -12,3 +12,4 @@ documentacao/*
 *.db
 
 web.config
+settings/settings_ckeditor.py

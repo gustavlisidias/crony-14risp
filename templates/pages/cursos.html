@@ -17,7 +17,7 @@
 			<div>
 				{% if request.user.get_access == 'admin' %} Cursos {% else %} Meus Cursos {% endif %}
 			</div>
-			{% if request.user.get_access == "admin" %}
+			{% if request.user.get_access != "common" %}
 				<div class="btn-group">
 					<button class="btn btn-secondary text-light" type="button" title="Novo curso" data-bs-toggle="modal" data-bs-target="#modalAdicionarCurso">
 						Adicionar
@@ -129,7 +129,7 @@
 						{% csrf_token %}
 						<div class="list-group mt-3">
 							{% for curso in cursos %}
-								<div role="button" class="list-group-item list-group-item-action" onclick="editarCurso({{curso.id}})">
+								<div role="button" class="list-group-item list-group-item-action" {% if request.user.get_access != "common" %} onclick="editarCurso({{curso.id}})" {% endif %}>
 									<div class="d-flex w-100 justify-content-between">
 										<h5 class="mb-3">{{curso}}</h5>
 										<small class="text-body-secondary">{{curso.data_cadastro}}</small>
@@ -146,10 +146,10 @@
 										</div>
 										<div class="d-flex align-items-center">
 											<div>
-												{% if request.user.get_access == "admin" %}
+												{% if request.user.get_access != 'common' %}
 													<button type="button" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;" onclick="atribuirCurso(event, {{curso.id}}, {{funcionario.id}})">Atribuir</button>
 												{% endif %}
-												{% if funcionario.get_perfil.time|value_to_string in curso.time.all|query_to_list:"titulo" %}
+												{% if funcionario.get_perfil.time.titulo in curso.times_liberados %}
 													<button type="submit" name="curso" value="{{curso.id}}" class="btn btn-primary text-light rounded-pill" style=" width: 12rem; height: 4rem;">Adicionar</button>
 												{% endif %}
 											</div>
@@ -186,6 +186,13 @@
 
 <script>
 	document.addEventListener("DOMContentLoaded", function () {
+		document.querySelectorAll("#cursoCertificado").forEach(button => {
+			button.addEventListener("change", function (event) {
+				$("#cursoObservacao").parent().toggleClass("d-none");
+				$("#cursoTipoCertificado").parent().toggleClass("d-none");	
+			});
+		});
+
 		document.querySelectorAll(".start-course").forEach(button => {
 			button.addEventListener("click", function (event) {
 				window.location.href = button.getAttribute("href");
@@ -216,6 +223,11 @@
 				const modal = $("#modalEditarCurso");
 				const action = `{% url "editar-curso" 0 %}`.replace("0", courseId);
 
+				modal.find("#cursoCertificado").on("change", function () {
+					modal.find("#cursoObservacao").parent().toggleClass("d-none");
+					modal.find("#cursoTipoCertificado").parent().toggleClass("d-none");
+				});
+
 				response.curso.times.forEach(time => {
 					const option = modal.find(`#cursoTime option[value="${time}"]`);
 					if (option.length) {
@@ -229,13 +241,23 @@
 						option.prop("selected", true).trigger("change");						
 					};
 				});
-
-				response.etapas.forEach(etapa => {
+				
+				modal.find("#cursoEtapas option:selected").prop("selected", "");
+				response.curso.etapas.forEach(etapa => {
 					const option = modal.find(`#cursoEtapas option[value="${etapa.id}"]`);
 					if (option.length) {
 						option.prop("selected", true).trigger("change");						
 					};
-				});				
+				});
+
+				if (response.curso.certificado) {
+					modal.find("#cursoCertificado").prop("checked", true);
+					modal.find("#cursoObservacao").val(response.curso.observacao);
+					modal.find("#cursoObservacao").parent().removeClass("d-none");
+
+					modal.find(`#cursoTipoCertificado option[value="${response.curso.tipo}"]`).prop("selected", true).trigger("change");
+					modal.find("#cursoTipoCertificado").parent().removeClass("d-none");
+				};
 				
 				modal.find("form").attr("action", action);
 				modal.find("#cursoTitulo").val(response.curso.titulo);

@@ -27,18 +27,24 @@
 				</div>
 				<div class="row mb-3" id="divPeriodoAbono">
 					<div class="col">
-						<label class="form-label" for="abonoInicio">Inicio do Período</label>
-						<input type="datetime-local" class="form-control" name="inicio" id="abonoInicio">
+						<div class="form-floating">
+							<input type="datetime-local" class="form-control" id="abonoInicio" name="inicio" placeholder required>
+							<label for="abonoInicio">Início Período *</label>
+						</div>
 					</div>
 					<div class="col">
-						<label class="form-label" for="abonoFinal">Final do Período</label>
-						<input type="datetime-local" class="form-control" name="final" id="abonoFinal">
+						<div class="form-floating">
+							<input type="datetime-local" class="form-control" id="abonoFinal" name="final" placeholder required>
+							<label for="abonoFinal">Final Período *</label>
+						</div>
 					</div>
 				</div>
 				<div class="row d-none" id="divTempoAbono">
 					<div class="col">
-						<label class="form-label" for="abonoFinal">Data do Abono</label>
-						<input type="date" class="form-control" name="data" id="abonoData">
+						<div class="form-floating">
+							<input type="date" class="form-control" id="abonoData" name="data" placeholder>
+							<label for="abonoData">Data Abono *</label>
+						</div>
 					</div>
 				</div>
 				<div class="form-floating mb-3">
@@ -60,7 +66,7 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-				<button type="submit" class="btn btn-info text-light">Enviar</button>
+				<button type="submit" class="btn btn-secondary text-light">Enviar</button>
 			</div>
 		</form>
 	</div>

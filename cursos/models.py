@@ -1,3 +1,5 @@
+import uuid as uid
+
 from django.db import models
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -10,10 +12,18 @@ from funcionarios.models import Funcionario
 
 
 class Curso(models.Model):
+	class Tipos(models.TextChoices):
+		NDA = 'NDA', 'Nenhum'
+		CONC = 'CONC', 'Conclusão'
+		PART = 'PART', 'Participação'
+	
 	titulo = models.CharField(max_length=60, null=False, blank=False, verbose_name='Título')
 	descricao = models.TextField(null=False, blank=False, verbose_name='Descrição')
+	observacao = models.TextField(null=True, blank=True, verbose_name='Texto Certificado')
 	contrato = models.ManyToManyField(Contrato, blank=True, related_name='contratos', verbose_name='Contrato')
 	slug = models.SlugField(default='', editable=False, null=True, blank=True, max_length=120)
+	tipo = models.CharField(max_length=4, default=Tipos.NDA, choices=Tipos.choices, verbose_name='Tipo de Certificado')
+	certificado = models.BooleanField(default=False, verbose_name='Gerar Certificado')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def save(self, *args, **kwargs):
@@ -43,11 +53,15 @@ class Etapa(models.Model):
 
 
 class CursoFuncionario(models.Model):
+	uuid = models.CharField(max_length=255, verbose_name='UUID')
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
 	curso = models.ForeignKey(Curso, on_delete=models.CASCADE, verbose_name='Curso')
+	data_conclusao = models.DateTimeField(null=True, verbose_name='Data de Conclusão')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def save(self, *args, **kwargs):
+		if not self.uuid:
+			self.uuid = uid.uuid4().hex
 		if CursoFuncionario.objects.filter(funcionario=self.funcionario, curso=self.curso).exists():
 			return
 		super().save(*args, **kwargs)
@@ -56,8 +70,8 @@ class CursoFuncionario(models.Model):
 		return f'{self.funcionario.nome_completo} - {self.curso.titulo}'
 
 	class Meta:
-		verbose_name = 'Curso Funcionário'
-		verbose_name_plural = 'Cursos Funcionário'
+		verbose_name = 'Curso por Funcionário'
+		verbose_name_plural = 'Cursos por Funcionário'
 
 
 class ProgressoEtapa(models.Model):
@@ -74,8 +88,7 @@ class ProgressoEtapa(models.Model):
 
 
 # Sempre que um novo registro de CursoFuncionario for salvo, todas as etapas desse curso serão 
-# automaticamente criadas em ProgressoEtapa
-# Para o funcionário associado
+# automaticamente criadas em ProgressoEtapa para o funcionário associado
 @receiver(post_save, sender=CursoFuncionario)
 def criar_etapas_para_curso(sender, instance, created, **kwargs):
 	if created:
@@ -88,9 +101,8 @@ def criar_etapas_para_curso(sender, instance, created, **kwargs):
 				ProgressoEtapa.objects.create(funcionario=funcionario, etapa=etapa)
 
 
-# Quando uma nova etapa for adicionada a um curso, o sistema automaticamente criará os 
-# registros correspondentes em ProgressoEtapa
-# Para cada funcionário associado a esse curso
+# Quando uma nova etapa for adicionada à um curso, o sistema automaticamente criará os 
+# registros correspondentes em ProgressoEtapa para cada funcionário associado a esse curso
 @receiver(m2m_changed, sender=Etapa.curso.through)
 def adicionar_progresso_etapa(sender, instance, action, reverse, model, pk_set, **kwargs):
 	if action == 'post_add':

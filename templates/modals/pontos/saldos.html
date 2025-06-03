@@ -7,16 +7,7 @@
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				<div class="mb-3">
-					<label class="form-label" for="saldoData">Início do Saldo *</label>
-					<input type="date" class="form-control" name="data" id="saldoData" required>
-				</div>
 				<div class="form-floating mb-3">
-					<input type="text" class="form-control" name="intervalo" id="saldoIntervalo" placeholder required>
-					<label class="form-label" for="saldoIntervalo">Total *</label>
-					<div class="form-text" id="saldoIntervaloHelp">Formato: hh:mm:ss</div>
-				</div>
-				<div class="form-floating">
 					<select class="form-select" id="saldoFuncionario" name="funcionario" required>
 					  <option value="">Selecione um Colaborador</option>
 					  {% for funcionario in funcionarios %}
@@ -25,10 +16,23 @@
 					</select>
 					<label for="saldoFuncionario">Colaborador *</label>
 				</div>
+				<div class="form-floating mb-3">
+					<input type="date" class="form-control" id="saldoData" name="data" placeholder required>
+					<label for="saldoData">Data Saldo *</label>
+				</div>
+				<div class="form-floating mb-3">
+					<input type="text" class="form-control" name="intervalo" id="saldoIntervalo" placeholder required>
+					<label class="form-label" for="saldoIntervalo">Total *</label>
+					<div class="form-text" id="saldoIntervaloHelp">Formato: hh:mm:ss</div>
+				</div>
+				<div class="form-check">
+					<input class="form-check-input" type="checkbox" value="on" id="saldoDescontoFolha" name="folha">
+					<label class="form-check-label" for="saldoDescontoFolha">Desconto em Folha de Pagamento</label>
+				</div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
+				<button type="submit" class="btn btn-info text-light">Salvar</button>
 			</div>
 		</form>
 	</div>

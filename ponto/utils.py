@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime, date, time
+from datetime import timedelta, datetime, date
 from collections import defaultdict
 
 from django.db.models import Sum
@@ -6,7 +6,7 @@ from django.db.models.query import QuerySet
 from django.utils import timezone
 
 from funcionarios.models import Funcionario, JornadaFuncionario
-from ponto.models import Ponto, Saldos, Feriados, SolicitacaoPonto, SolicitacaoAbono
+from ponto.models import Ponto, Saldos, Feriados, SolicitacaoPonto, SolicitacaoAbono, Fechamento
 
 
 def calcular_banco(dados, data_inicial, funcionarios):
@@ -46,8 +46,12 @@ def calcular_banco(dados, data_inicial, funcionarios):
 				total_jornada = timedelta()
 				total_trabalhado = timedelta()
 				saldo = Saldos.objects.filter(funcionario__id=funcionario_id, data=data).aggregate(total=Sum('saldo'))['total'] or timedelta()
+
+				hora_extra_50 = timedelta()
+				hora_extra_100 = timedelta()
+				hora_extra_desconto = timedelta()
 				
-				if jornada:
+				if jornada and len(pontos) >= 2:
 					for i in range(0, len(jornada) - 1, 2):
 						entrada = datetime.combine(datetime.today(), jornada[i])
 						saida = datetime.combine(datetime.today(), jornada[i + 1])
@@ -64,143 +68,144 @@ def calcular_banco(dados, data_inicial, funcionarios):
 					
 					if (saldo < timedelta() and saldo >= tolerancia * -1):
 						saldo = timedelta()
-					
-					banco += saldo
+
+					if saldo > timedelta():
+						feriados = Feriados.objects.filter(data=data)
+						is_feriado = feriados.first().get_feriado_funcionario(funcionario) if feriados.exists() else False
+
+						if weekday in [1, 7] or is_feriado:
+							hora_extra_100 += saldo
+						else:
+							hora_extra_50 += saldo
+
+					elif saldo < timedelta():
+						hora_extra_desconto -= saldo
+
+					banco += (hora_extra_50 * 1.5) + (hora_extra_100 * 2) - hora_extra_desconto
 		
 		return banco
 	
 	banco = timedelta()
 	
 	if len(funcionarios) == 1:
-		funcionario_id = funcionarios[0]['id']
-		pontos = Ponto.objects.filter(funcionario__id=funcionario_id)
-		primeiro_registro = pontos.order_by('data', 'hora').first().data
-		
-		jornadas = JornadaFuncionario.objects.filter(funcionario__id=funcionario_id)		
-		tolerancia = timedelta(minutes=5) if Funcionario.objects.get(pk=funcionario_id).get_contrato.tipo == 'est' else timedelta(minutes=10)
-		datas = [primeiro_registro + timedelta(days=i) for i in range((data_inicial - primeiro_registro).days)]
-		dados_anteriores = {d: {funcionario_id: {'pontos': []}} for d in datas}
-		
-		banco = banco_anterior(pontos, jornadas, dados_anteriores, data_inicial, tolerancia)
+		funcionario = funcionarios.first()
+		pontos = Ponto.objects.filter(funcionario=funcionario).order_by('data', 'hora')
+		jornadas = JornadaFuncionario.objects.filter(funcionario=funcionario)
+
+		if pontos:
+			primeiro_registro = pontos.first().data
+			tolerancia = timedelta(minutes=5) if funcionario.get_contrato.tipo == 'est' else timedelta(minutes=10)
+			datas = [primeiro_registro + timedelta(days=i) for i in range((data_inicial - primeiro_registro).days)]
+			dados_anteriores = {d: {funcionario.id: {'pontos': list()}} for d in datas}
+			
+			banco = banco_anterior(pontos, jornadas, dados_anteriores, data_inicial, tolerancia)
 	
 	for data, funcionarios in dados.items():
 		for funcionario, dado in funcionarios.items():
-			banco += dado['saldo'] # Validar se será o campo saldo ou hora_extra
+			banco += dado['hora_extra'] # Validar se será o campo saldo ou hora_extra
 			dados[data][funcionario].update({'banco': banco})
 
 	return dados
 
 
-def calcular_totais_e_saldos(funcionario_id, data, pontos, jornada, weekday, motivo):
-	def calcular_horas_extras(funcionario, data, pontos, weekday, saldo):
+def calcular_totais_e_saldos(funcionario, data, pontos, jornada, weekday, motivo, score):
+	def calcular_horas_extras(he_funcionario, he_data, he_weekday, he_saldo):
 		"""
 		Existem diferentes tipos de horas extras, de acordo com a Consolidação das Leis do Trabalho (CLT)
 		Hora extra diurna: É a mais comum e simples, e corresponde a um acréscimo de 50% sobre o valor da hora normal. É aplicada a horas trabalhadas de segunda a sábado, entre as 5h e as 22h.
 		Hora extra noturna: Corresponde a um acréscimo de 80% sobre o valor da hora normal. É aplicada a horas trabalhadas entre as 22h de um dia e as 5h do dia seguinte.
 		Hora extra em domingos e feriados: Corresponde a um acréscimo de 100% sobre o valor da hora normal. É aplicada a horas trabalhadas em domingos, feriados e pontos facultativos.
 
-		Seguindo regras enviadas por Anderson
+		Seguindo regras enviadas por Anderson (Chat Crony)
 
-		9 - HORAS EXTRAS
-		As horas extraordinárias serão remuneradas com os adicionais seguintes, aplicáveis sobre o salário
-		hora normal:
-		9.1 - 60% (sessenta por cento) para as duas primeiras no dia;
-		9.2 - 80% (oitenta por cento) para os excedentes de 2 (duas) diárias; e
-		9.3 - 100% (cem por cento) as prestadas aos domingos, feriados e dias já compensados.
+		HORAS EXTRAS
+		1 - 50% (cinquanta por cento) saldos positivos, incluindo noturno;
+		2 - 100% (cem por cento) as prestadas aos sábados, domingos e feriados.
 		"""
 
-		hora_extra_before = timedelta()
-		hora_extra_after = timedelta()
-		hora_extra_noturna = timedelta()
-		hora_extra_feriado = timedelta()
+		hora_extra_50 = timedelta()
+		hora_extra_100 = timedelta()
+		hora_extra_desconto = timedelta()
 
-		inicio_periodo_noturno = time(22, 0)
-		final_periodo_norturno = time(5, 0)
-		limite_hora_extra = timedelta(minutes=120)
+		if he_funcionario.get_contrato.tipo == 'est':
+			return he_saldo
 
-		double = False
+		elif he_saldo > timedelta():
+			feriados = Feriados.objects.filter(data=he_data)
+			is_feriado = feriados.first().get_feriado_funcionario(he_funcionario) if feriados.exists() else False
 
-		if saldo > timedelta(0) and len(pontos) >= 2:
-			
-			feriados = Feriados.objects.filter(data=data)
-			is_holiday = feriados.first().get_feriado_funcionario(funcionario) if feriados.exists() else False
-
-			if weekday in [1, 7] or is_holiday:
-				hora_extra_feriado += saldo
-			
-			elif pontos[-1] > inicio_periodo_noturno or pontos[0] < final_periodo_norturno:
-
-				noturno_after, noturno_before = timedelta(), timedelta()
-
-				if pontos[-1] > inicio_periodo_noturno:
-					noturno_after = timedelta(hours=pontos[-1].hour-inicio_periodo_noturno.hour, minutes=pontos[-1].minute-inicio_periodo_noturno.minute)
-				if pontos[0] < final_periodo_norturno:
-					noturno_before = timedelta(hours=final_periodo_norturno.hour-pontos[0].hour, minutes=final_periodo_norturno.minute-pontos[0].minute)				
-				
-				hora_extra_noturna += (noturno_after + noturno_before)
-
-				if (saldo - hora_extra_noturna) > limite_hora_extra:
-					hora_extra_after = saldo - hora_extra_noturna - limite_hora_extra
-					hora_extra_before = limite_hora_extra
-					double = True
-				else:
-					hora_extra_before = saldo - hora_extra_noturna
-
+			if he_weekday in [1, 7] or is_feriado:
+				hora_extra_100 += he_saldo
 			else:
-				if saldo > limite_hora_extra:
-					hora_extra_after = saldo - limite_hora_extra
-					hora_extra_before = limite_hora_extra
-				else:
-					hora_extra_before = saldo
+				hora_extra_50 += he_saldo
 
-		if double:
-			hora_extra_total = (hora_extra_before * 1.6) + (hora_extra_after * 1.8) + (hora_extra_noturna * 2.1) + (hora_extra_feriado * 2)
-		else:
-			hora_extra_total = (hora_extra_before * 1.6) + (hora_extra_after * 1.8) + (hora_extra_noturna * 1.3) + (hora_extra_feriado * 2)
+		elif he_saldo < timedelta():
+			hora_extra_desconto -= he_saldo
+
+		hora_extra_total = (hora_extra_50 * 1.5) + (hora_extra_100 * 2) - hora_extra_desconto
 		
 		return hora_extra_total
 	
 	total_jornada = timedelta()
 	total_trabalhado = timedelta()
-	saldo = timedelta()
-	score = 0
 
-	funcionario = Funcionario.objects.get(pk=funcionario_id)
+	score_calculado = True if score != 0 else False
+
+	funcionario = Funcionario.objects.get(pk=funcionario)
 	tolerancia = timedelta(minutes=5) if funcionario.get_contrato.tipo == 'est' else timedelta(minutes=10)
 	saldo = Saldos.objects.filter(funcionario=funcionario, data=data).aggregate(total=Sum('saldo'))['total'] or timedelta()
+	
+	feriados = Feriados.objects.filter(data=data)
+	is_feriado = feriados.first().get_feriado_funcionario(funcionario) if feriados.exists() else False
+	
+	qtd_pontos = len(pontos)
+	qtd_jornada = len(jornada)
 
-	for i in range(0, len(jornada) - 1, 2):
+	for i in range(0, qtd_jornada - 1, 2):
 		entrada = datetime.combine(datetime.today(), jornada[i])
 		saida = datetime.combine(datetime.today(), jornada[i + 1])
 		duracao = saida - entrada
 		total_jornada += duracao
 
-	if not pontos and weekday in [1, 7]:
+	if qtd_pontos == 0 and weekday in [1, 7]: # Sábado e Domingo
 		motivo = 'Descanso remunerado'
 
-	elif not pontos or (len(pontos) <= 1 and not motivo):
+	elif qtd_pontos == 1 and motivo: # Feriado e/ou Ferias -> Saldo Calculado
+		saldo -= total_jornada
+
+	elif qtd_pontos <= 1 and not motivo:
 		motivo = 'Falta não compensada'
-		saldo += total_trabalhado - total_jornada
-		score = 1
+		saldo -= total_jornada
+
+		if not score_calculado:
+			score = 1
 
 	else:
-		for i in range(0, len(pontos) - 1, 2):
+		for i in range(0, qtd_pontos - 1, 2):
 			entrada = datetime.combine(datetime.today(), pontos[i])
 			saida = datetime.combine(datetime.today(), pontos[i + 1])
 			duracao = saida - entrada
 			total_trabalhado += duracao
 
 		saldo += total_trabalhado - total_jornada
-		score = 5
 
-		if (total_trabalhado + tolerancia) < total_jornada:
+		if not score_calculado:
+			score = 5
+
+		if (total_trabalhado + tolerancia) < total_jornada and not score_calculado:
 			score = 2.5
 
 		if saldo < timedelta() and saldo >= tolerancia * -1:
 			saldo = timedelta()
-			score = 4.5
 
-	hora_extra = calcular_horas_extras(funcionario, data, pontos, weekday, saldo)
+			if not score_calculado:
+				score = 4.5
+	
+	hora_extra = calcular_horas_extras(funcionario, data, weekday, saldo)
+
+	faltando_registro = False
+	if qtd_pontos < qtd_jornada and weekday not in [1, 7] and not is_feriado:
+		faltando_registro = True
 
 	return {
 		'total': total_trabalhado,
@@ -209,23 +214,27 @@ def calcular_totais_e_saldos(funcionario_id, data, pontos, jornada, weekday, mot
 		'score': score,
 		'motivo': motivo.strip(),
 		'hora_extra': hora_extra,
+		'faltando_registro': faltando_registro
 	}
 
 
 def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
+	if not isinstance(funcionarios, QuerySet):
+		funcionarios = Funcionario.objects.filter(pk=funcionarios.pk)
+
 	def inicializar_dados(datas, funcionarios):
 		"""
 		Garante que todos os dias no intervalo e todos os funcionários tenham dados inicializados.
 		"""
-		dados = {}
+		dados = dict()
 
 		for data in datas:
 			if data not in dados:
-				dados[data] = {}
+				dados[data] = dict()
 
 			for funcionario in funcionarios:
 				if funcionario['id'] not in dados[data]:
-					dados[data][funcionario['id']] = {'nome': funcionario['nome'], 'pontos': [], 'motivo': '', 'encerrado': False}
+					dados[data][funcionario['id']] = {'nome': funcionario['nome'], 'pontos': list(), 'motivo': '', 'encerrado': False, 'estagiario': funcionario['estagio']}
 		
 		return dados
 
@@ -314,14 +323,18 @@ def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
 			jornadas[index][agrupador]['dias'][wday].append(whora)
 
 		# Calcular os scores e atualizar os dados
-		score_por_funcionario = defaultdict(lambda: {'media': 0, 'perc': 0, 'notas': []})
+		score_por_funcionario = defaultdict(lambda: {'media': 0, 'perc': 0, 'notas': list()})
 
 		for data, funcionarios_ids in dados.items():
 			weekday = 1 if data.weekday() + 2 == 8 else data.weekday() + 2
 
 			for funcionario_id, dado in funcionarios_ids.items():
+				anomes = int(data.strftime('%Y%m'))
+				fechamento = Fechamento.objects.filter(funcionario__id=funcionario_id, referencia=anomes).values_list('pontuacao', flat=True)
+				score = fechamento[0] if fechamento else 0
+
 				jornada = next((info['dias'].get(weekday, []) for _, info in jornadas.get(funcionario_id).items() if info['inicio'] <= data <= info['vencimento']), [])
-				totais_saldos = calcular_totais_e_saldos(funcionario_id, data, dado['pontos'], jornada, weekday, dado['motivo'])
+				totais_saldos = calcular_totais_e_saldos(funcionario_id, data, dado['pontos'], jornada, weekday, dado['motivo'], score)
 
 				dado.update(totais_saldos)
 				score_por_funcionario[funcionario_id]['notas'].append(totais_saldos['score'])
@@ -332,19 +345,19 @@ def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
 		"""
 		Calcula o score final utilizado para o fechamento mensal
 		"""
-		mes = 12 if datetime.today().month == 1 else datetime.today().month - 1
-		ano = datetime.today().year - 1 if datetime.today().month == 1 else datetime.today().year
+		hoje = date.today()
+		mes = hoje.month - 1 if hoje.month > 1 else 12
+		ano = hoje.year if hoje.month > 1 else hoje.year - 1
 
-		for funcionario in funcionarios:
-			ajustes = []
-			abonos = []
+		for funcionario_id, _ in score_por_funcionario.items():
+			ajustes, abonos = list(), list()
 
-			for (func, data), itens in solicitacoes.items():
+			for (funcid, _), itens in solicitacoes.items():
 				for item in itens:
-					if func == funcionario['id'] and item['ano'] == ano and item['mes'] == mes and item['categoria'] == 'ajuste' and item['status']:
+					if funcid == funcionario_id and item['ano'] == ano and item['mes'] == mes and item['categoria'] == 'ajuste' and item['status']:
 						ajustes.append(item)
 
-					if func == funcionario['id'] and item['ano'] == ano and item['mes'] == mes and item['categoria'] == 'abono' and item['status']:
+					if funcid == funcionario_id and item['ano'] == ano and item['mes'] == mes and item['categoria'] == 'abono' and item['status']:
 						abonos.append(item)
 
 			total_ajustes = len(ajustes) * 0.01
@@ -353,7 +366,7 @@ def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
 			total_atestados = len([i for i in abonos if i['tipo'] not in ['DC', 'FT']]) * 0.08
 			total_desconto = total_ajustes + total_atestados + total_declaracoes + total_faltas
 
-			cargo = funcionario.cargo.slug
+			cargo = Funcionario.objects.get(pk=funcionario_id).cargo.slug
 
 			if cargo == 'analista':
 				total_desconto * 2.5
@@ -362,8 +375,8 @@ def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
 			else:
 				total_desconto * 2.25
 			
-			nota = score_por_funcionario.get(funcionario['id'], {'media': 5, 'perc': 100, 'notas': []})
-			nota_final = nota[0] - total_desconto
+			nota = score_por_funcionario.get(funcionario_id, {'media': 5, 'perc': 100, 'notas': list()})
+			nota_final = nota['media'] - total_desconto
 			nota_percentual = (nota_final * 100) / 5
 
 			if nota_final > 5:
@@ -374,19 +387,19 @@ def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
 				nota_final = 0
 				nota_percentual = 0
 			
-			score_por_funcionario[funcionario['id']] = {'media': nota_final, 'perc': nota_percentual, 'notas': nota['notas']}
+			score_por_funcionario[funcionario_id] = {'media': nota_final, 'perc': nota_percentual, 'notas': nota['notas']}
 		
 		return score_por_funcionario
 
 	# Gerar lista de datas no intervalo e de funcionários
 	datas = [(data_inicio + timedelta(days=i)).date() for i in range((data_fim - data_inicio).days + 1)]
-	funcionarios = [{'id': f.id, 'nome': f.nome_completo} for f in funcionarios] if isinstance(funcionarios, QuerySet) else [{'id': funcionarios.id, 'nome': funcionarios.nome_completo}]
+	lista_funcionarios = [{'id': f.id, 'nome': f.nome_completo, 'estagio': f.get_contrato.tipo == 'est'} for f in funcionarios]
 
 	# Inicializar dados para todos os dias filtrados e carregar pontos registrados
-	dados, solicitacoes = carregar_pontos(datas, funcionarios)
+	dados, solicitacoes = carregar_pontos(datas, lista_funcionarios)
 
 	# Calcular totais, saldo, hora extra, banco e score para cada funcionário
-	score_por_funcionario = calcular_scores_e_dados(funcionarios, dados)
+	score_por_funcionario = calcular_scores_e_dados(lista_funcionarios, dados)
 	saldo_por_funcionario = calcular_banco(dados, datas[0], funcionarios)
 
 	# Calcular médias e percentuais finais
@@ -398,7 +411,7 @@ def pontos_por_dia(data_inicio, data_fim, funcionarios, fechamento=False):
 	# Calcular fechamento
 	if fechamento:
 		score_por_funcionario = calcular_scores_fechamento(solicitacoes, score_por_funcionario)
-
+	
 	return saldo_por_funcionario, score_por_funcionario
 
 
@@ -406,8 +419,8 @@ def filtrar_abonos(inicio, final, funcionario):
 	data_inico = timezone.localtime(inicio)
 	data_final = timezone.localtime(final)
 
-	montar_pontos = {}
-	jornadas_filtradas = {}
+	montar_pontos = dict()
+	jornadas_filtradas = dict()
 	nro_dias = (data_final.date() - data_inico.date()).days
 
 	if data_inico.date() == data_final.date():
@@ -421,7 +434,7 @@ def filtrar_abonos(inicio, final, funcionario):
 		wd_atual = 1 if dia_atual.weekday() + 2 == 8 else dia_atual.weekday() + 2
 
 		if dia_atual not in montar_pontos:
-			montar_pontos[dia_atual] = []
+			montar_pontos[dia_atual] = list()
 
 		for jornada in jornadas.filter(dia=wd_atual):
 			montar_pontos[dia_atual].append(jornada.hora)
@@ -430,7 +443,7 @@ def filtrar_abonos(inicio, final, funcionario):
 		if dia < data_inico.date() or dia > data_final.date():
 			continue
 
-		horas_filtradas = []
+		horas_filtradas = list()
 		
 		for hora in horas:
 			if dia == data_inico.date() and hora < data_inico.time():
@@ -459,7 +472,7 @@ def total_saldo(queryset):
 	except Exception:
 		return None
 	
-	total = timedelta(0)
+	total = timedelta()
 
 	for i in range(0, len(horarios), 2):
 		try:

@@ -14,7 +14,9 @@
 				<label class="form-label" for="feedbackDestinatario">Colaborador *</label>
 				<select class="form-select" id="feedbackDestinatario" name="destinatario" required>
 					{% for funcionario in funcionarios %}
-						<option value="{{funcionario.id}}">{{funcionario}}</option>
+						{% if funcionario.usuario.get_access != "common" or funcionario.is_analista %}
+							<option value="{{funcionario.id}}">{{funcionario}}</option>
+						{% endif %}
 					{% endfor %}
 				</select>
 			</div>

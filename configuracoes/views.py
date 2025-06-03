@@ -14,8 +14,8 @@ from pathlib import Path
 
 from agenda.models import TipoAtividade
 from configuracoes.models import Jornada, Usuario, Variavel, Contrato
-from funcionarios.models import Cargo, Funcionario, Setor, TipoDocumento
-from notifications.models import Notification
+from funcionarios.models import Cargo, Setor, TipoDocumento
+from web.decorators import base_context_required
 from web.utils import not_none_not_empty
 
 
@@ -93,25 +93,23 @@ def LogoutView(request):
 
 
 # Page
-@login_required(login_url='entrar')
-def ConfiguracoesView(request):
-	funcionario = Funcionario.objects.get(usuario=request.user)
-	notificacoes = Notification.objects.filter(recipient=request.user, unread=True)
-
+@base_context_required
+def ConfiguracoesView(request, context):
 	variaveis = Variavel.objects.all()
 	setores = Setor.objects.all()
 	cargos = Cargo.objects.all()
+
 	tipos_documento = TipoDocumento.objects.all().order_by('-codigo')
 	tipos_atividade = TipoAtividade.objects.all().order_by('-data_cadastro')
 	tipos_contrato = [{'key': i[0], 'value': i[1]} for i in Contrato.Tipo.choices]
 
-	jornadas = {}
+	jornadas = dict()
 	for item in Jornada.objects.all().order_by('contrato__id', 'dia', 'ordem'):
 		if item.contrato not in jornadas:
-			jornadas[item.contrato] = {}
+			jornadas[item.contrato] = dict()
 
 		if item.dia not in jornadas[item.contrato]:
-			jornadas[item.contrato][item.dia] = []
+			jornadas[item.contrato][item.dia] = list()
 
 		jornadas[item.contrato][item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora})
 
@@ -120,7 +118,8 @@ def ConfiguracoesView(request):
 		nome_empresa = request.POST.get('nome_empresa')
 		cnpj = request.POST.get('cnpj')
 		insc_estadual = request.POST.get('insc_estadual')
-		email = request.POST.get('email')
+		# email_docs = request.POST.get('email_docs')
+		# email_afet = request.POST.get('email_afet')
 		caminho_documentos = request.POST.get('caminho_documentos')
 		caminho_funcionarios = request.POST.get('caminho_funcionarios')
 
@@ -128,7 +127,8 @@ def ConfiguracoesView(request):
 			Variavel.objects.update_or_create(chave='NOME_EMPRESA', defaults={'valor': nome_empresa})
 			Variavel.objects.update_or_create(chave='CNPJ', defaults={'valor': cnpj})
 			Variavel.objects.update_or_create(chave='INSC_ESTADUAL', defaults={'valor': insc_estadual})
-			Variavel.objects.update_or_create(chave='EMAIL', defaults={'valor': email})
+			# Variavel.objects.update_or_create(chave='EMAIL_DOCS', defaults={'valor': email_docs})
+			# Variavel.objects.update_or_create(chave='EMAIL_AFET', defaults={'valor': email_afet})
 			Variavel.objects.update_or_create(chave='PATH_DOCS', defaults={'valor': caminho_documentos})
 			Variavel.objects.update_or_create(chave='PATH_DOCS_EMP', defaults={'valor': caminho_funcionarios})
 
@@ -251,9 +251,7 @@ def ConfiguracoesView(request):
 				messages.error(request, f'Configurações de registro de ponto externo não foram salvas! {e}')
 				return redirect('configuracoes')
 
-	context = {
-		'funcionario': funcionario,
-		'notificacoes': notificacoes,
+	context.update({
 		'variaveis': variaveis,
 		'jornadas': jornadas,
 		'setores': setores,
@@ -261,7 +259,7 @@ def ConfiguracoesView(request):
 		'tipos_documento': tipos_documento,
 		'tipos_atividade': tipos_atividade,
 		'tipos_contrato': tipos_contrato
-	}
+	})
 
 	return render(request, 'pages/configuracoes.html', context)
 

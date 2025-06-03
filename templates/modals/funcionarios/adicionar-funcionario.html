@@ -225,7 +225,7 @@
 							<select class="form-select" id="funcionarioContrato" name="contrato" required>
 								<option value selected hidden>Selecione uma Jornada</option>
 								{% for contrato in contratos %}
-									<option value="{{contrato.id}}">{{contrato.titulo}} - {{contrato.descricao}}</option>
+									<option data-tipo="{{contrato.tipo}}" value="{{contrato.id}}">{{contrato.titulo}} - {{contrato.descricao}}</option>
 								{% endfor %}
 							</select>
 							<label class="form-label" for="funcionarioContrato">Jornada *</label>
@@ -250,11 +250,10 @@
 					<div class="col">
 						<div class="form-floating mb-3">
 							<select class="form-select" id="funcionarioGerente" name="gerente">
-								<option value="" selected hidden>Selecione um Responsável</option>
-								<option value="">Nenhum Responsável</option>
-								{% for funcionario in funcionarios %}
-									{% if funcionario.usuario.is_gerente %}
-										<option value="{{funcionario.id}}">{{funcionario}}</option>
+								<option value="" selected>Nenhum Responsável</option>
+								{% for item in funcionarios %}
+									{% if item.usuario.is_gerente %}
+										<option value="{{item.id}}">{{item.nome_completo}}</option>
 									{% endif %}
 								{% endfor %}
 							</select>
@@ -287,7 +286,7 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-tertiary text-light" data-bs-dismiss="modal">Cancelar</button>
-				<button type="button" class="btn btn-secondary text-light" onclick="consultarFuncionario()">Salvar</button>
+				<button type="submit" class="btn btn-secondary text-light">Salvar</button>
 			</div>
 		</form>
 	</div>

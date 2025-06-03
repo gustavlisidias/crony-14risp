@@ -1,5 +1,4 @@
 # ruff: noqa: E402
-# ruff: noqa: F401
 import logging
 import pytz
 import os
@@ -7,7 +6,11 @@ import sys
 import pandas as pd
 import django
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 

@@ -8,7 +8,11 @@ import django
 import pandas as pd
 import pytz
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
@@ -28,7 +32,6 @@ from funcionarios.models import (
 	Funcionario,
 	JornadaFuncionario,
 	Perfil,
-	Score,
 	Setor,
 )
 from settings.settings import BASE_DIR
@@ -199,9 +202,6 @@ def importar_funcionario(dados):
 				
 				# Criando Perfil do Funcionario
 				Perfil.objects.create(funcionario=funcionario)
-
-				# Criar Score inicial do Funcionario
-				Score.objects.create(funcionario=funcionario)
 
 				# Atribuir cursos ao novo Funcionário
 				cursos = Curso.objects.filter(contrato=jornadas.first().contrato)

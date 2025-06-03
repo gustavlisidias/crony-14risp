@@ -14,7 +14,7 @@ sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 
 from agenda.models import Ferias

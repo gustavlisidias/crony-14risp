@@ -16,7 +16,7 @@ django.setup()
 
 from django.db import transaction
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from funcionarios.models import Funcionario, JornadaFuncionario
 from ponto.models import Feriados, Ponto, Saldos
@@ -29,9 +29,9 @@ def abonar_feriados():
 	log_path = os.path.join(BASE_DIR, f'logs/tasks/{log_file}')
 	logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
 
-	hoje = date.today()
-	weekday = 1 if hoje.weekday() + 2 == 8 else hoje.weekday() + 2
-	feriados = Feriados.objects.filter(data=hoje)
+	ontem = date.today() - timedelta(1)
+	weekday = 1 if ontem.weekday() + 2 == 8 else ontem.weekday() + 2
+	feriados = Feriados.objects.filter(data=ontem)
 
 	if feriados:
 		for feriado in feriados:
@@ -45,7 +45,7 @@ def abonar_feriados():
 					
 				with transaction.atomic():				
 					for funcionario in funcionarios:
-						ponto_funcionario = Ponto.objects.filter(funcionario=funcionario, data=feriado.data).exists()
+						ponto_funcionario = Ponto.objects.filter(funcionario=funcionario, data=ontem)
 
 						jornada_funcionario = JornadaFuncionario.objects.filter(
 							funcionario=funcionario, final_vigencia=None, dia=weekday
@@ -53,21 +53,26 @@ def abonar_feriados():
 
 						saldo = total_saldo(jornada_funcionario)
 
-						if not ponto_funcionario:
+						if ponto_funcionario.exists():
+							ponto_funcionario.update(
+								motivo=feriado.titulo,
+								alterado=True,
+								autor_modificacao=Funcionario.objects.get(pk=1)
+							)
+						else:
 							Ponto(
 								funcionario=funcionario,
-								data=hoje,
+								data=ontem,
 								hora=time(),
 								motivo=feriado.titulo,
 								alterado=True,
-								encerrado=True,
 								autor_modificacao=Funcionario.objects.get(pk=1)
 							).save()
 
 						Saldos(
 							funcionario=funcionario,
 							saldo=saldo,
-							data=hoje
+							data=ontem
 						).save()
 
 					logging.info(f'Feriado {feriado.titulo} rodou o saldo com sucesso para {len(funcionarios)} funcionários')
@@ -76,7 +81,7 @@ def abonar_feriados():
 				logging.info(f'Ocorreu um erro ao abonar o feriado {feriado.titulo}: {e}')
 				
 	else:
-		logging.info(f'Nenhum feriado encontrado no dia {hoje}')
+		logging.info(f'Nenhum feriado encontrado no dia {ontem}')
 
 
 if __name__ == '__main__':

@@ -7,28 +7,21 @@
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body">
-				<input type="hidden" name="tipo" id="fechamentoTipo" value="0">
-				<div class="form-floating mb-3">
-					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 12rem;">
-						{% for contrato in contratos %}
-							<option value="{{contrato.id}}">{{contrato}}</option>
-						{% endfor %}
-					</select>
-					<label for="fechamentoContrato">Contrato</label>
-				</div>
+				<input type="hidden" name="tipo" id="fechamentoTipo" value="1">
+				<input type="hidden" name="fechamento" id="fechamentoFechamento" value="True">
 				<div class="row mb-3">
 					<div class="col">
-						<label for="relatorioInicio" class="form-label">Início</label>
-						<input class="form-control" type="date" id="fechamentoInicio" name="relatorio_inicio" required>
+						<div class="form-floating">
+							<input type="date" class="form-control" id="fechamentoInicio" name="relatorio_inicio" placeholder required>
+							<label for="fechamentoInicio">Data Início *</label>
+						</div>
 					</div>
 					<div class="col">
-						<label for="relatorioFinal" class="form-label">Final</label>
-						<input class="form-control" type="date" id="fechamentoFinal" name="relatorio_final" required>
+						<div class="form-floating">
+							<input type="date" class="form-control" id="relatorioFinal" name="relatorio_final" placeholder required>
+							<label for="relatorioFinal">Data Final *</label>
+						</div>
 					</div>
-				</div>
-				<div class="form-check mb-3 d-none">
-					<input class="form-check-input me-2" type="checkbox" value="True" id="fechamentoFechamento" name="fechamento" style="width: 20px; height: 20px;" checked>
-					<label class="form-check-label" for="fechamentoFechamento" style="margin-top: 3px;">Fechamento</label>
 				</div>
 				<div class="form-floating mb-3">
 					<select class="form-select" size="5" id="fechamentoFuncionario" name="funcionarios" multiple style="height: 12rem;">
@@ -37,6 +30,14 @@
 						{% endfor %}
 					</select>
 					<label for="relatorioFuncionario">Colaboradores</label>
+				</div>
+				<div class="form-floating mb-3">
+					<select class="form-select" size="5" id="fechamentoContrato" name="contrato" multiple style="height: 12rem;">
+						{% for contrato in contratos %}
+							<option value="{{contrato.id}}">{{contrato}}</option>
+						{% endfor %}
+					</select>
+					<label for="fechamentoContrato">Contrato</label>
 				</div>
 			</div>
 			<div class="modal-footer">

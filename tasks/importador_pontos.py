@@ -7,13 +7,15 @@ import django
 import pandas as pd
 import pytz
 
-sys.path.append('C:\inetpub\wwwroot\crony')
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
+sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
 from datetime import datetime
-
-from django.db import transaction
 
 from funcionarios.models import Funcionario
 from ponto.models import Ponto
@@ -28,64 +30,34 @@ def importar_pontos(planilha):
 	for funcionario in Funcionario.objects.all():
 		funcionario.nome_completo = funcionario.nome_completo.strip()
 		funcionario.save()
-
-	pontos_funcionarios = {}
-	df = pd.read_excel(planilha, dtype={'Nome': str})
-
+	
+	df = pd.read_excel(planilha, dtype={'nome': str})
 	for _, row in df.iterrows():
-		funcionario = row['Nome'].strip().title()
-		data = row['Data']
+		matricula = int(row['matricula'])
+		data = row['data'].date()
+		hora = datetime.strptime(row['hora'], '%H:%M').time()
+		alterado = True if row['alterado'] == 'true' else False
+		motivo = row['motivo']
+		encerrado = True if row['encerrado'] == 'true' else False
+		data_fechamento = row['data_fechamento'].date() if not pd.isna(row['data_fechamento']) else None
+		data_modificacao = datetime.strptime(row['data_cadastro'], '%Y-%m-%d %H:%M:%S.%f %z')
 
-		if data not in pontos_funcionarios:
-			pontos_funcionarios[data] = {}
-		
-		if funcionario not in pontos_funcionarios[data]:
-			pontos_funcionarios[data][funcionario] = []
-		
-		if not pd.isna(row['1 Saída']):
-			pontos_funcionarios[data][funcionario].append(row['1 Entrada'])
-			pontos_funcionarios[data][funcionario].append(row['1 Saída'])
-
-		if not pd.isna(row['2 Saída']):
-			pontos_funcionarios[data][funcionario].append(row['2 Entrada'])
-			pontos_funcionarios[data][funcionario].append(row['2 Saída'])
-
-		if not pd.isna(row['3 Saída']):
-			pontos_funcionarios[data][funcionario].append(row['3 Entrada'])
-			pontos_funcionarios[data][funcionario].append(row['3 Saída'])
-
-		if not pd.isna(row['4 Saída']):
-			pontos_funcionarios[data][funcionario].append(row['4 Entrada'])
-			pontos_funcionarios[data][funcionario].append(row['4 Saída'])
-
-		if not pd.isna(row['5 Saída']):
-			pontos_funcionarios[data][funcionario].append(row['5 Entrada'])
-			pontos_funcionarios[data][funcionario].append(row['5 Saída'])
-
-	for data, funcionarios in pontos_funcionarios.items():
-		for funcionario, pontos in funcionarios.items():
-			if len(pontos) % 2 != 0:
-				logging.error(f'Quantidade de pontos para o funcionário {funcionario} no dia {data} não batem para entrada-saida')
-				continue
-			else:
-				horas = [datetime.strptime(str(i), '%H:%M').time() for i in pontos]
-			
-			try:
-				with transaction.atomic():
-					funcionario = Funcionario.objects.get(nome_completo=funcionario)
-					Ponto.objects.filter(funcionario=funcionario, data=data).delete()
-
-					for hora in horas:
-						Ponto.objects.create(
-							data=data,
-							hora=hora,
-							funcionario=funcionario,
-							motivo='Importação PontoMais'
-						)
-				
-				logging.info(f'Ponto criado com sucesso para o funcionario {funcionario.nome_completo} no dia {data}')
-			except Exception as e:
-				logging.error(f'Não foi possível criar o ponto para o funcionario {funcionario} no dia {data}: {e}')
+		try:
+			funcionario = Funcionario.objects.get(matricula=f'{matricula:06}')
+			Ponto(
+				funcionario=funcionario,
+				data=data,
+				hora=hora,
+				alterado=alterado,
+				motivo=motivo,
+				encerrado=encerrado,
+				data_fechamento=data_fechamento,
+				data_modificacao=data_modificacao,
+				autor_modificacao=Funcionario.objects.get(pk=1)
+			).save()
+			logging.info(f"SUCCESS::CREATE::MATRICULA {matricula}")
+		except Exception as e:
+			logging.info(f"ERROR::CREATE::MATRICULA {matricula}::{e}")
 
 
 if __name__ == '__main__':

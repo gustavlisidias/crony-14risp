@@ -133,100 +133,102 @@
 	const { pdfjsLib } = globalThis;
 	pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'pdfjs/build/pdf.worker.mjs' %}";
 
-	document.getElementById("verificar-documento").addEventListener("click", function () {
-		const modal = $("#modalVisualizarDocumento");
-		const url = `{% url "stream-documento" 0 "doc" "visualizar" %} `.replace("0", this.dataset.id);
-
-		let pdfDoc = null;
-		let pageNum = 1;
-		let pageRendering = false;
-		let pageNumPending = null;
-		let scale = 1;
-		let canvas = document.getElementById("pdf-viewer");
-		let ctx = canvas.getContext("2d");
-
-		canvas.addEventListener("contextmenu", function (event) {
-			event.preventDefault();
-		});
-
-		function renderPage(num) {
-			pageRendering = true;
-
-			pdfDoc.getPage(num).then(function(page) {
-				const viewport = page.getViewport({scale: scale});
-				canvas.height = viewport.height;
-				canvas.width = viewport.width;
-
-				const renderContext = {
-					canvasContext: ctx,
-					viewport: viewport
-				};
-				
-				const renderTask = page.render(renderContext);
-
-				renderTask.promise.then(function() {
-					pageRendering = false;
-					if (pageNumPending !== null) {
-						renderPage(pageNumPending);
-						pageNumPending = null;
-					}
-				});
+	if (document.getElementById("verificar-documento")) {
+		document.getElementById("verificar-documento").addEventListener("click", function () {
+			const modal = $("#modalVisualizarDocumento");
+			const url = `/documentos/stream/${this.dataset.id}/doc/visualizar`;
+	
+			let pdfDoc = null;
+			let pageNum = 1;
+			let pageRendering = false;
+			let pageNumPending = null;
+			let scale = 1;
+			let canvas = document.getElementById("pdf-viewer");
+			let ctx = canvas.getContext("2d");
+	
+			canvas.addEventListener("contextmenu", function (event) {
+				event.preventDefault();
 			});
-
-			document.getElementById("page_num").textContent = num;
-		};
-
-		function queueRenderPage(num) {
-			if (pageRendering) {
-				pageNumPending = num;
-			} else {
-				renderPage(num);
-			}
-		};
-
-		function onPrevPage() {
-			if (pageNum <= 1) {
-				return;
-			}
-			pageNum--;
-			queueRenderPage(pageNum);
-		};
-
-		document.getElementById("prev").addEventListener("click", onPrevPage);
-
-		function onNextPage() {
-			if (pageNum >= pdfDoc.numPages) {
-				return;
-			}
-			pageNum++;
-			queueRenderPage(pageNum);
-		};
-
-		document.getElementById("next").addEventListener("click", onNextPage);
-
-		function zoomIn() {
-			scale += 0.1;
-			renderPage(pageNum);
-		};
-
-		function zoomOut() {
-			if (scale > 0.2) {
-				scale -= 0.1;
+	
+			function renderPage(num) {
+				pageRendering = true;
+	
+				pdfDoc.getPage(num).then(function(page) {
+					const viewport = page.getViewport({scale: scale});
+					canvas.height = viewport.height;
+					canvas.width = viewport.width;
+	
+					const renderContext = {
+						canvasContext: ctx,
+						viewport: viewport
+					};
+					
+					const renderTask = page.render(renderContext);
+	
+					renderTask.promise.then(function() {
+						pageRendering = false;
+						if (pageNumPending !== null) {
+							renderPage(pageNumPending);
+							pageNumPending = null;
+						}
+					});
+				});
+	
+				document.getElementById("page_num").textContent = num;
+			};
+	
+			function queueRenderPage(num) {
+				if (pageRendering) {
+					pageNumPending = num;
+				} else {
+					renderPage(num);
+				}
+			};
+	
+			function onPrevPage() {
+				if (pageNum <= 1) {
+					return;
+				}
+				pageNum--;
+				queueRenderPage(pageNum);
+			};
+	
+			document.getElementById("prev").addEventListener("click", onPrevPage);
+	
+			function onNextPage() {
+				if (pageNum >= pdfDoc.numPages) {
+					return;
+				}
+				pageNum++;
+				queueRenderPage(pageNum);
+			};
+	
+			document.getElementById("next").addEventListener("click", onNextPage);
+	
+			function zoomIn() {
+				scale += 0.1;
 				renderPage(pageNum);
-			}
-		};
-
-		document.getElementById("zoom_in").addEventListener("click", zoomIn);
-		document.getElementById("zoom_out").addEventListener("click", zoomOut);
-
-		pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
-			pdfDoc = pdfDoc_;
-			document.getElementById("page_count").textContent = pdfDoc.numPages;
-			renderPage(pageNum);
+			};
+	
+			function zoomOut() {
+				if (scale > 0.2) {
+					scale -= 0.1;
+					renderPage(pageNum);
+				}
+			};
+	
+			document.getElementById("zoom_in").addEventListener("click", zoomIn);
+			document.getElementById("zoom_out").addEventListener("click", zoomOut);
+	
+			pdfjsLib.getDocument(url).promise.then(function(pdfDoc_) {
+				pdfDoc = pdfDoc_;
+				document.getElementById("page_count").textContent = pdfDoc.numPages;
+				renderPage(pageNum);
+			});
+	
+			modal.modal("show");
 		});
-
-		modal.modal("show");
-	});
+	};
 </script>
 
 <script>

@@ -38,9 +38,9 @@
 						<th scope="col">Gestor</th>
 						<th scope="col">Ativo</th>
 						<th scope="col">Data Contratação</th>
-						<!-- {% if request.user.get_access == "admin" %}
+						<!--{% if request.user.get_access == "admin" %}
 							<th class="text-center" scope="col">Ações</th>
-						{% endif %} -->
+						{% endif %}-->
 					</tr>
 				</thead>
 				<tbody>
@@ -70,7 +70,7 @@
 
 							<td>{{funcionario.data_contratacao|date:"d/m/Y"}}</td>
 							
-							<!-- {% if request.user.get_access == "admin" %}
+							<!--{% if request.user.get_access == "admin" %}
 								<td class="text-center">
 									<div class="d-flex justify-content-around">
 										<a onclick="event.stopPropagation();" href="{% url 'detalhes-ponto' funcionario.id %}" title="Abrir cartão de ponto">
@@ -78,7 +78,7 @@
 										</a>
 									</div>
 								</td>
-							{% endif %} -->
+							{% endif %}-->
 						</tr>
 					{% endfor %}
 				</tbody>

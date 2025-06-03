@@ -4,7 +4,6 @@ from ponto.ajax import (
 	AprovarSolicitacaoView,
 	ConsultarPontoView,
 	ConsultarSolicitacaoView,
-	EditarPontoView,
 	ReprovarSolicitacaoView,
 	RegistrarPontoView,
 	RelatoriosPontoView,
@@ -14,6 +13,7 @@ from ponto.ajax import (
 from ponto.views import (
 	RegistrosPontoView,
 	RegistrosPontoFuncinarioView,
+    EditarPontoView,
 	SolicitarAbonoView,
 	AdicionarFeriadoView,
 	AdicionarSaldoView,

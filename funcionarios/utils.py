@@ -6,6 +6,7 @@ import pytz
 from django.contrib import messages
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
+from django.db.models import Q
 from django.db.utils import IntegrityError
 from django.shortcuts import redirect
 
@@ -18,7 +19,7 @@ from cities_light.models import Region as Estado
 from cities_light.models import SubRegion as Cidade
 from configuracoes.models import Usuario, Jornada, Variavel, Contrato
 from cursos.models import Curso, CursoFuncionario
-from funcionarios.models import Funcionario, HistoricoFuncionario, JornadaFuncionario, Perfil, Score, Cargo, Setor
+from funcionarios.models import Funcionario, HistoricoFuncionario, JornadaFuncionario, Perfil, Cargo, Setor
 from ponto.models import Ponto
 from web.models import Celebracao
 from web.utils import not_none_not_empty, add_coins
@@ -73,7 +74,7 @@ def converter_documento(file):
 
 def obter_arvore(caminho):
 	dados = {'text': os.path.basename(caminho), 'path': caminho}
-	dados['children'] = []
+	dados['children'] = list()
 
 	try:
 		for item in os.listdir(caminho):
@@ -95,39 +96,49 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 	
 	# Dados do Funcionario
 	matricula = request.POST.get('matricula') # required
+	sexo = request.POST.get('sexo') # required
+
 	nome_completo = request.POST.get('nome_completo') # required
 	nome_social = request.POST.get('nome_social') if not_none_not_empty(request.POST.get('nome_social')) else None
+
 	nome_mae = request.POST.get('nome_mae') if not_none_not_empty(request.POST.get('nome_mae')) else None
 	nome_pai = request.POST.get('nome_pai') if not_none_not_empty(request.POST.get('nome_pai')) else None
+
+	cpf = request.POST.get('cpf') # required
+	rg = request.POST.get('rg') if not_none_not_empty(request.POST.get('rg')) else None
+	data_expedicao = request.POST.get('data_expedicao') if not_none_not_empty(request.POST.get('data_expedicao')) else None
+
 	email = request.POST.get('email') # required
 	email_sec = request.POST.get('email_sec') if not_none_not_empty(request.POST.get('email_sec')) else None
-	contato = None
-	contato_sec = None
+
+	contato = request.POST.get('contato') if not_none_not_empty(request.POST.get('contato')) else None
+	contato_sec = request.POST.get('contato_sec') if not_none_not_empty(request.POST.get('contato_sec')) else None
 	resp_contato_sec = request.POST.get('resp_contato_sec') if not_none_not_empty(request.POST.get('resp_contato_sec')) else None
-	cpf = request.POST.get('cpf') # required
-	rg = request.POST.get('rg') # required
-	sexo = request.POST.get('sexo') # required
+	
 	estado_civil = request.POST.get('estado_civil') # required
+	data_nascimento = request.POST.get('data_nascimento') # required
+
 	estado = Estado.objects.get(pk=request.POST.get('estado')) # required
 	cidade = Cidade.objects.get(pk=request.POST.get('cidade')) # required
+
 	rua = request.POST.get('rua') # required
 	numero = request.POST.get('numero') # required
 	complemento = request.POST.get('complemento') if not_none_not_empty(request.POST.get('complemento')) else None
 	cep = request.POST.get('cep') # required
+
 	setor = Setor.objects.get(pk=request.POST.get('setor')) # required
 	cargo = Cargo.objects.get(pk=request.POST.get('cargo')) # required
+
 	gerente = Funcionario.objects.get(pk=request.POST.get('gerente')) if not_none_not_empty(request.POST.get('gerente')) else None
-	salario = 0
-	data_expedicao = request.POST.get('data_expedicao') if not_none_not_empty(request.POST.get('data_expedicao')) else None
-	data_nascimento = request.POST.get('data_nascimento') # required
 	data_contratacao = request.POST.get('data_contratacao') # required
-	data_demissao = request.POST.get('data_demissao') if not_none_not_empty(request.POST.get('data_demissao')) else None
 	data_inicio_ferias = request.POST.get('data_inicio_ferias') if not_none_not_empty(request.POST.get('data_inicio_ferias')) else None
 	conta_banco = request.POST.get('conta_banco') if not_none_not_empty(request.POST.get('conta_banco')) else None
 
-	# Dados adicionais
-	contrato = Contrato.objects.get(pk=int(request.POST.get('contrato'))) if not_none_not_empty(request.POST.get('contrato')) else None
+	contrato = Contrato.objects.get(pk=int(request.POST.get('contrato'))) if not_none_not_empty(request.POST.get('contrato')) else None # required porém em edição não existe
+	salario = 0
+
 	is_gerente = True if not_none_not_empty(request.POST.get('staff')) else False
+	data_demissao = request.POST.get('data_demissao') if not_none_not_empty(request.POST.get('data_demissao')) else None
 
 	# Dados do Usuario do Funcionario
 	if len(nome_completo.split()) > 1:
@@ -141,13 +152,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 
 	if not_none_not_empty(request.POST.get('salario')) and request.POST.get('salario') != 'R$ ':
 		salario = float(re.sub(r'[^0-9]', '', request.POST.get('salario'))) / 100
-
-	if not_none_not_empty(request.POST.get('contato')) and request.POST.get('contato') != '(__) _____-____':
-		contato = request.POST.get('contato')
-
-	if not_none_not_empty(request.POST.get('contato_sec')) and request.POST.get('contato_sec') != '(__) _____-____':
-		contato_sec = request.POST.get('contato_sec')
-
+	
 	if not editar:
 		try:
 			if Usuario.objects.filter(username=username).exists():			
@@ -213,9 +218,6 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 				# Criando Perfil do Funcionario
 				Perfil.objects.create(funcionario=funcionario)
 
-				# Criar Score inicial do Funcionario
-				Score.objects.create(funcionario=funcionario)
-
 				# Gravo as informações no Histórico de Funcionários
 				HistoricoFuncionario(
 					funcionario=funcionario,
@@ -226,7 +228,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 				).save()
 
 				# Atribuir cursos ao novo Funcionário
-				cursos = Curso.objects.filter(contrato=jornadas.first().contrato)
+				cursos = Curso.objects.filter(Q(contrato=jornadas.first().contrato))
 				for curso in cursos:
 					CursoFuncionario(funcionario=funcionario, curso=curso).save()
 
@@ -250,8 +252,8 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 				
 			return messages.success(request, 'Funcionário(a) criado(a) com sucesso!')
 					
-		except IntegrityError as e:
-			return messages.error(request, f'Funcionário(a) não foi criado(a)! O campo Matrícula deve ser único. {e}')
+		except IntegrityError:
+			return messages.error(request, 'Funcionário(a) não foi criado(a)! Verifique se algum dos campos "Matrícula", "Email", "CPF", "RG" ou "Conta Bancária" já não existem no sistema.')
 
 		except Exception as e:
 			return messages.error(request, f'Funcionário(a) não foi criado(a): {e}!')
@@ -263,7 +265,7 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 
 			with transaction.atomic():
 				if cargo and funcionario.cargo != cargo:
-					add_coins(funcionario, 250)
+					add_coins(funcionario, 250, 'Evolução de cargo')
 
 				# Faço o fechamento dos pontos em aberto se data_demissao
 				if data_demissao:
@@ -325,6 +327,13 @@ def cadastro_funcionario(request, funcionario=None, editar=False):
 					contrato=funcionario.get_contrato,
 					salario=funcionario.salario,
 				).save()
+				
+				for curso in Curso.objects.filter(Q(contrato=funcionario.get_contrato)):
+					if not CursoFuncionario.objects.filter(curso=curso, funcionario=funcionario).exists():
+						CursoFuncionario.objects.create(
+							curso=curso,
+							funcionario=funcionario
+						)
 
 			return messages.success(request, 'Funcionário(a) alterado(a) com sucesso!')
 

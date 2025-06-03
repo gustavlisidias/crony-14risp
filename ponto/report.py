@@ -3,13 +3,14 @@ import zipfile
 from io import BytesIO
 from datetime import timedelta, date
 
+from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
 from configuracoes.models import Variavel
 from funcionarios.models import Funcionario, JornadaFuncionario
 from notifications.signals import notify
-from ponto.models import Ponto
+from ponto.models import Ponto, Saldos
 from ponto.renderers import RenderToPDF
 from ponto.utils import pontos_por_dia
 from web.utils import not_none_not_empty, parse_date, parse_employee
@@ -24,25 +25,68 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 	funcionarios = parse_employee(funcionarios)
 	zip_buffer = BytesIO()
 
+	def processar_fechamento(funcionario):
+			pontos, _ = pontos_por_dia(data_inicial, data_final, funcionario)
+
+			if not pontos:
+				return False, f'Nenhum ponto encontrado para {funcionario.nome_completo}'
+	
+			bancos_estagiarios = dict()
+
+			for _, funcs in pontos.items():
+				for func, dados in funcs.items():
+					if dados['estagiario']:
+						if func not in bancos_estagiarios:
+							bancos_estagiarios[func] = timedelta()
+						bancos_estagiarios[func] = dados['banco']
+
+			try:
+				with transaction.atomic():
+					# Zerar banco para estágios
+					saldo_para_desconto = bancos_estagiarios.get(funcionario.id)
+					if saldo_para_desconto:
+						Saldos.objects.create(data=data_final, funcionario=funcionario, saldo=(saldo_para_desconto * -1))
+
+					pontos_fechamento = Ponto.objects.filter(funcionario=funcionario, data__range=[data_inicial, data_final]).order_by('data', 'hora')
+					for ponto in pontos_fechamento:
+						ponto.encerrado = True
+						ponto.data_fechamento = date.today()
+
+						if ponto.data == pontos_fechamento.last().data and saldo_para_desconto:
+							ponto.motivo = 'Desconto horas fechamento mensal'
+						
+						ponto.save()
+			
+				return True, None
+			
+			except Exception as e:
+				return False, e
+
 	def processar_funcionario(funcionario):
 		try:
+			if not_none_not_empty(request.POST.get('fechamento')):
+				_, erro_fechamento = processar_fechamento(funcionario)
+				if erro_fechamento:
+					raise Exception(f'Erro durante fechamento: {erro_fechamento}')
+
 			pontos, _ = pontos_por_dia(data_inicial, data_final, funcionario)
 			
 			if not pontos:
-				raise ValueError(f'Nenhum ponto encontrado para {funcionario.nome_completo}')
+				raise Exception(f'Nenhum ponto encontrado para {funcionario.nome_completo}')
 			
-			jornada = {}
+			jornada = dict()
+			nro_colunas = 0
+
 			for item in JornadaFuncionario.objects.filter(funcionario=funcionario, final_vigencia=None).order_by('funcionario__id', 'agrupador', 'dia', 'ordem'):
 				if item.dia not in jornada:
-					jornada[item.dia] = []
+					jornada[item.dia] = list()
 				jornada[item.dia].append({'tipo': item.get_tipo_display(), 'hora': item.hora, 'contrato': item.contrato})
-			
-			nro_colunas = 0
+
 			saldos = {
-				'total': timedelta(seconds=0),
-				'saldo': timedelta(seconds=0),
-				'credito': timedelta(seconds=0),
-				'debito': timedelta(seconds=0)
+				'total': timedelta(),
+				'saldo': timedelta(),
+				'credito': timedelta(),
+				'debito': timedelta()
 			}
 
 			for _, funcs in pontos.items():
@@ -50,7 +94,7 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 					saldos['total'] += dados['total']
 					saldos['saldo'] += dados['saldo']
 
-					if dados['saldo'] < timedelta(0):
+					if dados['saldo'] < timedelta():
 						saldos['debito'] += dados['saldo']
 					else:
 						saldos['credito'] += dados['saldo']
@@ -68,13 +112,7 @@ def gerar_pdf_ponto(request, funcionarios, data_inicial, data_final):
 				'autor': get_object_or_404(Funcionario, usuario=request.user),
 				'jornada': jornada,
 				'dados_empresa': DADOS_EMPRESA
-			}
-
-			if not_none_not_empty(request.POST.get('fechamento')):
-				for ponto in Ponto.objects.filter(funcionario=funcionario, data__range=[data_inicial, data_final]).order_by('data', 'hora'):
-					ponto.encerrado = True
-					ponto.data_fechamento = date.today()
-					ponto.save()
+			}			
 
 			pdf = RenderToPDF(request, 'relatorios/espelho_ponto.html', context, filename).weasyprint()
 			return filename, pdf

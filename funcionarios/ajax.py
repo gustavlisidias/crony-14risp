@@ -3,7 +3,7 @@ import os
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Max, Q
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -71,8 +71,8 @@ def RealoadDocumentosView(request):
 		return JsonResponse({'message': 'forbidden'}, status=404)
 	
 	funcionario = Funcionario.objects.get(usuario=request.user)
-	filtro_data_inicial = request.GET.get('data_inicial') if not_none_not_empty(request.GET.get('data_inicial')) else '2018-01-01'  # (timezone.localdate() - timedelta(days=10)).strftime('%Y-%m-%d')
-	filtro_data_final = request.GET.get('data_final') if not_none_not_empty(request.GET.get('data_final')) else timezone.localdate().strftime('%Y-%m-%d')
+	filtro_data_inicial = request.GET.get('data_inicial', '2018-01-01')
+	filtro_data_final = request.GET.get('data_final', timezone.localdate().strftime('%Y-%m-%d'))
 	filtro_nome = request.GET.get('nome')
 	filtro_tipo = request.GET.get('tipo')
 

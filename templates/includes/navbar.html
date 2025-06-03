@@ -128,6 +128,7 @@
 				</li>
 
 				<!-- Novos Documentos -->
+				<!--
 				{% if funcionario.has_docpendentes %}
 					<li class="nav-item dropstart me-3" title="Documentos Pendentes">
 						<a class="nav-link" href="{% url 'editar-funcionario' funcionario.id %}" role="button">
@@ -138,6 +139,7 @@
 						</a>
 					</li>
 				{% endif %}
+				-->
 
 				<!-- Profile -->
 				<li class="nav-item dropdown dropdown-profile">
@@ -152,7 +154,7 @@
 							<a class="dropdown-item" href="{% url 'configuracoes' %}"><i class="fa-thin fa-gear text-body"></i> Configurações</a>
 							<a class="dropdown-item" href="/admin/" target="_blank" rel="noopener noreferrer"><i class="fa-thin fa-chart-candlestick text-body"></i> Painel</a>
 						{% endif %}
-						<!-- <a class="dropdown-item" href="{% url 'score' %}"><i class="fa-thin fa-star text-body"></i> Ranking</a> -->
+						<!-- <a class="dropdown-item" href="{% url 'ranking' %}"><i class="fa-thin fa-star text-body"></i> Ranking</a> -->
 						<a class="dropdown-item" href="{% url 'sair' %}"><i class="fa-thin fa-power-off text-body"></i> Sair</a>
 					</div>
 				</li>

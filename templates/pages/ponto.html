@@ -37,10 +37,10 @@
 						<button class="nav-link" id="colaboradores-tab" data-bs-toggle="tab" data-bs-target="#colaboradores-pane" type="button" role="tab">Cartão Colaborador</button>
 					</li>
 					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="fechamentos-tab" data-bs-toggle="tab" data-bs-target="#fechamentos-pane" type="button" role="tab">Fechamentos</button>
+						<button class="nav-link" id="fechamentos-tab" data-bs-toggle="tab" data-bs-target="#fechamentos-pane" type="button" role="tab">Fechamento de Pontos</button>
 					</li>
 					<li class="nav-item" role="presentation">
-						<button class="nav-link" id="scores-tab" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">Scores (Mensal)</button>
+						<button class="nav-link" id="scores-tab" data-bs-toggle="tab" data-bs-target="#scores-pane" type="button" role="tab">Assiduidade & Moedas</button>
 					</li>
 				{% endif %}
 			</ul>
@@ -246,34 +246,24 @@
 									<tr>
 										<th scope="col">#</th>
 										<th scope="col">Colaborador</th>
-										<th scope="col">Pontuação</th>
-										<th scope="col">Status</th>
-										<th scope="col">Data Cadastro</th>
+										<th scope="col">Assiduidade</th>
 										<th scope="col">Moedas</th>
+										<th scope="col">Referencia</th>
+										<th scope="col">Nota Final</th>
 										<th class="text-center" scope="col">Ações</th>
 									</tr>
 								</thead>
 								<tbody>
-									{% for score in pontuacoes %}
+									{% for item in pontuacoes %}
 										<tr>
 											<th scope="row">{{forloop.counter}}</th>
-											<td>{{score.funcionario}}</td>
-											<td>{{score.pontuacao|floatformat:"02"}}</td>
-											{% if score.fechado %}
-												<td>
-													<span class="d-none">Fechado</span>
-													<i class="fa-duotone fa-circle-check text-success"></i>
-												</td>
-											{% else %}
-												<td>
-													<span class="d-none">Aberto</span>
-													<i class="fa-duotone fa-circle-xmark text-danger"></i>
-												</td>
-											{% endif %}
-											<td>{{score.data_cadastro|default_if_none:""|date:"d/m/Y"}}</td>
-											<td>{{score.moedas|floatformat:00}}</td>
+											<td>{{item.funcionario}}</td>
+											<td>{{item.pontuacao|floatformat:"02"}}</td>
+											<td>{{item.moedas|floatformat:"00"}}</td>
+											<td>{{item.referencia}}</td>
+											<td>{{item.nota_final|floatformat:02}}</td>
 											<td class="text-center">
-												<a onclick="adicionarMoedas({{score.funcionario.id}}, {{score.anomes}})" role="button" title="Adicionar moedas">
+												<a onclick="adicionarMoedas({{item.id}})" role="button" title="Adicionar moedas">
 												<i class="fa-duotone fa-solid fa-coins fa-lg text-body"></i>
 											</a></td>
 										</tr>
@@ -310,9 +300,10 @@
 				</div>
 
 				<div class="d-flex justify-content-around mb-3">
-					<p class="fw-bold">Score de Pontualidade: {{graph.notas.media|floatformat:2}}</p>
-					<p class="fw-bold">Total Trabalhado: {{graph.total|timedelta}}</p>
-					<p class="fw-bold">Saldo de Horas: {{graph.saldo|timedelta}}</p>
+					<p class="fw-bold">SCORE PERIODO: {{graph.notas.media|floatformat:2}}</p>
+					<p class="fw-bold">TOTAL HORAS TRABALHADAS: {{graph.total|timedelta}}</p>
+					<p class="fw-bold">SALDO HORAS PERIODO: {{graph.saldo|timedelta}}</p>
+					<p class="fw-bold">TOTAL BANCO HORAS: {{graph.banco|timedelta}}</p>
 				</div>
 
 				<div class="d-flex justify-content-center mb-2">
@@ -646,9 +637,9 @@
 		return false;
 	};
 
-	function adicionarMoedas(func, anomes) {
+	function adicionarMoedas(objID) {
 		const modal = $("#modalAdicionarMoedas");
-		const action = `moedas/adicionar/${func}/${anomes}`;
+		const action = `moedas/adicionar/${objID}`;
 
 		modal.find("#formAdicionarMoedas").attr("action", action);
         modal.modal("show");
@@ -828,11 +819,19 @@
 				document.getElementById("divPeriodoAbono").classList.remove("mb-3");
 				document.getElementById("divTempoAbono").classList.add("mb-3");
 				document.getElementById("divTempoAbono").classList.remove("d-none");
+
+				document.getElementById("divPeriodoAbono").querySelector("#abonoInicio").removeAttribute("required");
+				document.getElementById("divPeriodoAbono").querySelector("#abonoFinal").removeAttribute("required");
+				document.getElementById("divTempoAbono").querySelector("#abonoData").setAttribute("required", "");
 			} else {
 				document.getElementById("divPeriodoAbono").classList.remove("d-none");
 				document.getElementById("divPeriodoAbono").classList.add("mb-3");
 				document.getElementById("divTempoAbono").classList.remove("mb-3");
 				document.getElementById("divTempoAbono").classList.add("d-none");
+
+				document.getElementById("divPeriodoAbono").querySelector("#abonoInicio").setAttribute("required", "");
+				document.getElementById("divPeriodoAbono").querySelector("#abonoFinal").setAttribute("required", "");
+				document.getElementById("divTempoAbono").querySelector("#abonoData").removeAttribute("required");
 			}
 		});
 
@@ -867,7 +866,7 @@
 					{% for funcionario, dados in funcionarios.items %}
 						{
 							data: `{{ data|date:"d/m/Y" }}`,
-							banco: parseFloat("{{ dados.saldo|floatdelta|floatformat:2 }}".replace(",", "."))
+							saldo: parseFloat("{{ dados.saldo|floatdelta|floatformat:2 }}".replace(",", "."))
 						},
 					{% endfor %}
 				{% endfor %}
@@ -878,10 +877,10 @@
 			});
 
 			const labels = dadosFiltrados.map(item => item.data);
-			const banco = dadosFiltrados.map(item => item.banco);
+			const saldo = dadosFiltrados.map(item => item.saldo);
 			const ctx = document.getElementById("saldoGrafico").getContext("2d");
 
-			createChart(ctx, "line", labels, banco, "Total em horas", "Banco de Horas");
+			createChart(ctx, "line", labels, saldo, "Total em horas", "SALDO DE HORAS POR DIA");
 		};
 		
 		let images = document.querySelectorAll(".lazyload");

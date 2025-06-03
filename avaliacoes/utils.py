@@ -1,86 +1,102 @@
+# ruff: noqa: F401
 from avaliacoes.models import Nivel
 from funcionarios.models import Perfil
+from ponto.models import Ponto
 from ponto.utils import pontos_por_dia
 
-from datetime import datetime, time as ctime
+from datetime import datetime, time
+from collections import defaultdict
 
 
 def dados_avaliacao(avaliacao, perguntas, respostas):
+	if not respostas:
+		return None, None
+	
 	total_respostas = len(respostas)
 	total_participantes = len(avaliacao.avaliadores.all())
 	total_participantes_ativos = len(set([i.funcionario for i in respostas]))
 	total_perguntas = len(perguntas)
+
+	participantes_sem_resposta = avaliacao.avaliadores.exclude(id__in=[i.funcionario.id for i in respostas])
+
+	# Determinação da data de início para cálculo de score
+	primeiro_ponto = Ponto.objects.filter(funcionario=avaliacao.avaliado).values('data').order_by('data').first()
+	inicio_score = datetime.combine(max(avaliacao.inicio, avaliacao.avaliado.data_contratacao, primeiro_ponto['data']), time())
+	_, score_periodo = pontos_por_dia(inicio_score, datetime.combine(avaliacao.final, time()), avaliacao.avaliado)
 	
-	_, score_periodo = pontos_por_dia(datetime.combine(avaliacao.inicio, ctime()), datetime.combine(avaliacao.final, ctime()), avaliacao.avaliado)
-	time = Perfil.objects.get(funcionario=avaliacao.avaliado).time.titulo.lower()
+	# Estruturas para armazenar notas e estatísticas
+	tabela = defaultdict(lambda: {'par': 0, 'auto': 0, 'gestor': 0})
+	notas_por_nivel = defaultdict(lambda: {'par': 0, 'auto': 0, 'gestor': 0})
+	qtd_por_nivel = {'par': set(), 'auto': set(), 'gestor': set()}
+	comentarios = defaultdict(list)
+	pesos = {i.get_tipo_display().lower(): i.peso for i in Nivel.objects.filter(avaliacao=avaliacao)}
 
-	cortes = {'diamante': 4.5, 'ouro': 4.0, 'prata': 3.5, 'bronze': 2.5}
-	notas_por_nivel = {0: {}, 1: {}, 2: {}}
-	comentarios = {}
+	for resposta in respostas:
+		funcionario = resposta.funcionario
+		titulo_pergunta = resposta.referencia.pergunta.titulo
+		nota, peso = resposta.nota, resposta.referencia.pergunta.peso
 
-	# Criando objeto de nota por funcionario por nivel de avaliador
-	for i in respostas:
-		observacoes = [{'observacao': j.observacao, 'pergunta': j.referencia.pergunta.titulo} for j in respostas if i.funcionario == j.funcionario and j.observacao]
-		if observacoes:
-			comentarios[i.funcionario] = observacoes
-		
-		if i.funcionario == avaliacao.avaliado:
-			nivel = 0
-		elif i.funcionario.usuario.get_access != 'common':
-			nivel = 2
+		# Coleta de observações por funcionário
+		if resposta.observacao:
+			comentarios[funcionario].append({
+				'observacao': resposta.observacao,
+				'pergunta': titulo_pergunta
+			})
+
+		# Determinar o nível do avaliador
+		if funcionario == avaliacao.avaliado:
+			nivel = 'auto'
+		elif funcionario == avaliacao.avaliado.gerente or funcionario.usuario.get_access != 'common':
+			nivel = 'gestor'
 		else:
-			nivel = 1
-		
-		if i.funcionario not in notas_por_nivel[nivel]:
-			notas_por_nivel[nivel][i.funcionario] = {}
-		
-		if i.referencia.pergunta not in notas_por_nivel[nivel][i.funcionario]:
-			notas_por_nivel[nivel][i.funcionario][i.referencia.pergunta] = i.nota * i.referencia.pergunta.peso
-	
-	# Calculo da média de notas por nível
-	for nivel, funcionarios in notas_por_nivel.items():
-		media = 0
-		qtd_func = len(notas_por_nivel[nivel]) if notas_por_nivel[nivel] else 1
-		for _, perguntas in funcionarios.items():
-			for _, nota in perguntas.items():
-				media += nota
-		
-		notas_por_nivel[nivel]['media'] = media / qtd_func
+			nivel = 'par'
 
-	# Cálculo da nota final
-	nota_final = sum([notas_por_nivel[i]['media'] * Nivel.objects.get(avaliacao=avaliacao, tipo=i).peso for i in notas_por_nivel])
-	if score_periodo:
-		nota_final = (nota_final + score_periodo[avaliacao.avaliado.id]['media']) / 2
+		# Atualizar contadores e somar notas
+		tabela[titulo_pergunta][nivel] += nota
+		notas_por_nivel[titulo_pergunta][nivel] += nota * peso
+		qtd_por_nivel[nivel].add(funcionario.id)
 	
+	# Cálculo da média das notas por critério e nível
+	for criterio in tabela:
+		for nivel in pesos.keys():
+			qtd = len(qtd_por_nivel[nivel])
+			tabela[criterio][nivel] /= qtd if qtd else 1
+			notas_por_nivel[criterio][nivel] /= qtd if qtd else 1
+
+	# Média por critério
+	media_por_criterio = {criterio: sum(niveis.values()) / len(niveis) for criterio, niveis in tabela.items()}
+
+	# Média por nível
+	niveis_tabela = {'par': 0, 'auto': 0, 'gestor': 0}
+	for criterio in tabela.values():
+		for nivel, valor in criterio.items():
+			niveis_tabela[nivel] += valor
+
+	media_por_nivel = {nivel: total / len(tabela) for nivel, total in niveis_tabela.items()}
+	
+	# Aplicação dos pesos às notas finais
+	nota_final = sum(notas_por_nivel[criterio][nivel] * pesos[nivel] for criterio in notas_por_nivel for nivel in pesos)
+
 	# Definindo se usuário está dentro da nota de corte (aprovado)
-	corte = cortes.get(time, 0)
+	cortes = {'ouro': 4.5, 'prata': 4, 'bronze': 3.5}
+	corte = cortes.get(avaliacao.avaliado.get_perfil.time.titulo.lower(), 2.5)
 	aprovado = nota_final >= corte
-
-	tabela = {}
-	tabela_footer = {0: 0, 1: 0, 2: 0}
-	for nivel, funcionarios in notas_por_nivel.items():
-		for funcionario, perguntas in funcionarios.items():
-			if funcionario != 'media':
-
-				for pergunta, nota in perguntas.items():
-					if pergunta.titulo not in tabela:
-						tabela[pergunta.titulo] = {0: 0, 1: 0, 2: 0}
-
-					qtd_respostas = (len(notas_por_nivel[nivel]) - 1)
-					tabela[pergunta.titulo][nivel] += nota / qtd_respostas
-					tabela_footer[nivel] += nota / qtd_respostas
-
-	return {
+	
+	dados = {
 		'total_respostas': total_respostas,
 		'total_participantes': total_participantes,
 		'total_participantes_ativos': total_participantes_ativos,
 		'total_perguntas': total_perguntas,
-		'score': score_periodo.get(avaliacao.avaliado.id).get('media', 0),
-		'notas': notas_por_nivel,
-		'comentarios': comentarios,
+		'score': score_periodo.get(avaliacao.avaliado.id, {}).get('media', 0),
+		'notas': dict(notas_por_nivel),
+		'comentarios': dict(comentarios),
 		'nota_final': nota_final,
 		'aprovado': aprovado,
-		'tabela': tabela,
-		'tabela_footer': tabela_footer
+		'corte': corte,
+		'grafico': {tipo: sum(valor[tipo] for valor in dict(tabela).values()) / len(dict(tabela)) for tipo in pesos.keys()},
+		'media_por_criterio': media_por_criterio,
+		'media_por_nivel': media_por_nivel,
+		'participantes_sem_resposta': participantes_sem_resposta
 	}
-	
+
+	return dados, dict(tabela)

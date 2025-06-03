@@ -1,11 +1,8 @@
-import pytz
-
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.text import slugify
 
-from datetime import datetime
 
 from django_ckeditor_5.fields import CKEditor5Field
 from funcionarios.models import Funcionario
@@ -83,14 +80,15 @@ class Comentario(models.Model):
 
 class Humor(models.Model):
 	class Status(models.TextChoices):
-		FELIZ = '5', 'Muito Feliz'
-		ALEGRE = '4', 'Feliz'
-		NEUTRO = '3', 'Neutro'
-		CHATEADO = '2', 'Triste'
-		TRISTE = '1', 'Muito Triste'
+		ESTR = '1', 'Estressante'
+		SBCR = '2', 'Sobrecarregado'
+		EQLB = '3', 'Equilibrado'
+		TRAN = '4', 'Tranquilo'
+		PROD = '5', 'Produtivo'
 
 	humor = models.CharField(max_length=1, choices=Status.choices, verbose_name='Humor')
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
+	observacao = models.TextField(null=True, blank=True, verbose_name='Observação')
 	data_cadastro = models.DateTimeField(auto_now_add=True, verbose_name='Data de Cadastro')
 
 	def __str__(self):
@@ -146,20 +144,12 @@ class MensagemOuvidoria(models.Model):
 class Moeda(models.Model):
 	funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE, verbose_name='Funcionário')
 	pontuacao = models.FloatField(default=0, verbose_name='Pontuação')
-	fechado = models.BooleanField(default=False, verbose_name='Fechado')
-	anomes = models.PositiveIntegerField(editable=False, verbose_name='Referência Ano Mês')
+	motivo = models.CharField(max_length=120, null=True, verbose_name='Motivo')
 	data_cadastro = models.DateTimeField(auto_now=True, verbose_name='Data de Cadastro')
 
-	def save(self, *args, **kwargs):
-		if not self.data_cadastro:
-			self.data_cadastro = datetime.now().replace(tzinfo=pytz.utc)
-		self.anomes = int(self.data_cadastro.strftime('%Y%m'))
-		super().save(*args, **kwargs)
-
 	def __str__(self):
-		return f'{self.funcionario.nome_completo} têm {self.pontuacao} em {self.data_cadastro}'
+		return f'{self.funcionario} - {self.pontuacao}'
 
 	class Meta:
-		unique_together = ('funcionario', 'anomes', 'fechado')
-		verbose_name = 'Moeda'
-		verbose_name_plural = 'Moedas'
+		verbose_name = 'Histórico de Moeda'
+		verbose_name_plural = 'Histórico de Moedas'

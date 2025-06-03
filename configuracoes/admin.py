@@ -2,16 +2,35 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.admin.models import LogEntry
 
+from agenda.admin import FuncionarioForm
 from configuracoes.auth import UserAdmin
 from configuracoes.models import Contrato, Jornada, Usuario, Variavel
 
 
 admin.site.unregister(Group)
-
 admin.site.register(Usuario, UserAdmin)
-admin.site.register(Contrato)
-admin.site.register(Jornada)
-admin.site.register(Variavel)
+
+
+@admin.register(Contrato)
+class ContratoAdmin(admin.ModelAdmin):
+	list_display = ('titulo', 'descricao', 'tipo', 'data_cadastro') # colunas da tabela
+	search_fields = ('titulo', 'descricao', 'tipo') # campos de pesquisa aberta
+	ordering = ('titulo',) # ordenção da tabela
+
+
+@admin.register(Jornada)
+class JornadaAdmin(admin.ModelAdmin):
+	list_display = ('contrato', 'tipo', 'ordem', 'dia', 'hora') # colunas da tabela
+	search_fields = ('contrato__titulo', 'tipo', 'dia') # campos de pesquisa aberta
+	ordering = ('contrato', 'dia', 'ordem') # ordenção da tabela
+
+
+@admin.register(Variavel)
+class VariavelAdmin(admin.ModelAdmin):
+	form = FuncionarioForm
+	list_display = ('chave', 'valor') # colunas da tabela
+	search_fields = ('chave', 'valor') # campos de pesquisa aberta
+	ordering = ('chave',) # ordenção da tabela
 
 
 @admin.register(LogEntry)

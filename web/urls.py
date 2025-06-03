@@ -11,7 +11,7 @@ from web.ajax import (
 )
 from web.views import (
 	InicioView, 
-	ScoreView, 
+	RankingView, 
 	AdicionarMoedaView,
 	AdicionarPostView,
 	ComentarPostView,
@@ -21,16 +21,16 @@ from web.views import (
 	ExcluirPostView,
 	AdicionarCelebracaoView,
 	OuvidoriaView,
-	AdicionarOuvidoriaView,
+	AdicionarOuvidoriaView
 )
 
 
 urlpatterns = [
 	path('', InicioView, name='inicio'),
 	path('alterar/tema', AlterarTemaView, name='alterar-tema'),
-	path('ranking', ScoreView, name='score'),
+	path('ranking', RankingView, name='ranking'),
 	path('procurar/cidade/<int:estado>', ProcurarCidadesView, name='procurar-cidades'),
-	path('moedas/adicionar/<int:func>/<int:anomes>', AdicionarMoedaView, name='adicionar-moedas'),
+	path('moedas/adicionar/<int:fecid>', AdicionarMoedaView, name='adicionar-moedas'),
 	path('consultar/funcionarios/tags', FuncionariosTagsView, name='funcionarios-tags'),
 
 	path('posts/adicionar/celebracao', AdicionarCelebracaoView, name='adicionar-celebracao'),

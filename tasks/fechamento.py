@@ -1,4 +1,4 @@
-# ruff: noqa: E402, F401
+# ruff: noqa: E402
 import logging
 import os
 import sys
@@ -9,63 +9,76 @@ import pytz
 
 from pathlib import Path
 from dotenv import load_dotenv
+from collections import defaultdict
 
 load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 sys.path.append(os.getenv('SYSTEM_PATH'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.settings')
 django.setup()
 
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
+from datetime import date, datetime, time
 
 from funcionarios.models import Funcionario, Score
+from ponto.models import Fechamento
 from ponto.utils import pontos_por_dia
 from settings.settings import BASE_DIR
 from web.models import Moeda
 
 
 def fechamento_pontuacoes():
-	'''
-	No primeiro dia de cada mês, verifico as moedas em aberto
-	Filtrando a referencia ano-mes na data de hoje -1 mês
-	Exemplo: hoje é 01/09/2024 a referencia é 202408, todas as moedas abertas nessa referencia serão fechadas
-	'''
-	if datetime.today().day == 1:
+	hoje = date.today()
+
+	if hoje.day == 1:
 		log_file = f'fechamento_{datetime.now().replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")}.log'
 		log_path = os.path.join(BASE_DIR, f'logs/tasks/{log_file}')
 		logging.basicConfig(filename=log_path, encoding='utf-8', level=logging.INFO, force=True)
 		
 		try:
-			mes = datetime.today().month - 1 if datetime.today().month > 1 else 12
-			ano = datetime.today().year if datetime.today().month > 1 else datetime.today().year - 1
-			ultimo_dia = calendar.monthrange(datetime.today().year, datetime.today().month - 1)[1] if datetime.today().month > 1 else 31
+			mes = hoje.month - 1 if hoje.month > 1 else 12
+			ano = hoje.year if hoje.month > 1 else hoje.year - 1
+			ultimo_dia = calendar.monthrange(hoje.year, hoje.month - 1)[1] if hoje.month > 1 else 31
 
-			anomes = int(f'{ano}{mes:02}')
-			data_inicial = f'{ano}-{mes:02}-01'
-			data_final = f'{ano}-{mes:02}-{ultimo_dia}'
-			
+			data_inicial = datetime.combine(date(ano, mes, 1), time())
+			data_final = datetime.combine(date(ano, mes, ultimo_dia), time())
+
 			funcionarios = Funcionario.objects.filter(data_demissao=None).order_by('nome_completo')
 			_, scores = pontos_por_dia(data_inicial, data_final, funcionarios, True)
-		
-			for moeda in Moeda.objects.filter(fechado=False, anomes=anomes, funcionario__in=funcionarios):
-				moeda.fechado = True
-				moeda.save()
 
-			for score in Score.objects.filter(fechado=False, anomes=anomes, funcionario__in=funcionarios):
-				scores_fechados = Score.objects.filter(fechado=True, anomes=anomes, funcionario=score.funcionario)
-				total_scores_fechados = sum([i.pontuacao for i in scores_fechados])
-				nro_scores_fechados = len(scores_fechados) + 1
-				nota_calculada = scores.get(score.funcionario.id)['media']
+			# Salvo todas as médias do período, para cada funcionário
+			for funcid, score in scores.items():
+				funcionario = Funcionario.objects.get(pk=funcid)
+				pontuacao = score['media']
+				Score.objects.create(funcionario=funcionario, pontuacao=pontuacao, data_cadastro=data_final)
 
-				pontuacao = (nota_calculada + total_scores_fechados) / nro_scores_fechados
-				scores_fechados.delete()
+			# Crio objeto com o total de moeda/pontuacao por funcionario nesse periodo de fechamento
+			moedas, pontuacoes = defaultdict(lambda: defaultdict(int)), defaultdict(lambda: defaultdict(int))
 
-				score.pontuacao = pontuacao
-				score.fechado = True
-				score.save()
-			
+			for moeda in Moeda.objects.filter(data_cadastro__date__month=mes, data_cadastro__date__year=ano).order_by('-pontuacao'):
+				referencia = moeda.data_cadastro.strftime('%Y%m')
+				moedas[moeda.funcionario][referencia] += moeda.pontuacao
+
+			for pontuacao in Score.objects.filter(data_cadastro__date__month=mes, data_cadastro__date__year=ano).order_by('-pontuacao'):
+				referencia = pontuacao.data_cadastro.strftime('%Y%m')
+				pontuacoes[pontuacao.funcionario][referencia] += pontuacao.pontuacao
+
+			for funcionario, referencias in pontuacoes.items():
+				for referencia, pontuacao in referencias.items():
+					qtd_registros = Score.objects.filter(funcionario=funcionario, data_cadastro__date__month=mes, data_cadastro__date__year=ano).count()
+					pontuacoes[funcionario][referencia] = pontuacoes[funcionario][referencia] / qtd_registros if qtd_registros else 0
+
+			# Para cada funcionario, verifico a referencia dos objetos criados e salvo o fechamento
+			referencia = f'{ano}{mes:02}'
 			for funcionario in funcionarios:
-				Score.objects.create(funcionario=funcionario)
+				# print(referencia, funcionario, pontuacoes[funcionario].get(referencia, 1), moedas[funcionario].get(referencia, 1))
+					
+				fechamento = Fechamento.objects.create(
+					funcionario=funcionario,
+					pontuacao=pontuacoes[funcionario].get(referencia, 1),
+					moedas=moedas[funcionario].get(referencia, 1),
+					referencia=referencia
+				)
+
+				logging.info(f'Funcionario: {fechamento.funcionario.nome_completo} - Ref: {fechamento.referencia} - Pontuacao: {fechamento.pontuacao} - Moeda {fechamento.moedas}')
 			
 			logging.info('Fechamento mensal realizado!')
 

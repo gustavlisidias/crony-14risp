@@ -18,6 +18,7 @@ from django.core.mail import EmailMessage
 
 from datetime import datetime, timedelta
 
+from funcionarios.models import Funcionario
 from settings.settings import BASE_DIR, EMAIL_HOST_USER
 from web.models import Humor
 
@@ -42,7 +43,7 @@ def relatorio_semanal():
 
 		subject = 'Relatório Semanal de Humores - Crony'
 		message = f'Na semana de {inicio.strftime("%d/%m/%Y")} até {final.strftime("%d/%m/%Y")} houve {len(humores)} humores enviados com uma média de {media}\n\nTotal Feliz: {total_feliz}\nTotal Alegre: {total_alegre}\nTotal Neutro: {total_neutro}\nTotal Triste: {total_triste}\nTotal Deprimido: {total_deprimido}'
-		destinatarios = ['ronilda@14ri.com.br',]
+		destinatarios = [i.email for i in Funcionario.objects.filter(data_demissao=None, usuario__is_admin=True)]
 		email = EmailMessage(subject, message, EMAIL_HOST_USER, destinatarios)
 		email.send()
 

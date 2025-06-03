@@ -103,7 +103,7 @@ class UserAdmin(admin.ModelAdmin):
 		'''
 		Use special form during user creation
 		'''
-		defaults = {}
+		defaults = dict()
 		if obj is None:
 			defaults['form'] = self.add_form
 			
@@ -151,7 +151,7 @@ class UserAdmin(admin.ModelAdmin):
 			raise PermissionDenied
 		
 		if extra_context is None:
-			extra_context = {}
+			extra_context = dict()
 		username_field = self.model._meta.get_field(self.model.USERNAME_FIELD)
 		defaults = {
 			'auto_populated_fields': (),
