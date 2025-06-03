@@ -66,7 +66,7 @@
 	<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 		{% if request.user.is_authenticated %}			
 			{% include "includes/overlay.html" %}
-			{% include "modals/chat/mensagem-massa.html" %}
+			{% include "includes/mensagem-massa.html" %}
 			{% include "includes/chat.html" %}
 			<div class="container-fluid">
 				<div class="row flex-nowrap">
